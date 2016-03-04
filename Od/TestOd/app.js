@@ -132,6 +132,16 @@ var Obs;
     };
     // Peek at the value of an observable without establishing a dependency.
     Obs.peek = function (obs) { return obs.value; };
+    // Decide if an object is observable or not.
+    // This just tests whether the object has an 'id' property.
+    Obs.isObservable = function (obs) {
+        return !!obs.id;
+    };
+    // Decide if an observable is computed or not.
+    // This just tests whether the object has a 'fn' property.
+    Obs.isComputed = function (obs) {
+        return !!obs.fn;
+    };
     // Create a subscription on a set of observables.  The action can read
     // any observables without establishing a dependency.  Subscriptions
     // run after all other affected computed observables have run.
@@ -445,9 +455,13 @@ var Od;
                 : [childOrChildren]);
         return { tag: tag, props: propAssocList, children: children };
     };
-    Od.component = function (obs) {
-        var subs = Obs.subscribe([obs], updateComponent);
-        var vdom = { obs: obs, subs: subs, dom: null };
+    Od.component = function (fn) {
+        var obs = (Obs.isObservable(fn)
+            ? fn
+            : Obs.fn(fn));
+        var vdom = { obs: obs, subs: null, dom: null };
+        var subs = Obs.subscribe([obs], updateComponent.bind(vdom));
+        vdom.subs = subs;
         subs(); // Initialise the dom component.
         return vdom;
     };
@@ -596,18 +610,23 @@ var Od;
         var eltChildren = elt.childNodes;
         if (!vdomChildren)
             vdomChildren = emptyIVdomList;
+        var numEltChildren = eltChildren.length;
+        var numVdomChildren = vdomChildren.length;
+        // Remove any extraneous existing children.
+        for (var i = numEltChildren - 1; numVdomChildren <= i; i--) {
+            var eltChild = eltChildren[i];
+            replaceNode(null, eltChild, elt);
+            if (debug)
+                console.log("Removed child", i + 1);
+        }
+        // Patch or add the number of required children.
         var iTop = Math.max(eltChildren.length, vdomChildren.length);
-        for (var i = 0; i < iTop; i++) {
+        for (var i = 0; i < numVdomChildren; i++) {
             if (debug)
                 console.log("Patching child", i + 1);
             var vdomChild = vdomChildren[i];
             var eltChild = eltChildren[i];
-            if (vdomChild) {
-                Od.patchDom(vdomChild, eltChild, elt);
-            }
-            else {
-                replaceNode(null, eltChild, elt);
-            }
+            Od.patchDom(vdomChild, eltChild, elt);
             if (debug)
                 console.log("Patched child", i + 1);
         }
@@ -616,7 +635,8 @@ var Od;
         return dom.__Od__component;
     };
     var setDomComponent = function (dom, component) {
-        dom.__Od__component = component;
+        if (dom)
+            dom.__Od__component = component;
     };
     function updateComponent() {
         var component = this;
@@ -626,6 +646,7 @@ var Od;
         setDomComponent(dom, null);
         var newDom = Od.patchDom(vdom, dom, domParent);
         setDomComponent(newDom, component);
+        component.dom = newDom;
     }
     // We track nodes we've deleted so we can clean them up: remove
     // dangling event handlers and that sort of thing.
@@ -694,7 +715,7 @@ var Test;
             Test.addPassReport(name);
         }
         catch (e) {
-            Test.addFailureReport(name, e);
+            Test.addFailureReport(name, JSON.stringify(e));
         }
     };
     Test.runDeferred = function (timeoutInMS, name, action) {
@@ -833,12 +854,75 @@ window.onload = function () {
         chk(C, [0], "#xyz");
         diff(B, C);
     });
-    Test.run("Patch DIV vs DIV(xyz, pqr)", function () {
+    Test.run("Patch DIV vs DIV(pqr, qrs)", function () {
         var A = e("DIV");
-        var B = d(e("DIV", null, ["xyz", "pqr"]));
+        var B = d(e("DIV", null, ["pqr", "qrs"]));
         var C = Od.patchDom(A, B, null);
         chk(C, [], "DIV", 0);
         same(B, C);
+    });
+    Test.run("Patch DIV(xyz) vs DIV(pqr, qrs)", function () {
+        var A = e("DIV", null, "xyz");
+        var B = d(e("DIV", null, ["pqr", "qrs"]));
+        var C = Od.patchDom(A, B, null);
+        chk(C, [], "DIV", 1);
+        chk(C, [0], "#xyz");
+        same(B, C);
+    });
+    Test.run("Patch DIV(xyz, wxy) vs DIV(pqr)", function () {
+        var A = e("DIV", null, ["xyz", "wxy"]);
+        var B = d(e("DIV", null, "pqr"));
+        var C = Od.patchDom(A, B, null);
+        chk(C, [], "DIV", 2);
+        chk(C, [0], "#xyz");
+        chk(C, [1], "#wxy");
+        same(B, C);
+    });
+    Test.run("Cmpt(DIV(xyz) -> DIV(wxy)) vs null", function () {
+        var text = Obs.of("xyz");
+        var cmpt = Od.component(function () { return e("DIV", null, text()); });
+        var A = cmpt;
+        var B = null;
+        var C = Od.patchDom(A, B, null);
+        chk(C, [], "DIV", 1);
+        chk(C, [0], "#xyz");
+        text("wxy");
+        chk(C, [], "DIV", 1);
+        chk(C, [0], "#wxy");
+    });
+    Test.run("DIV(Cmpt(DIV), Cmpt(P)) -> DIV(Cmpt(P), Cmpt(DIV)) vs null", function () {
+        var X = Od.component(function () { return e("DIV"); });
+        var Y = Od.component(function () { return e("P"); });
+        var A1 = e("DIV", null, [X, Y]);
+        var B = null;
+        var C1 = Od.patchDom(A1, B, null);
+        chk(C1, [], "DIV", 2);
+        var C10 = nav(C1, [0]);
+        var C11 = nav(C1, [1]);
+        chk(C10, [], "DIV", 0);
+        chk(C11, [], "P", 0);
+        var A2 = e("DIV", null, [Y, X]);
+        var C2 = Od.patchDom(A2, C1, null);
+        chk(C2, [], "DIV", 2);
+        var C20 = nav(C2, [0]);
+        var C21 = nav(C2, [1]);
+        chk(C20, [], "P", 0);
+        chk(C21, [], "DIV", 0);
+        same(C10, C21);
+        same(C11, C20);
+    });
+    Test.run("Cmpt(DIV(P(xyz) -> pqr)) vs null", function () {
+        var X = e("P", null, "xyz");
+        var T = Obs.of(true);
+        var A = Od.component(function () { return e("DIV", null, T() ? X : "pqr"); });
+        var B = null;
+        var C = Od.patchDom(A, B, null);
+        chk(C, [], "DIV", 1);
+        chk(C, [0], "P", 1);
+        chk(C, [0, 0], "#xyz");
+        T(false);
+        chk(C, [], "DIV", 1);
+        chk(C, [0], "#pqr");
     });
 };
 //# sourceMappingURL=app.js.map

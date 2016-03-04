@@ -31,7 +31,7 @@
             action();
             addPassReport(name);
         } catch (e) {
-            addFailureReport(name, e);
+            addFailureReport(name, JSON.stringify(e));
         }
     };
 

@@ -155,6 +155,16 @@ var Obs;
     };
     // Peek at the value of an observable without establishing a dependency.
     Obs.peek = function (obs) { return obs.value; };
+    // Decide if an object is observable or not.
+    // This just tests whether the object has an 'id' property.
+    Obs.isObservable = function (obs) {
+        return !!obs.id;
+    };
+    // Decide if an observable is computed or not.
+    // This just tests whether the object has a 'fn' property.
+    Obs.isComputed = function (obs) {
+        return !!obs.fn;
+    };
     // Create a subscription on a set of observables.  The action can read
     // any observables without establishing a dependency.  Subscriptions
     // run after all other affected computed observables have run.
@@ -468,9 +478,13 @@ var Od;
                 : [childOrChildren]);
         return { tag: tag, props: propAssocList, children: children };
     };
-    Od.component = function (obs) {
-        var subs = Obs.subscribe([obs], updateComponent);
-        var vdom = { obs: obs, subs: subs, dom: null };
+    Od.component = function (fn) {
+        var obs = (Obs.isObservable(fn)
+            ? fn
+            : Obs.fn(fn));
+        var vdom = { obs: obs, subs: null, dom: null };
+        var subs = Obs.subscribe([obs], updateComponent.bind(vdom));
+        vdom.subs = subs;
         subs(); // Initialise the dom component.
         return vdom;
     };
@@ -619,18 +633,23 @@ var Od;
         var eltChildren = elt.childNodes;
         if (!vdomChildren)
             vdomChildren = emptyIVdomList;
+        var numEltChildren = eltChildren.length;
+        var numVdomChildren = vdomChildren.length;
+        // Remove any extraneous existing children.
+        for (var i = numEltChildren - 1; numVdomChildren <= i; i--) {
+            var eltChild = eltChildren[i];
+            replaceNode(null, eltChild, elt);
+            if (debug)
+                console.log("Removed child", i + 1);
+        }
+        // Patch or add the number of required children.
         var iTop = Math.max(eltChildren.length, vdomChildren.length);
-        for (var i = 0; i < iTop; i++) {
+        for (var i = 0; i < numVdomChildren; i++) {
             if (debug)
                 console.log("Patching child", i + 1);
             var vdomChild = vdomChildren[i];
             var eltChild = eltChildren[i];
-            if (vdomChild) {
-                Od.patchDom(vdomChild, eltChild, elt);
-            }
-            else {
-                replaceNode(null, eltChild, elt);
-            }
+            Od.patchDom(vdomChild, eltChild, elt);
             if (debug)
                 console.log("Patched child", i + 1);
         }
@@ -639,7 +658,8 @@ var Od;
         return dom.__Od__component;
     };
     var setDomComponent = function (dom, component) {
-        dom.__Od__component = component;
+        if (dom)
+            dom.__Od__component = component;
     };
     function updateComponent() {
         var component = this;
@@ -649,6 +669,7 @@ var Od;
         setDomComponent(dom, null);
         var newDom = Od.patchDom(vdom, dom, domParent);
         setDomComponent(newDom, component);
+        component.dom = newDom;
     }
     // We track nodes we've deleted so we can clean them up: remove
     // dangling event handlers and that sort of thing.

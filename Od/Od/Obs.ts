@@ -156,6 +156,16 @@ module Obs {
     // Peek at the value of an observable without establishing a dependency.
     export const peek = <T>(obs: IObservable<T>): T => (obs as Obs<T>).value;
 
+    // Decide if an object is observable or not.
+    // This just tests whether the object has an 'id' property.
+    export const isObservable = (obs: any): boolean =>
+        !!(obs as ObsAny).id;
+
+    // Decide if an observable is computed or not.
+    // This just tests whether the object has a 'fn' property.
+    export const isComputed = (obs: any): boolean =>
+        !!(obs as ObsAny).fn;
+
     export interface ISubscription extends IObservable<void> { }
 
     // Create a subscription on a set of observables.  The action can read

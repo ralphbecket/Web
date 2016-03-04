@@ -126,12 +126,81 @@
         diff(B, C);
     });
 
-    Test.run("Patch DIV vs DIV(xyz, pqr)", () => {
+    Test.run("Patch DIV vs DIV(pqr, qrs)", () => {
         var A = e("DIV");
-        var B = d(e("DIV", null, ["xyz", "pqr"]));
+        var B = d(e("DIV", null, ["pqr", "qrs"]));
         var C = Od.patchDom(A, B, null);
         chk(C, [], "DIV", 0);
         same(B, C);
+    });
+
+    Test.run("Patch DIV(xyz) vs DIV(pqr, qrs)", () => {
+        var A = e("DIV", null, "xyz");
+        var B = d(e("DIV", null, ["pqr", "qrs"]));
+        var C = Od.patchDom(A, B, null);
+        chk(C, [], "DIV", 1);
+        chk(C, [0], "#xyz");
+        same(B, C);
+    });
+
+    Test.run("Patch DIV(xyz, wxy) vs DIV(pqr)", () => {
+        var A = e("DIV", null, ["xyz", "wxy"]);
+        var B = d(e("DIV", null, "pqr"));
+        var C = Od.patchDom(A, B, null);
+        chk(C, [], "DIV", 2);
+        chk(C, [0], "#xyz");
+        chk(C, [1], "#wxy");
+        same(B, C);
+    });
+
+    Test.run("Cmpt(DIV(xyz) -> DIV(wxy)) vs null", () => {
+        const text = Obs.of("xyz");
+        const cmpt = Od.component(() => e("DIV", null, text()));
+        const A = cmpt;
+        const B = null;
+        var C = Od.patchDom(A, B, null);
+        chk(C, [], "DIV", 1);
+        chk(C, [0], "#xyz");
+        text("wxy");
+        chk(C, [], "DIV", 1);
+        chk(C, [0], "#wxy");
+    });
+
+    Test.run("DIV(Cmpt(DIV), Cmpt(P)) -> DIV(Cmpt(P), Cmpt(DIV)) vs null",
+    () => {
+        const X = Od.component(() => e("DIV"));
+        const Y = Od.component(() => e("P"));
+        const A1 = e("DIV", null, [X, Y]);
+        const B = null;
+        const C1 = Od.patchDom(A1, B, null);
+        chk(C1, [], "DIV", 2);
+        const C10 = nav(C1, [0]);
+        const C11 = nav(C1, [1]);
+        chk(C10, [], "DIV", 0);
+        chk(C11, [], "P", 0);
+        const A2 = e("DIV", null, [Y, X]);
+        const C2 = Od.patchDom(A2, C1, null);
+        chk(C2, [], "DIV", 2);
+        const C20 = nav(C2, [0]);
+        const C21 = nav(C2, [1]);
+        chk(C20, [], "P", 0);
+        chk(C21, [], "DIV", 0);
+        same(C10, C21);
+        same(C11, C20);
+    });
+
+    Test.run("Cmpt(DIV(P(xyz) -> pqr)) vs null", () => {
+        const X = e("P", null, "xyz");
+        const T = Obs.of(true);
+        const A = Od.component(() => e("DIV", null, T() ? X : "pqr"));
+        const B = null;
+        const C = Od.patchDom(A, B, null);
+        chk(C, [], "DIV", 1);
+        chk(C, [0], "P", 1);
+        chk(C, [0, 0], "#xyz");
+        T(false);
+        chk(C, [], "DIV", 1);
+        chk(C, [0], "#pqr");
     });
 
 };

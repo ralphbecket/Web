@@ -74,9 +74,15 @@ module Od {
         return { tag: tag, props: propAssocList, children: children };
     };
 
-    export const component = (obs: Obs.IObservable<Vdom>): IVdom => {
-        const subs = Obs.subscribe([obs], updateComponent);
-        const vdom = { obs: obs, subs: subs, dom: null } as IVdom;
+    export const component = (fn: () => Vdom): IVdom => {
+        const obs =
+            ( Obs.isObservable(fn)
+            ? fn as Obs.IObservable<Vdom>
+            : Obs.fn(fn)
+            );
+        const vdom = { obs: obs, subs: null, dom: null } as IVdom;
+        const subs = Obs.subscribe([obs], updateComponent.bind(vdom));
+        vdom.subs = subs;
         subs(); // Initialise the dom component.
         return vdom;
     };
@@ -266,19 +272,24 @@ module Od {
     const emptyIVdomList = [] as IVdom[];
 
     const patchChildren =
-        (elt: HTMLElement, vdomChildren: Vdom[]): void => {
+    (elt: HTMLElement, vdomChildren: Vdom[]): void => {
         const eltChildren = elt.childNodes;
         if (!vdomChildren) vdomChildren = emptyIVdomList;
+        const numEltChildren = eltChildren.length;
+        const numVdomChildren = vdomChildren.length;
+        // Remove any extraneous existing children.
+        for (var i = numEltChildren - 1; numVdomChildren <= i; i--) {
+            const eltChild = eltChildren[i];
+            replaceNode(null, eltChild, elt);
+            if (debug) console.log("Removed child", i + 1);
+        }
+        // Patch or add the number of required children.
         const iTop = Math.max(eltChildren.length, vdomChildren.length);
-        for (var i = 0; i < iTop; i++) {
+        for (var i = 0; i < numVdomChildren; i++) {
             if (debug) console.log("Patching child", i + 1);
             const vdomChild = vdomChildren[i];
             const eltChild = eltChildren[i];
-            if (vdomChild) {
-                patchDom(vdomChild, eltChild, elt);
-            } else {
-                replaceNode(null, eltChild, elt);
-            }
+            patchDom(vdomChild, eltChild, elt);
             if (debug) console.log("Patched child", i + 1);
         }
     };
@@ -287,7 +298,7 @@ module Od {
         (dom as any).__Od__component;
 
     const setDomComponent = (dom: Node, component: IVdom): void => {
-        (dom as any).__Od__component = component;
+        if (dom) (dom as any).__Od__component = component;
     };
 
     function updateComponent(): void {
@@ -298,6 +309,7 @@ module Od {
         setDomComponent(dom, null);
         const newDom = patchDom(vdom, dom, domParent);
         setDomComponent(newDom, component);
+        component.dom = newDom;
     }
 
     // We track nodes we've deleted so we can clean them up: remove

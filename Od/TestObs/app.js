@@ -132,6 +132,16 @@ var Obs;
     };
     // Peek at the value of an observable without establishing a dependency.
     Obs.peek = function (obs) { return obs.value; };
+    // Decide if an object is observable or not.
+    // This just tests whether the object has an 'id' property.
+    Obs.isObservable = function (obs) {
+        return !!obs.id;
+    };
+    // Decide if an observable is computed or not.
+    // This just tests whether the object has a 'fn' property.
+    Obs.isComputed = function (obs) {
+        return !!obs.fn;
+    };
     // Create a subscription on a set of observables.  The action can read
     // any observables without establishing a dependency.  Subscriptions
     // run after all other affected computed observables have run.
@@ -413,7 +423,7 @@ var Test;
             Test.addPassReport(name);
         }
         catch (e) {
-            Test.addFailureReport(name, e);
+            Test.addFailureReport(name, JSON.stringify(e));
         }
     };
     Test.runDeferred = function (timeoutInMS, name, action) {

@@ -28,7 +28,7 @@ var Test;
             Test.addPassReport(name);
         }
         catch (e) {
-            Test.addFailureReport(name, e);
+            Test.addFailureReport(name, JSON.stringify(e));
         }
     };
     Test.runDeferred = function (timeoutInMS, name, action) {
