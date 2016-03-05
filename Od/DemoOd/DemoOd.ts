@@ -50,7 +50,10 @@
     };
 
     addDemo("Nested components",
-        swapper(counter(Obs.of(0)), counter(Obs.of(0)))
+        swapper(
+            counter(Obs.of(0), "color: blue;"),
+            counter(Obs.of(0), "color: red;")
+        )
     );
 
 };
