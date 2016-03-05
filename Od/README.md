@@ -1,4 +1,4 @@
-# Od.ts
+# Od
 (C) Ralph Becket, 2015
 
 ## Observables-based vDOM.
