@@ -104,6 +104,7 @@ var Obs;
     Obs.of = function (x, eq) {
         if (eq === void 0) { eq = defaultEq; }
         var obs = undefined;
+        // We need 'function' so we can use 'arguments'.  Sorry.
         obs = (function (newX) {
             return readOrWriteObs(obs, eq, newX, arguments.length);
         });
@@ -117,6 +118,7 @@ var Obs;
     Obs.fn = function (f, eq) {
         if (eq === void 0) { eq = defaultEq; }
         var obs = undefined;
+        // We need 'function' so we can use 'arguments'.  Sorry.
         obs = (function (newX) {
             return readOrWriteObs(obs, eq, newX, arguments.length);
         });
@@ -130,6 +132,16 @@ var Obs;
     };
     // Peek at the value of an observable without establishing a dependency.
     Obs.peek = function (obs) { return obs.value; };
+    // Decide if an object is observable or not.
+    // This just tests whether the object has an 'id' property.
+    Obs.isObservable = function (obs) {
+        return !!obs.id;
+    };
+    // Decide if an observable is computed or not.
+    // This just tests whether the object has a 'fn' property.
+    Obs.isComputed = function (obs) {
+        return !!obs.fn;
+    };
     // Create a subscription on a set of observables.  The action can read
     // any observables without establishing a dependency.  Subscriptions
     // run after all other affected computed observables have run.
@@ -162,6 +174,7 @@ var Obs;
     };
     // Implementation detail.
     Obs.toStringMaxValueLength = 32;
+    // We need 'function' rather than '=>' so we can use 'this'.  Sorry.
     var obsToString = function () {
         var valueStr = JSON.stringify(this.value);
         if (valueStr && Obs.toStringMaxValueLength < valueStr.length) {
@@ -169,6 +182,7 @@ var Obs;
         }
         return "{obs " + this.id + " = " + valueStr + "}";
     };
+    // We need 'function' rather than '=>' so we can use 'this'.  Sorry.
     var disposeObs = function () {
         var obs = this;
         obs.value = undefined;

@@ -278,13 +278,14 @@ module Od {
         const numEltChildren = eltChildren.length;
         const numVdomChildren = vdomChildren.length;
         // Remove any extraneous existing children.
+        // We do this first, and backwards, because removing a child node
+        // changes the indices of any succeeding children.
         for (var i = numEltChildren - 1; numVdomChildren <= i; i--) {
             const eltChild = eltChildren[i];
             replaceNode(null, eltChild, elt);
             if (debug) console.log("Removed child", i + 1);
         }
         // Patch or add the number of required children.
-        const iTop = Math.max(eltChildren.length, vdomChildren.length);
         for (var i = 0; i < numVdomChildren; i++) {
             if (debug) console.log("Patching child", i + 1);
             const vdomChild = vdomChildren[i];

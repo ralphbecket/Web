@@ -613,6 +613,8 @@ var Od;
         var numEltChildren = eltChildren.length;
         var numVdomChildren = vdomChildren.length;
         // Remove any extraneous existing children.
+        // We do this first, and backwards, because removing a child node
+        // changes the indices of any succeeding children.
         for (var i = numEltChildren - 1; numVdomChildren <= i; i--) {
             var eltChild = eltChildren[i];
             replaceNode(null, eltChild, elt);
@@ -620,7 +622,6 @@ var Od;
                 console.log("Removed child", i + 1);
         }
         // Patch or add the number of required children.
-        var iTop = Math.max(eltChildren.length, vdomChildren.length);
         for (var i = 0; i < numVdomChildren; i++) {
             if (debug)
                 console.log("Patching child", i + 1);
@@ -878,7 +879,7 @@ window.onload = function () {
         chk(C, [1], "#wxy");
         same(B, C);
     });
-    Test.run("Cmpt(DIV(xyz) -> DIV(wxy)) vs null", function () {
+    Test.run("Patch Cmpt(DIV(xyz) -> DIV(wxy)) vs null", function () {
         var text = Obs.of("xyz");
         var cmpt = Od.component(function () { return e("DIV", null, text()); });
         var A = cmpt;
@@ -890,7 +891,7 @@ window.onload = function () {
         chk(C, [], "DIV", 1);
         chk(C, [0], "#wxy");
     });
-    Test.run("DIV(Cmpt(DIV), Cmpt(P)) -> DIV(Cmpt(P), Cmpt(DIV)) vs null", function () {
+    Test.run("Patch DIV(Cmpt(DIV), Cmpt(P)) -> DIV(Cmpt(P), Cmpt(DIV)) vs null", function () {
         var X = Od.component(function () { return e("DIV"); });
         var Y = Od.component(function () { return e("P"); });
         var A1 = e("DIV", null, [X, Y]);
@@ -911,7 +912,7 @@ window.onload = function () {
         same(C10, C21);
         same(C11, C20);
     });
-    Test.run("Cmpt(DIV(P(xyz) -> pqr)) vs null", function () {
+    Test.run("Patch Cmpt(DIV(P(xyz) -> pqr)) vs null", function () {
         var X = e("P", null, "xyz");
         var T = Obs.of(true);
         var A = Od.component(function () { return e("DIV", null, T() ? X : "pqr"); });

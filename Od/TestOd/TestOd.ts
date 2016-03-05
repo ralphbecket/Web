@@ -153,7 +153,7 @@
         same(B, C);
     });
 
-    Test.run("Cmpt(DIV(xyz) -> DIV(wxy)) vs null", () => {
+    Test.run("Patch Cmpt(DIV(xyz) -> DIV(wxy)) vs null", () => {
         const text = Obs.of("xyz");
         const cmpt = Od.component(() => e("DIV", null, text()));
         const A = cmpt;
@@ -166,7 +166,7 @@
         chk(C, [0], "#wxy");
     });
 
-    Test.run("DIV(Cmpt(DIV), Cmpt(P)) -> DIV(Cmpt(P), Cmpt(DIV)) vs null",
+    Test.run("Patch DIV(Cmpt(DIV), Cmpt(P)) -> DIV(Cmpt(P), Cmpt(DIV)) vs null",
     () => {
         const X = Od.component(() => e("DIV"));
         const Y = Od.component(() => e("P"));
@@ -189,7 +189,7 @@
         same(C11, C20);
     });
 
-    Test.run("Cmpt(DIV(P(xyz) -> pqr)) vs null", () => {
+    Test.run("Patch Cmpt(DIV(P(xyz) -> pqr)) vs null", () => {
         const X = e("P", null, "xyz");
         const T = Obs.of(true);
         const A = Od.component(() => e("DIV", null, T() ? X : "pqr"));
