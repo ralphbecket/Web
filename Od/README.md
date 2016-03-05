@@ -1,5 +1,5 @@
 # Od
-(C) Ralph Becket, 2015
+(C) Ralph Becket, 2016
 
 ## Observables-based vDOM.
 
