@@ -1,5 +1,5 @@
 // Obs.ts
-// (C) Ralph Becket, 2015
+// (C) Ralph Becket, 2016
 //
 // My implementation of Knockout-style observables, albeit with deferred
 // updates and dependency ordering to minimise redundant recomputation.
@@ -394,7 +394,7 @@ var Obs;
     };
 })(Obs || (Obs = {}));
 // Od.ts
-// (C) Ralph Becket, 2015
+// (C) Ralph Becket, 2016
 //
 // Observables-based vDOM.
 //
