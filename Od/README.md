@@ -3,14 +3,14 @@
 
 ## Observables-based vDOM.
 
-Virtual-DOM schemes are all the rage.  Essentially, manually updating the
-HTML DOM is hard to do efficiently and correctly.  vDOM schemes instead
-(typically) take the approach of
+Virtual-DOM schemes are all the rage.  Because manually updating the
+HTML DOM is hard to do efficiently and correctly, vDOM schemes instead
+take the following approach:
 - whenever something "interesting" happens (the user clicks something, an
   AJAX request returns, that sort of thing) then an application-provided
   function is called which
 - constructs a new vDOM structure (a cheaper, abstract) representing
-  what the DOM should look like and
+  what the entire DOM should look like and
 - the vDOM library then works out the minimal set of DOM updates required
   to bring the DOM proper into line with the new vDOM representation.
 
@@ -22,9 +22,10 @@ There are typically two flies in the ointment of the schemes I have studied:
    then compared against the entire DOM; and
 2. people want to include "components" in their vDOM, namely reusable
    abstractions (e.g., for auto-complete inputs, grids, etc.).  These
-   things have always felt a little clunky to me in execution.
+   things have always felt a little clunky to me in execution.  They are
+   often the place where the vDOM abstraction of choice starts to leak.
 
-My approach kills both these birds with one stone: observables.  The idea
+My approach kills these two birds with one stone: observables.  The idea
 behind observables is that one can attach functions to them (subscriptions)
 to be executed whenever the value of the observable changes.
 
@@ -78,7 +79,34 @@ node will not be affected).
 
 ### Observables
 
-XXX FILL THIS IN.
+Observables provide a pleasingly declarative solution to many problems.
+
+A _mutable observable_ is a quantity which can be read and updated.
+
+A _computed observable_ is a function which is re-evaluated on any update
+to any _observable_ (mutable or computed) that was read in the previous 
+evaluation of the function.  Computed observables can be read, but not
+updated.
+
+A _subscription_ is a function which is evaluated for its side effect
+whenever one of a given set of observables is updates.
+
+The *Obs* library here is independent of *Od*.  It provides an API
+broadly similar to the observables component of _Knockout_, albeit with
+a couple of key differences:
+- updates can be grouped into atomic "update regions", which can prevent
+the redundant re-evaluation of computed observables etc. when updating
+multiple observables.  For example, say `u` is the computed observable of the
+sum of `x` and `y`; updating `x` then `y` will normally lead to separate
+re-evaluations of `u` on each of those updates.  Updating `x` and `y` in an
+update region has the effect of only updating `u` once, when the end of the
+update region is reached.
+- the recomputation order of computed observables is in dependency order.
+That is if computed observable `u` depends on mutable observable `x` and
+computed observable `v` depends on both `x` and `u`, then `v` will be
+re-evaluated only after `u` when `x` is updated (without this, we may find
+`v` being re-evaluated twice: once for `x`; a second time for `u`).
+
 
 #### TO DO...
 
