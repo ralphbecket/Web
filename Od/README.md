@@ -77,6 +77,11 @@ replaces a child component with some other vDOM structure, then a whole
 new DOM subtree is substituted instead (i.e., the child component's DOM
 node will not be affected).
 
+Component updates are batched by default via requestAnimationFrame (or some
+similar fallback).  This is a standard approach to reducing redrawing 
+pressure on the web browser.  Component updates can be made immediate by 
+setting a global flag.
+
 ### Observables
 
 Observables provide a pleasingly declarative solution to many problems.
@@ -110,7 +115,6 @@ re-evaluated only after `u` when `x` is updated (without this, we may find
 
 #### TO DO...
 
-- Defer and batch DOM updates using some `requestAnimationFrame` scheme.
 - Add a background task to clean up discarded DOM subtrees (mainly just
   removing event handlers to prevent garbage retention).
 - Add sensible support for style properties (at the moment only the
