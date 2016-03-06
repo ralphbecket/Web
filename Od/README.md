@@ -118,7 +118,7 @@ re-evaluated only after `u` when `x` is updated (without this, we may find
 - Add a background task to clean up discarded DOM subtrees (mainly just
   removing event handlers to prevent garbage retention).
 - Add sensible support for style properties (at the moment only the
-  style: "color: red; width: 10em; ..." approach is implemented).
+  `style: "color: red; width: 10em; ..."` approach is implemented).
 - The idea of "keyed lists" is a common optimization for efficient list
   reordering; I need to extend the _patch children_ code to support this.
 - Performance testing.  I expect this thing to rock.
