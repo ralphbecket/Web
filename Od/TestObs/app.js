@@ -199,8 +199,7 @@ var Obs;
         if (argc) {
             if (obs.fn)
                 throw new Error("Computed observables cannot be assigned to.");
-            if (debug)
-                console.log("Updating obs " + obs.id);
+            trace("Updating obs", obs.id);
             var oldX = obs.value;
             obs.value = newX;
             if (!eq(oldX, newX))
@@ -224,8 +223,7 @@ var Obs;
     var enqueueUpdate = function (obs) {
         if (obs.isInUpdateQueue)
             return;
-        if (debug)
-            console.log("  Enqueueing obs " + obs.id);
+        trace("  Enqueueing obs", obs.id);
         // This is usually called "DownHeap" in the literature.
         var i = updateQ.length;
         updateQ.push(obs);
@@ -242,16 +240,14 @@ var Obs;
             j = i >> 1;
         }
         updateQ[i] = obs;
-        if (debug)
-            console.log("    UpdateQ = " + JSON.stringify(updateQ.map(function (x) { return x.id; })));
+        trace("    UpdateQ =", JSON.stringify(updateQ.map(function (x) { return x.id; })));
     };
     var dequeueUpdate = function () {
         if (!updateQ.length)
             return undefined;
         var obs = updateQ[0];
         obs.isInUpdateQueue = false;
-        if (debug)
-            console.log("  Dequeueing obs " + obs.id);
+        trace("  Dequeueing obs", obs.id);
         // This is usually called "UpHeap" in the literature.
         var obsI = updateQ.pop();
         var levelI = obsI.level;
@@ -309,8 +305,7 @@ var Obs;
     // If this is undefined then no dependencies will be recorded.
     var currentDependencies = undefined;
     var reevaluateComputedObs = function (obs) {
-        if (debug)
-            console.log("Reevaluating obs " + obs.id + "...");
+        trace("Reevaluating obs", obs.id, "...");
         var oldCurrentDependencies = currentDependencies;
         currentDependencies = obs.dependencies;
         breakDependencies(obs);
@@ -319,8 +314,7 @@ var Obs;
         currentDependencies = oldCurrentDependencies;
         if (hasChanged)
             updateDependents(obs);
-        if (debug)
-            console.log("Reevaluating obs " + obs.id + " done.");
+        trace("Reevaluating obs", obs.id, "done.");
     };
     // Break the connection between a computed observable and its dependencies
     // prior to reevaluating its value (reevaluation may change the set of
@@ -351,8 +345,7 @@ var Obs;
             if (!obsDepcy.dependents)
                 obsDepcy.dependents = {};
             obsDepcy.dependents[obsID] = obs;
-            if (debug)
-                console.log("  Obs " + obsID + " depends on obs " + obsDepcy.id);
+            trace("  Obs", obsID, "depends on obs", obsDepcy.id);
             var obsDepcyLevel = obsDepcy.level | 0;
             if (obsLevel <= obsDepcyLevel)
                 obsLevel = 1 + obsDepcyLevel;
@@ -391,6 +384,14 @@ var Obs;
             Obs.exceptionReporter(e);
             return false;
         }
+    };
+    // Debugging.
+    var trace = function () {
+        if (!debug)
+            return;
+        if (!window.console || !window.console.log)
+            return;
+        console.log.apply(console, arguments);
     };
 })(Obs || (Obs = {}));
 var Test;

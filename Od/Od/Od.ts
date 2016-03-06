@@ -207,7 +207,7 @@ module Od {
             ? document.createElement(tag)
             : elt
             );
-        if (debug && newElt !== elt) console.log("Created", tag);
+        if (newElt !== elt) trace("Created", tag);
         patchProps(newElt, vdomPropDict);
         patchChildren(newElt, vdomChildren);
         replaceNode(newElt, dom, domParent);
@@ -305,15 +305,15 @@ module Od {
         for (var i = numEltChildren - 1; numVdomChildren <= i; i--) {
             const eltChild = eltChildren[i];
             replaceNode(null, eltChild, elt);
-            if (debug) console.log("Removed child", i + 1);
+            trace("Removed child", i + 1);
         }
         // Patch or add the number of required children.
         for (var i = 0; i < numVdomChildren; i++) {
-            if (debug) console.log("Patching child", i + 1);
+            trace("Patching child", i + 1);
             const vdomChild = vdomChildren[i];
             const eltChild = eltChildren[i];
             patchDom(vdomChild, eltChild, elt);
-            if (debug) console.log("Patched child", i + 1);
+            trace("Patched child", i + 1);
         }
     };
 
@@ -376,7 +376,7 @@ module Od {
             const component = componentsAwaitingUpdate[i];
             const id = component.obs.id;
             if (patchedComponents[id]) continue;
-            if (debug) console.log("Patching queued component #", id);
+            trace("Patching queued component #", id);
             patchUpdatedComponent(component);
             patchedComponents[id] = true;
         }
@@ -410,21 +410,29 @@ module Od {
     (newDom: Node, oldDom: Node, domParent?: Node): void => {
         if (!newDom) {
             if (!oldDom) return;
-            if (debug) console.log("Deleted", oldDom.nodeName || "#text");
+            trace("Deleted", oldDom.nodeName || "#text");
             deleteNode(oldDom);
             if (domParent) domParent.removeChild(oldDom);
         } else {
             if (!oldDom) {
-                if (debug) console.log("Inserted", newDom.nodeName || "#text");
+                trace("Inserted", newDom.nodeName || "#text");
                 if (domParent) domParent.appendChild(newDom);
             } else {
                 if (newDom === oldDom) return;
-                if (debug) console.log("Deleted", oldDom.nodeName || "#text");
+                trace("Deleted", oldDom.nodeName || "#text");
                 deleteNode(oldDom);
                 if (!domParent) return;
-                if (debug) console.log("Inserted", newDom.nodeName || "#text");
+                trace("Inserted", newDom.nodeName || "#text");
                 if (domParent) domParent.replaceChild(newDom, oldDom);
             }
         }
     };
+
+    // Debugging.
+
+    const trace: any = function() {
+        if (!debug) return;
+        if (!window.console || !window.console.log) return;
+        console.log.apply(console, arguments);
+    }
 }

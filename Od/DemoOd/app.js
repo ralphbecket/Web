@@ -199,8 +199,7 @@ var Obs;
         if (argc) {
             if (obs.fn)
                 throw new Error("Computed observables cannot be assigned to.");
-            if (debug)
-                console.log("Updating obs " + obs.id);
+            trace("Updating obs", obs.id);
             var oldX = obs.value;
             obs.value = newX;
             if (!eq(oldX, newX))
@@ -224,8 +223,7 @@ var Obs;
     var enqueueUpdate = function (obs) {
         if (obs.isInUpdateQueue)
             return;
-        if (debug)
-            console.log("  Enqueueing obs " + obs.id);
+        trace("  Enqueueing obs", obs.id);
         // This is usually called "DownHeap" in the literature.
         var i = updateQ.length;
         updateQ.push(obs);
@@ -242,16 +240,14 @@ var Obs;
             j = i >> 1;
         }
         updateQ[i] = obs;
-        if (debug)
-            console.log("    UpdateQ = " + JSON.stringify(updateQ.map(function (x) { return x.id; })));
+        trace("    UpdateQ =", JSON.stringify(updateQ.map(function (x) { return x.id; })));
     };
     var dequeueUpdate = function () {
         if (!updateQ.length)
             return undefined;
         var obs = updateQ[0];
         obs.isInUpdateQueue = false;
-        if (debug)
-            console.log("  Dequeueing obs " + obs.id);
+        trace("  Dequeueing obs", obs.id);
         // This is usually called "UpHeap" in the literature.
         var obsI = updateQ.pop();
         var levelI = obsI.level;
@@ -309,8 +305,7 @@ var Obs;
     // If this is undefined then no dependencies will be recorded.
     var currentDependencies = undefined;
     var reevaluateComputedObs = function (obs) {
-        if (debug)
-            console.log("Reevaluating obs " + obs.id + "...");
+        trace("Reevaluating obs", obs.id, "...");
         var oldCurrentDependencies = currentDependencies;
         currentDependencies = obs.dependencies;
         breakDependencies(obs);
@@ -319,8 +314,7 @@ var Obs;
         currentDependencies = oldCurrentDependencies;
         if (hasChanged)
             updateDependents(obs);
-        if (debug)
-            console.log("Reevaluating obs " + obs.id + " done.");
+        trace("Reevaluating obs", obs.id, "done.");
     };
     // Break the connection between a computed observable and its dependencies
     // prior to reevaluating its value (reevaluation may change the set of
@@ -351,8 +345,7 @@ var Obs;
             if (!obsDepcy.dependents)
                 obsDepcy.dependents = {};
             obsDepcy.dependents[obsID] = obs;
-            if (debug)
-                console.log("  Obs " + obsID + " depends on obs " + obsDepcy.id);
+            trace("  Obs", obsID, "depends on obs", obsDepcy.id);
             var obsDepcyLevel = obsDepcy.level | 0;
             if (obsLevel <= obsDepcyLevel)
                 obsLevel = 1 + obsDepcyLevel;
@@ -391,6 +384,14 @@ var Obs;
             Obs.exceptionReporter(e);
             return false;
         }
+    };
+    // Debugging.
+    var trace = function () {
+        if (!debug)
+            return;
+        if (!window.console || !window.console.log)
+            return;
+        console.log.apply(console, arguments);
     };
 })(Obs || (Obs = {}));
 // Od.ts
@@ -548,8 +549,8 @@ var Od;
         var newElt = (!elt || elt.tagName !== tag || isComponent(elt)
             ? document.createElement(tag)
             : elt);
-        if (debug && newElt !== elt)
-            console.log("Created", tag);
+        if (newElt !== elt)
+            trace("Created", tag);
         patchProps(newElt, vdomPropDict);
         patchChildren(newElt, vdomChildren);
         replaceNode(newElt, dom, domParent);
@@ -637,18 +638,15 @@ var Od;
         for (var i = numEltChildren - 1; numVdomChildren <= i; i--) {
             var eltChild = eltChildren[i];
             replaceNode(null, eltChild, elt);
-            if (debug)
-                console.log("Removed child", i + 1);
+            trace("Removed child", i + 1);
         }
         // Patch or add the number of required children.
         for (var i = 0; i < numVdomChildren; i++) {
-            if (debug)
-                console.log("Patching child", i + 1);
+            trace("Patching child", i + 1);
             var vdomChild = vdomChildren[i];
             var eltChild = eltChildren[i];
             Od.patchDom(vdomChild, eltChild, elt);
-            if (debug)
-                console.log("Patched child", i + 1);
+            trace("Patched child", i + 1);
         }
     };
     var getDomComponent = function (dom) {
@@ -704,8 +702,7 @@ var Od;
             var id = component_1.obs.id;
             if (patchedComponents[id])
                 continue;
-            if (debug)
-                console.log("Patching queued component #", id);
+            trace("Patching queued component #", id);
             patchUpdatedComponent(component_1);
             patchedComponents[id] = true;
         }
@@ -735,36 +732,41 @@ var Od;
         if (!newDom) {
             if (!oldDom)
                 return;
-            if (debug)
-                console.log("Deleted", oldDom.nodeName || "#text");
+            trace("Deleted", oldDom.nodeName || "#text");
             deleteNode(oldDom);
             if (domParent)
                 domParent.removeChild(oldDom);
         }
         else {
             if (!oldDom) {
-                if (debug)
-                    console.log("Inserted", newDom.nodeName || "#text");
+                trace("Inserted", newDom.nodeName || "#text");
                 if (domParent)
                     domParent.appendChild(newDom);
             }
             else {
                 if (newDom === oldDom)
                     return;
-                if (debug)
-                    console.log("Deleted", oldDom.nodeName || "#text");
+                trace("Deleted", oldDom.nodeName || "#text");
                 deleteNode(oldDom);
                 if (!domParent)
                     return;
-                if (debug)
-                    console.log("Inserted", newDom.nodeName || "#text");
+                trace("Inserted", newDom.nodeName || "#text");
                 if (domParent)
                     domParent.replaceChild(newDom, oldDom);
             }
         }
     };
+    // Debugging.
+    var trace = function () {
+        if (!debug)
+            return;
+        if (!window.console || !window.console.log)
+            return;
+        console.log.apply(console, arguments);
+    };
 })(Od || (Od = {}));
 window.onload = function () {
+    // ---- Preamble.
     var e = Od.element;
     var addDemo = function (title, content) {
         var vdom = e("DIV", null, [
@@ -773,6 +775,7 @@ window.onload = function () {
         ]);
         Od.appendChild(vdom, document.body);
     };
+    // ---- A simple incrementing counter component.
     var counter = function (x, style) {
         console.log("-- Creating counter.");
         var inc = function () {
@@ -785,6 +788,8 @@ window.onload = function () {
         return cmpt;
     };
     addDemo("Simple component", counter(Obs.of(0)));
+    // ---- A component that swaps sub-components around.  This demonstrates
+    //      how Od does not re-generate, re-patch, or re-render sub-components.
     var swapper = function (x, y) {
         console.log("-- Creating swapper.");
         var X = Obs.of(x);

@@ -1,4 +1,7 @@
 ﻿window.onload = () => {
+
+    // ---- Preamble.
+
     const e = Od.element;
 
     const addDemo = (title: string, content: Od.Vdom): void => {
@@ -8,6 +11,8 @@
         ]);
         Od.appendChild(vdom, document.body);
     };
+
+    // ---- A simple incrementing counter component.
 
     const counter = (x: Obs.IObservable<number>, style?: string): Od.Vdom => {
         console.log("-- Creating counter.");
@@ -24,6 +29,9 @@
     addDemo("Simple component",
         counter(Obs.of(0))
     );
+
+    // ---- A component that swaps sub-components around.  This demonstrates
+    //      how Od does not re-generate, re-patch, or re-render sub-components.
 
     const swapper = (x: Od.Vdom, y: Od.Vdom): Od.Vdom => {
         console.log("-- Creating swapper.");
