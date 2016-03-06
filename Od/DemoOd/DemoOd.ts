@@ -6,7 +6,7 @@
             e("H3", null, title),
             e("DIV", { className: "DemoContainer" }, content)
         ]);
-        Od.patchDom(vdom, null, document.body);
+        Od.appendChild(vdom, document.body);
     };
 
     const counter = (x: Obs.IObservable<number>, style?: string): Od.Vdom => {

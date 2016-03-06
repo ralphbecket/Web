@@ -1,5 +1,7 @@
 ﻿window.onload = () => {
 
+    Od.deferComponentUpdates = false; // Deferred updates make testing harder.
+
     const e = Od.element;
     const t = Od.text;
     const d = (v: Od.Vdom): Node => Od.patchDom(v, null, null);

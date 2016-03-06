@@ -445,6 +445,7 @@ var Od;
         return ({ text: isNully(text) ? "" : text.toString() });
     };
     ;
+    // Construct a vDOM node.
     Od.element = function (tag, props, childOrChildren) {
         tag = tag.toUpperCase();
         var propAssocList = propsToPropAssocList(props);
@@ -455,6 +456,7 @@ var Od;
                 : [childOrChildren]);
         return { tag: tag, props: propAssocList, children: children };
     };
+    // Construct a component node from a function computing a vDOM node.
     Od.component = function (fn) {
         var obs = (Obs.isObservable(fn)
             ? fn
@@ -465,6 +467,23 @@ var Od;
         subs(); // Initialise the dom component.
         return vdom;
     };
+    // Bind a vDOM node to a DOM node.  For example,
+    // Od.bind(myVdom, document.body.getElementById("foo"));
+    Od.bind = function (vdom, dom) {
+        var domParent = dom.parentNode;
+        Od.patchDom(vdom, dom, domParent);
+    };
+    // Bind a vDOM node to a DOM node as new child.  For example,
+    // Od.appendChild(myVdom, document.body);
+    Od.appendChild = function (vdom, domParent) {
+        var dom = null;
+        Od.patchDom(vdom, dom, domParent);
+    };
+    // Normally, component updates will be batched via requestAnimationFrame
+    // (i.e., they will occur at most once per display frame).  Setting this
+    // to false ensures updates happen eagerly (i.e., they will not be
+    // deferred).
+    Od.deferComponentUpdates = true;
     // Implementation detail.
     var isArray = function (x) { return x instanceof Array; };
     var isNully = function (x) { return x === null || x === undefined; };
@@ -641,6 +660,62 @@ var Od;
     };
     function updateComponent() {
         var component = this;
+        var dom = component.dom;
+        // If a DOM node is already associated with the component, we
+        // can defer the patching operation (which is nicer for the
+        // web browser).
+        if (dom) {
+            enqueueComponentForPatching(component);
+            return;
+        }
+        // Otherwise we have to establish the association up front.
+        var vdom = component.obs();
+        var domParent = dom && dom.parentNode;
+        setDomComponent(dom, null);
+        var newDom = Od.patchDom(vdom, dom, domParent);
+        setDomComponent(newDom, component);
+        component.dom = newDom;
+    }
+    // We defer DOM updates using requestAnimationFrame.  It's better to
+    // batch DOM updates where possible.
+    var requestAnimationFrameSubstitute = function (callback) {
+        return setTimeout(callback, 16); // 16 ms = 1/60 s.
+    };
+    var requestAnimationFrame = window.requestAnimationFrame || requestAnimationFrameSubstitute;
+    var componentsAwaitingUpdate = [];
+    var requestAnimationFrameID = 0;
+    var enqueueComponentForPatching = function (component) {
+        if (!Od.deferComponentUpdates) {
+            patchUpdatedComponent(component);
+            return;
+        }
+        componentsAwaitingUpdate.push(component);
+        if (requestAnimationFrameID)
+            return;
+        requestAnimationFrameID = requestAnimationFrame(patchQueuedComponents);
+    };
+    var patchQueuedComponents = function () {
+        // Ensure we don't patch the same component twice, should it have
+        // been updated more than once.
+        var patchedComponents = {};
+        var iTop = componentsAwaitingUpdate.length;
+        for (var i = 0; i < iTop; i++) {
+            var component_1 = componentsAwaitingUpdate[i];
+            var id = component_1.obs.id;
+            if (patchedComponents[id])
+                continue;
+            if (debug)
+                console.log("Patching queued component #", id);
+            patchUpdatedComponent(component_1);
+            patchedComponents[id] = true;
+        }
+        // Clear the queue.
+        componentsAwaitingUpdate = [];
+        // Tell enqueueComponentForPatching that it needs to make a
+        // new RAF request on the next update.
+        requestAnimationFrameID = 0;
+    };
+    var patchUpdatedComponent = function (component) {
         var vdom = component.obs();
         var dom = component.dom;
         var domParent = dom && dom.parentNode;
@@ -648,18 +723,21 @@ var Od;
         var newDom = Od.patchDom(vdom, dom, domParent);
         setDomComponent(newDom, component);
         component.dom = newDom;
-    }
+    };
     // We track nodes we've deleted so we can clean them up: remove
     // dangling event handlers and that sort of thing.
     // XXX Add a background process to do that.
     var deletedNodes = [];
+    var deleteNode = function (dom) {
+        // XXX FILL THIS IN!
+    };
     var replaceNode = function (newDom, oldDom, domParent) {
         if (!newDom) {
             if (!oldDom)
                 return;
             if (debug)
                 console.log("Deleted", oldDom.nodeName || "#text");
-            deletedNodes.push(oldDom);
+            deleteNode(oldDom);
             if (domParent)
                 domParent.removeChild(oldDom);
         }
@@ -675,7 +753,7 @@ var Od;
                     return;
                 if (debug)
                     console.log("Deleted", oldDom.nodeName || "#text");
-                deletedNodes.push(oldDom);
+                deleteNode(oldDom);
                 if (!domParent)
                     return;
                 if (debug)
@@ -748,6 +826,7 @@ var Test;
     };
 })(Test || (Test = {}));
 window.onload = function () {
+    Od.deferComponentUpdates = false; // Deferred updates make testing harder.
     var e = Od.element;
     var t = Od.text;
     var d = function (v) { return Od.patchDom(v, null, null); };
