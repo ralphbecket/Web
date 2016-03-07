@@ -203,18 +203,16 @@ module Od {
         const vdomChildren = vdom.children;
         const elt = dom as HTMLElement;
         const newElt =
-            ( !elt || elt.tagName !== tag || isComponent(elt)
+            ( !elt || elt.tagName !== tag || domBelongsToComponent(elt)
             ? document.createElement(tag)
             : elt
             );
-        if (newElt !== elt) trace("Created", tag);
+        if (newElt !== elt) trace("  Created", tag);
         patchProps(newElt, vdomPropDict);
         patchChildren(newElt, vdomChildren);
         replaceNode(newElt, dom, domParent);
         return newElt;
     };
-
-    const isComponent = (dom: Node): boolean => !!getDomComponent(dom);
 
     type PropList = string[];
 
@@ -223,10 +221,10 @@ module Od {
     // We attach lists of (ordered) property names to elements so we can
     // perform property updates in O(n) time.
 
-    const getEltPropList = (elt: HTMLElement): PropList =>
+    const getEltPropList = (elt: Node): PropList =>
         (elt as any).__Od__props;
 
-    const setEltPropList = (elt: HTMLElement, propList: PropList): void => {
+    const setEltPropList = (elt: Node, propList: PropList): void => {
         (elt as any).__Od__props = propList;
     };
 
@@ -324,6 +322,9 @@ module Od {
         if (dom) (dom as any).__Od__component = component;
     };
 
+    const domBelongsToComponent = (dom: Node): boolean =>
+        !!getDomComponent(dom);
+
     function updateComponent(): void {
         const component = this as IVdom;
         const dom = component.dom;
@@ -391,38 +392,82 @@ module Od {
         const vdom = component.obs();
         const dom = component.dom;
         const domParent = dom && dom.parentNode;
-        setDomComponent(dom, null);
+        if (domWillBeReplaced(vdom, dom)) {
+            // Component DOM nodes don't get stripped by default.
+            setDomComponent(dom, null);
+            enqueueNodeForStripping(dom);
+        } else {
+            // Component DOM nodes don't get patched by default.
+            setDomComponent(dom, null);
+        }
         const newDom = patchDom(vdom, dom, domParent);
         setDomComponent(newDom, component);
         component.dom = newDom;
     };
 
-    // We track nodes we've deleted so we can clean them up: remove
-    // dangling event handlers and that sort of thing.
-    // XXX Add a background process to do that.
+    // A DOM node will be replaced by a new DOM structure if it
+    // cannot be adjusted to match the corresponding vDOM node.
+    const domWillBeReplaced = (vdom: Vdom, dom: Node): boolean => {
+        if (!dom) return false;
+        if (typeof (vdom) === "string") return dom.nodeType !== Node.TEXT_NODE;
+        return (dom as HTMLElement).nodeName !== (vdom as IVdom).tag;
+    }
 
-    const deletedNodes = [] as Node[];
-    const deleteNode = (dom: Node): void => {
-        // XXX FILL THIS IN!
+    // We track DOM nodes we've discarded so we can clean them up, remove
+    // dangling event handlers and that sort of thing.  We do this in
+    // the background to reduce the time between patching the DOM and
+    // handing control back to the browser so it can re-paint.
+
+    const nodesPendingStripping = [] as Node[];
+
+    const enqueueNodeForStripping = (dom: Node): void => {
+        if (!dom) return;
+        if (domBelongsToComponent(dom)) return; // Can't touch this!
+        trace("  Discarded", dom.nodeName || "#text");
+        nodesPendingStripping.push(dom);
+        if (stripNodesID) return;
+        stripNodesID = setTimeout(stripNodes, 100);
     };
 
+    var stripNodesID = 0;
+
+    const stripNodes = (): void => {
+        var dom = nodesPendingStripping.pop();
+        while (dom) {
+            stripNode(dom);
+            var dom = nodesPendingStripping.pop();
+        }
+    };
+
+    const stripNode = (dom: Node): void => {
+        // We don't want to strip anything owned by a sub-component.
+        if (domBelongsToComponent(dom)) return; // Can't touch this!
+        // Strip any properties...
+        const props = getEltPropList(dom) || [];
+        const numProps = props.length;
+        for (var i = 0; i < numProps; i++) (dom as any)[props[i]] = undefined;
+        // Recursively strip any child nodes.
+        const children = dom.childNodes;
+        const numChildren = children.length;
+        for (var i = 0; i < numChildren; i++) stripNode(children[i]);
+    };
+
+    // Decide how a DOM node should be replaced.
     const replaceNode =
     (newDom: Node, oldDom: Node, domParent?: Node): void => {
         if (!newDom) {
             if (!oldDom) return;
-            trace("Deleted", oldDom.nodeName || "#text");
-            deleteNode(oldDom);
+            enqueueNodeForStripping(oldDom);
             if (domParent) domParent.removeChild(oldDom);
         } else {
             if (!oldDom) {
-                trace("Inserted", newDom.nodeName || "#text");
+                trace("  Inserted", newDom.nodeName || "#text");
                 if (domParent) domParent.appendChild(newDom);
             } else {
                 if (newDom === oldDom) return;
-                trace("Deleted", oldDom.nodeName || "#text");
-                deleteNode(oldDom);
+                enqueueNodeForStripping(oldDom);
                 if (!domParent) return;
-                trace("Inserted", newDom.nodeName || "#text");
+                trace("  Inserted", newDom.nodeName || "#text");
                 if (domParent) domParent.replaceChild(newDom, oldDom);
             }
         }

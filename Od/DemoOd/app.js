@@ -1,3 +1,55 @@
+window.onload = function () {
+    // ---- Preamble.
+    var e = Od.element;
+    var addDemo = function (title, content) {
+        var vdom = e("DIV", null, [
+            e("H3", null, title),
+            e("DIV", { className: "DemoContainer" }, content)
+        ]);
+        Od.appendChild(vdom, document.body);
+    };
+    // ---- A simple incrementing counter component.
+    var counter = function (x, style) {
+        console.log("-- Creating counter.");
+        var inc = function () {
+            x(x() + 1);
+        };
+        var cmpt = Od.component(function () {
+            console.log("-- Updating counter vDOM.");
+            return e("BUTTON", { style: style, onclick: inc }, x().toString());
+        });
+        return cmpt;
+    };
+    addDemo("Simple component", counter(Obs.of(0)));
+    // ---- A component that swaps sub-components around.  This demonstrates
+    //      how Od does not re-generate, re-patch, or re-render sub-components.
+    var swapper = function (x, y) {
+        console.log("-- Creating swapper.");
+        var X = Obs.of(x);
+        var Y = Obs.of(y);
+        var swap = function () {
+            // This updates two observables, but we only want to update the
+            // vDOM once, hence we do the updates in an atomic update region.
+            Obs.startUpdate();
+            var tmp = X();
+            X(Y());
+            Y(tmp);
+            Obs.endUpdate();
+        };
+        var cmpt = Od.component(function () {
+            console.log("-- Updating swapper vDOM.");
+            return e("DIV", null, [
+                X(),
+                e("BUTTON", { onclick: swap }, "Swap!"),
+                Y()
+            ]);
+        });
+        return cmpt;
+    };
+    addDemo("Nested components", swapper(counter(Obs.of(0), "color: blue;"), counter(Obs.of(0), "color: red;")));
+    // ---- More of the same, but deeper.
+    addDemo("Nested nested components", swapper(e("DIV", { style: "border: 1ex solid yellow; display: inline-block;" }, swapper(counter(Obs.of(0), "color: blue;"), counter(Obs.of(0), "color: red;"))), e("DIV", { style: "border: 1ex solid cyan; display: inline-block;" }, swapper(counter(Obs.of(0), "color: blue;"), counter(Obs.of(0), "color: red;")))));
+};
 // Obs.ts
 // (C) Ralph Becket, 2016
 //
@@ -11,7 +63,7 @@
 //      var x = Obs.of(k);
 //      var x = Obs.of(k, eq);
 //          creates a new mutable observable initialised to k with
-//          equality test eq (the default equality test us (p, q) => p === q)
+//          equality test eq (the default equality test is (p, q) => p === q)
 //          used to decide whether the new value is different to the
 //          previous value.  If an observable's value does change, its
 //          dependents (computed observables and subscriptions) will be
@@ -546,17 +598,16 @@ var Od;
         var vdomPropDict = vdom.props;
         var vdomChildren = vdom.children;
         var elt = dom;
-        var newElt = (!elt || elt.tagName !== tag || isComponent(elt)
+        var newElt = (!elt || elt.tagName !== tag || domBelongsToComponent(elt)
             ? document.createElement(tag)
             : elt);
         if (newElt !== elt)
-            trace("Created", tag);
+            trace("  Created", tag);
         patchProps(newElt, vdomPropDict);
         patchChildren(newElt, vdomChildren);
         replaceNode(newElt, dom, domParent);
         return newElt;
     };
-    var isComponent = function (dom) { return !!getDomComponent(dom); };
     var emptyPropList = [];
     // We attach lists of (ordered) property names to elements so we can
     // perform property updates in O(n) time.
@@ -656,6 +707,9 @@ var Od;
         if (dom)
             dom.__Od__component = component;
     };
+    var domBelongsToComponent = function (dom) {
+        return !!getDomComponent(dom);
+    };
     function updateComponent() {
         var component = this;
         var dom = component.dom;
@@ -716,41 +770,89 @@ var Od;
         var vdom = component.obs();
         var dom = component.dom;
         var domParent = dom && dom.parentNode;
-        setDomComponent(dom, null);
+        if (domWillBeReplaced(vdom, dom)) {
+            // Component DOM nodes don't get stripped by default.
+            setDomComponent(dom, null);
+            enqueueNodeForStripping(dom);
+        }
+        else {
+            // Component DOM nodes don't get patched by default.
+            setDomComponent(dom, null);
+        }
         var newDom = Od.patchDom(vdom, dom, domParent);
         setDomComponent(newDom, component);
         component.dom = newDom;
     };
-    // We track nodes we've deleted so we can clean them up: remove
-    // dangling event handlers and that sort of thing.
-    // XXX Add a background process to do that.
-    var deletedNodes = [];
-    var deleteNode = function (dom) {
-        // XXX FILL THIS IN!
+    // A DOM node will be replaced by a new DOM structure if it
+    // cannot be adjusted to match the corresponding vDOM node.
+    var domWillBeReplaced = function (vdom, dom) {
+        if (!dom)
+            return false;
+        if (typeof (vdom) === "string")
+            return dom.nodeType !== Node.TEXT_NODE;
+        return dom.nodeName !== vdom.tag;
     };
+    // We track DOM nodes we've discarded so we can clean them up, remove
+    // dangling event handlers and that sort of thing.  We do this in
+    // the background to reduce the time between patching the DOM and
+    // handing control back to the browser so it can re-paint.
+    var nodesPendingStripping = [];
+    var enqueueNodeForStripping = function (dom) {
+        if (!dom)
+            return;
+        if (domBelongsToComponent(dom))
+            return; // Can't touch this!
+        trace("  Discarded", dom.nodeName || "#text");
+        nodesPendingStripping.push(dom);
+        if (stripNodesID)
+            return;
+        stripNodesID = setTimeout(stripNodes, 100);
+    };
+    var stripNodesID = 0;
+    var stripNodes = function () {
+        var dom = nodesPendingStripping.pop();
+        while (dom) {
+            stripNode(dom);
+            var dom = nodesPendingStripping.pop();
+        }
+    };
+    var stripNode = function (dom) {
+        // We don't want to strip anything owned by a sub-component.
+        if (domBelongsToComponent(dom))
+            return; // Can't touch this!
+        // Strip any properties...
+        var props = getEltPropList(dom) || [];
+        var numProps = props.length;
+        for (var i = 0; i < numProps; i++)
+            dom[props[i]] = undefined;
+        // Recursively strip any child nodes.
+        var children = dom.childNodes;
+        var numChildren = children.length;
+        for (var i = 0; i < numChildren; i++)
+            stripNode(children[i]);
+    };
+    // Decide how a DOM node should be replaced.
     var replaceNode = function (newDom, oldDom, domParent) {
         if (!newDom) {
             if (!oldDom)
                 return;
-            trace("Deleted", oldDom.nodeName || "#text");
-            deleteNode(oldDom);
+            enqueueNodeForStripping(oldDom);
             if (domParent)
                 domParent.removeChild(oldDom);
         }
         else {
             if (!oldDom) {
-                trace("Inserted", newDom.nodeName || "#text");
+                trace("  Inserted", newDom.nodeName || "#text");
                 if (domParent)
                     domParent.appendChild(newDom);
             }
             else {
                 if (newDom === oldDom)
                     return;
-                trace("Deleted", oldDom.nodeName || "#text");
-                deleteNode(oldDom);
+                enqueueNodeForStripping(oldDom);
                 if (!domParent)
                     return;
-                trace("Inserted", newDom.nodeName || "#text");
+                trace("  Inserted", newDom.nodeName || "#text");
                 if (domParent)
                     domParent.replaceChild(newDom, oldDom);
             }
@@ -765,53 +867,3 @@ var Od;
         console.log.apply(console, arguments);
     };
 })(Od || (Od = {}));
-window.onload = function () {
-    // ---- Preamble.
-    var e = Od.element;
-    var addDemo = function (title, content) {
-        var vdom = e("DIV", null, [
-            e("H3", null, title),
-            e("DIV", { className: "DemoContainer" }, content)
-        ]);
-        Od.appendChild(vdom, document.body);
-    };
-    // ---- A simple incrementing counter component.
-    var counter = function (x, style) {
-        console.log("-- Creating counter.");
-        var inc = function () {
-            x(x() + 1);
-        };
-        var cmpt = Od.component(function () {
-            console.log("-- Updating counter vDOM.");
-            return e("BUTTON", { style: style, onclick: inc }, x().toString());
-        });
-        return cmpt;
-    };
-    addDemo("Simple component", counter(Obs.of(0)));
-    // ---- A component that swaps sub-components around.  This demonstrates
-    //      how Od does not re-generate, re-patch, or re-render sub-components.
-    var swapper = function (x, y) {
-        console.log("-- Creating swapper.");
-        var X = Obs.of(x);
-        var Y = Obs.of(y);
-        var swap = function () {
-            // This updates two observables, but we only want to update the
-            // vDOM once, hence we do the updates in an atomic update region.
-            Obs.startUpdate();
-            var tmp = X();
-            X(Y());
-            Y(tmp);
-            Obs.endUpdate();
-        };
-        var cmpt = Od.component(function () {
-            console.log("-- Updating swapper vDOM.");
-            return e("DIV", null, [
-                X(),
-                e("BUTTON", { onclick: swap }, "Swap!"),
-                Y()
-            ]);
-        });
-        return cmpt;
-    };
-    addDemo("Nested components", swapper(counter(Obs.of(0), "color: blue;"), counter(Obs.of(0), "color: red;")));
-};

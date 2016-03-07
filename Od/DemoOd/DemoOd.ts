@@ -64,4 +64,25 @@
         )
     );
 
+    // ---- More of the same, but deeper.
+
+    addDemo("Nested nested components",
+        swapper(
+            e("DIV",
+                { style: "border: 1ex solid yellow; display: inline-block;" },
+                swapper(
+                    counter(Obs.of(0), "color: blue;"),
+                    counter(Obs.of(0), "color: red;")
+                )
+            ),
+            e("DIV",
+                { style: "border: 1ex solid cyan; display: inline-block;" },
+                swapper(
+                    counter(Obs.of(0), "color: blue;"),
+                    counter(Obs.of(0), "color: red;")
+                )
+            )
+        )
+    );
+
 };

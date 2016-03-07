@@ -205,4 +205,18 @@
         chk(C, [0], "#pqr");
     });
 
+    Test.run("Deleting the DOM of a live component.", () => {
+        const X = Obs.of("Hi!");
+        const A = Od.component(() => e("DIV", null, X()));
+        const B = null;
+        const C = Od.patchDom(A, B, null);
+        chk(C, [], "DIV", 1);
+        chk(C, [0], "#Hi!");
+        A.dom = null;
+        X("Bye.");
+        const D = Od.patchDom(A, B, null);
+        chk(D, [], "DIV", 1);
+        chk(D, [0], "#Bye.");
+    });
+
 };

@@ -11,7 +11,7 @@
 //      var x = Obs.of(k);
 //      var x = Obs.of(k, eq);
 //          creates a new mutable observable initialised to k with
-//          equality test eq (the default equality test us (p, q) => p === q)
+//          equality test eq (the default equality test is (p, q) => p === q)
 //          used to decide whether the new value is different to the
 //          previous value.  If an observable's value does change, its
 //          dependents (computed observables and subscriptions) will be
