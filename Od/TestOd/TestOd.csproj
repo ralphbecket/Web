@@ -28,6 +28,14 @@
     <Content Include="..\Od\Od.js">
       <Link>Od.js</Link>
     </Content>
+    <Content Include="..\Od\Od.min.js">
+      <Link>Od.min.js</Link>
+      <DependentUpon>Od.js</DependentUpon>
+    </Content>
+    <Content Include="..\Od\Od.min.min.js">
+      <Link>Od.min.min.js</Link>
+      <DependentUpon>Od.min.js</DependentUpon>
+    </Content>
     <Content Include="..\Test\Test.js">
       <Link>Test.js</Link>
     </Content>

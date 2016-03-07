@@ -25,6 +25,14 @@
     <Content Include="..\Od\Obs.js">
       <Link>Obs.js</Link>
     </Content>
+    <Content Include="..\Od\Obs.min.js">
+      <Link>Obs.min.js</Link>
+      <DependentUpon>Obs.js</DependentUpon>
+    </Content>
+    <Content Include="..\Od\Obs.min.min.js">
+      <Link>Obs.min.min.js</Link>
+      <DependentUpon>Obs.min.js</DependentUpon>
+    </Content>
     <Content Include="..\Test\Test.js">
       <Link>Test.js</Link>
     </Content>
