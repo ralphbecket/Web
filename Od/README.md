@@ -82,6 +82,12 @@ similar fallback).  This is a standard approach to reducing redrawing
 pressure on the web browser.  Component updates can be made immediate by 
 setting a global flag.
 
+Discarded DOM nodes are "stripped" of any properties via a background
+task.  This serves two purposes: memory leaks due to retained event
+handler subscriptions are avoided; and stripping doesn't occupy time
+spent rendering and patching before handing control back to the browser
+for a repaint.
+
 ### Observables
 
 Observables provide a pleasingly declarative solution to many problems.
@@ -115,8 +121,6 @@ re-evaluated only after `u` when `x` is updated (without this, we may find
 
 #### TO DO...
 
-- Add a background task to clean up discarded DOM subtrees (mainly just
-  removing event handlers to prevent garbage retention).
 - Add sensible support for style properties (at the moment only the
   `style: "color: red; width: 10em; ..."` approach is implemented).
 - The idea of "keyed lists" is a common optimization for efficient list
