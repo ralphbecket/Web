@@ -521,9 +521,13 @@ var Obs;
 (function (Obs) {
     // The public interface.
     var debug = true;
+    // The default equality test for observables.
+    Obs.defaultEq = function (x, y) { return x === y; };
+    // The "equality test" for observables that always indicates a change.
+    Obs.alwaysUpdate = function (x, y) { return false; };
     // Create a mutable observable.
     Obs.of = function (x, eq) {
-        if (eq === void 0) { eq = defaultEq; }
+        if (eq === void 0) { eq = Obs.defaultEq; }
         var obs = undefined;
         // We need 'function' so we can use 'arguments'.  Sorry.
         obs = (function (newX) {
@@ -537,7 +541,7 @@ var Obs;
     };
     // Create a computed observable.
     Obs.fn = function (f, eq) {
-        if (eq === void 0) { eq = defaultEq; }
+        if (eq === void 0) { eq = Obs.defaultEq; }
         var obs = undefined;
         // We need 'function' so we can use 'arguments'.  Sorry.
         obs = (function (newX) {
@@ -615,7 +619,6 @@ var Obs;
         for (var i = 0; i < obsAnys.length; i++)
             obsAnys[i].dependents[id] = undefined;
     };
-    var defaultEq = function (x, y) { return x === y; };
     var readOrWriteObs = function (obs, eq, newX, argc) {
         if (argc) {
             if (obs.fn)

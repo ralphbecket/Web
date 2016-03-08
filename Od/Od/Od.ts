@@ -56,7 +56,7 @@ module Od {
     export const text = (text: string): IVdom =>
         ({ text: isNully(text) ? "" : text.toString() });
 
-    interface IProps { [prop: string]: any };
+    export interface IProps { [prop: string]: any };
 
     type VdomChildren = Vdom | Vdom[];
 

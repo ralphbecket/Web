@@ -4,7 +4,7 @@ window.onload = function () {
     var addDemo = function (title, content) {
         var vdom = e("DIV", null, [
             e("H3", null, title),
-            e("DIV", { className: "DemoContainer" }, content)
+            e("DIV", { className: "DemoContainer" }, content())
         ]);
         Od.appendChild(vdom, document.body);
     };
@@ -20,7 +20,9 @@ window.onload = function () {
         });
         return cmpt;
     };
-    addDemo("Simple component", counter(Obs.of(0)));
+    addDemo("Simple components", function () {
+        return counter(Obs.of(0));
+    });
     // ---- A component that swaps sub-components around.  This demonstrates
     //      how Od does not re-generate, re-patch, or re-render sub-components.
     var swapper = function (x, y) {
@@ -46,9 +48,69 @@ window.onload = function () {
         });
         return cmpt;
     };
-    addDemo("Nested components", swapper(counter(Obs.of(0), "color: blue;"), counter(Obs.of(0), "color: red;")));
+    addDemo("Nested components", function () {
+        return swapper(counter(Obs.of(0), "color: blue;"), counter(Obs.of(0), "color: red;"));
+    });
     // ---- More of the same, but deeper.
-    addDemo("Nested nested components", swapper(e("DIV", { style: "border: 1ex solid yellow; display: inline-block;" }, swapper(counter(Obs.of(0), "color: blue;"), counter(Obs.of(0), "color: red;"))), e("DIV", { style: "border: 1ex solid cyan; display: inline-block;" }, swapper(counter(Obs.of(0), "color: blue;"), counter(Obs.of(0), "color: red;")))));
+    addDemo("Nested nested components", function () {
+        var A = counter(Obs.of(0), "color: blue;");
+        var B = counter(Obs.of(0), "color: red;");
+        var C = counter(Obs.of(0), "color: blue;");
+        var D = counter(Obs.of(0), "color: red;");
+        var AB = e("DIV", { style: "border: 1ex solid yellow; display: inline-block;" }, swapper(A, B));
+        var CD = e("DIV", { style: "border: 1ex solid cyan; display: inline-block;" }, swapper(C, D));
+        return swapper(AB, CD);
+    });
+    // ---- Simple inputs.
+    var bindValueOnChange = function (x, props) {
+        if (props === void 0) { props = {}; }
+        props["value"] = x();
+        props["onchange"] = function (e) {
+            x(e.target.value);
+        };
+        return props;
+    };
+    var bindValue = function (x, props) {
+        if (props === void 0) { props = {}; }
+        props["value"] = x();
+        return props;
+    };
+    addDemo("Simple inputs", function () {
+        var X = Obs.of(2);
+        var Y = Obs.of(2);
+        var Z = Obs.fn(function () { return +X() + +Y(); });
+        var props = { style: "width: 2em; text-align: right;" };
+        return e("DIV", null, [
+            e("INPUT", bindValueOnChange(X, props)),
+            " + ",
+            e("INPUT", bindValueOnChange(Y, props)),
+            " = ",
+            Od.component(function () { return Z().toString(); })
+        ]);
+    });
+    // ---- Simple lists.
+    addDemo("Simple lists", function () {
+        var Xs = Obs.of([1], Obs.alwaysUpdate);
+        var inc = function () {
+            var xs = Xs();
+            xs.push(xs.length + 1);
+            Xs(xs);
+        };
+        var dec = function () {
+            var xs = Xs();
+            if (xs.length <= 1)
+                return;
+            xs.pop();
+            Xs(xs);
+        };
+        return e("DIV", null, [
+            e("BUTTON", { onclick: inc, style: "width: 2em;" }, "+"),
+            e("BUTTON", { onclick: dec, style: "width: 2em;" }, "-"),
+            Od.component(function () {
+                return e("DIV", null, Xs().map(function (x) { return e("SPAN", null, " " + x + " "); }));
+            })
+        ]);
+    });
 };
 // Obs.ts
 // (C) Ralph Becket, 2016
@@ -152,9 +214,13 @@ var Obs;
 (function (Obs) {
     // The public interface.
     var debug = true;
+    // The default equality test for observables.
+    Obs.defaultEq = function (x, y) { return x === y; };
+    // The "equality test" for observables that always indicates a change.
+    Obs.alwaysUpdate = function (x, y) { return false; };
     // Create a mutable observable.
     Obs.of = function (x, eq) {
-        if (eq === void 0) { eq = defaultEq; }
+        if (eq === void 0) { eq = Obs.defaultEq; }
         var obs = undefined;
         // We need 'function' so we can use 'arguments'.  Sorry.
         obs = (function (newX) {
@@ -168,7 +234,7 @@ var Obs;
     };
     // Create a computed observable.
     Obs.fn = function (f, eq) {
-        if (eq === void 0) { eq = defaultEq; }
+        if (eq === void 0) { eq = Obs.defaultEq; }
         var obs = undefined;
         // We need 'function' so we can use 'arguments'.  Sorry.
         obs = (function (newX) {
@@ -246,7 +312,6 @@ var Obs;
         for (var i = 0; i < obsAnys.length; i++)
             obsAnys[i].dependents[id] = undefined;
     };
-    var defaultEq = function (x, y) { return x === y; };
     var readOrWriteObs = function (obs, eq, newX, argc) {
         if (argc) {
             if (obs.fn)

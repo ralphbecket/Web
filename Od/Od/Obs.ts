@@ -117,6 +117,12 @@ module Obs {
 
     type EqualityTest<T> = (oldX: T, newX: T) => boolean;
 
+    // The default equality test for observables.
+    export const defaultEq = <T>(x: T, y: T) => x === y;
+
+    // The "equality test" for observables that always indicates a change.
+    export const alwaysUpdate = <T>(x: T, y: T) => false;
+
     // Create a mutable observable.
     export const of =
     <T>(x: T, eq: EqualityTest<T> = defaultEq): IObservable<T> => {
@@ -226,8 +232,6 @@ module Obs {
         for (var i = 0; i < obsAnys.length; i++)
             obsAnys[i].dependents[id] = undefined;
     };
-
-    const defaultEq = <T>(x: T, y: T) => x === y;
 
     const readOrWriteObs =
     <T>(obs: Obs<T>, eq: EqualityTest<T>, newX: T, argc: number): T => {

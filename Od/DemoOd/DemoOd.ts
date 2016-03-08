@@ -4,10 +4,10 @@
 
     const e = Od.element;
 
-    const addDemo = (title: string, content: Od.Vdom): void => {
+    const addDemo = (title: string, content: () => Od.Vdom): void => {
         const vdom = e("DIV", null, [
             e("H3", null, title),
-            e("DIV", { className: "DemoContainer" }, content)
+            e("DIV", { className: "DemoContainer" }, content())
         ]);
         Od.appendChild(vdom, document.body);
     };
@@ -26,7 +26,7 @@
         return cmpt;
     };
 
-    addDemo("Simple component",
+    addDemo("Simple components", () =>
         counter(Obs.of(0))
     );
 
@@ -57,7 +57,7 @@
         return cmpt;
     };
 
-    addDemo("Nested components",
+    addDemo("Nested components", () =>
         swapper(
             counter(Obs.of(0), "color: blue;"),
             counter(Obs.of(0), "color: red;")
@@ -66,23 +66,82 @@
 
     // ---- More of the same, but deeper.
 
-    addDemo("Nested nested components",
-        swapper(
-            e("DIV",
-                { style: "border: 1ex solid yellow; display: inline-block;" },
-                swapper(
-                    counter(Obs.of(0), "color: blue;"),
-                    counter(Obs.of(0), "color: red;")
-                )
-            ),
-            e("DIV",
-                { style: "border: 1ex solid cyan; display: inline-block;" },
-                swapper(
-                    counter(Obs.of(0), "color: blue;"),
-                    counter(Obs.of(0), "color: red;")
+    addDemo("Nested nested components", () => {
+        const A = counter(Obs.of(0), "color: blue;");
+        const B = counter(Obs.of(0), "color: red;");
+        const C = counter(Obs.of(0), "color: blue;");
+        const D = counter(Obs.of(0), "color: red;");
+        const AB = e("DIV",
+            { style: "border: 1ex solid yellow; display: inline-block;" },
+            swapper(A, B)
+        );
+        const CD = e("DIV",
+            { style: "border: 1ex solid cyan; display: inline-block;" },
+            swapper(C, D)
+        );
+        return swapper(AB, CD);
+    });
+
+    // ---- Simple inputs.
+
+    const bindValueOnChange = <T>(
+        x: Obs.IObservable<T>,
+        props: Od.IProps = {}
+    ): Od.IProps => {
+        props["value"] = x();
+        props["onchange"] = (e: Event) => {
+            x((e.target as any).value);
+        };
+        return props;
+    }
+
+    const bindValue = <T>(
+        x: Obs.IObservable<T>,
+        props: Od.IProps = {}
+    ): Od.IProps => {
+        props["value"] = x();
+        return props;
+    };
+
+    addDemo("Simple inputs", () => {
+        const X = Obs.of(2);
+        const Y = Obs.of(2);
+        const Z = Obs.fn(() => +X() + +Y());
+        const props = { style: "width: 2em; text-align: right;" } as Od.IProps;
+        
+        return e("DIV", null, [
+            e("INPUT", bindValueOnChange(X, props)),
+            " + ",
+            e("INPUT", bindValueOnChange(Y, props)),
+            " = ",
+            Od.component(() => Z().toString())
+        ]);
+    });
+
+    // ---- Simple lists.
+
+    addDemo("Simple lists", () => {
+        const Xs = Obs.of([1], Obs.alwaysUpdate);
+        const inc = () => {
+            const xs = Xs();
+            xs.push(xs.length + 1);
+            Xs(xs);
+        };
+        const dec = () => {
+            const xs = Xs();
+            if (xs.length <= 1) return;
+            xs.pop();
+            Xs(xs);
+        };
+        return e("DIV", null, [
+            e("BUTTON", { onclick: inc, style: "width: 2em;" }, "+"),
+            e("BUTTON", { onclick: dec, style: "width: 2em;" }, "-"),
+            Od.component(() =>
+                e("DIV", null,
+                    Xs().map(x => e("SPAN", null, " " + x + " "))
                 )
             )
-        )
-    );
+        ]);
+    });
 
 };
