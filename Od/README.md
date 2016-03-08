@@ -118,6 +118,14 @@ computed observable `v` depends on both `x` and `u`, then `v` will be
 re-evaluated only after `u` when `x` is updated (without this, we may find
 `v` being re-evaluated twice: once for `x`; a second time for `u`).
 
+#### Bragging
+
+The combined Obs and Od libraries currently come in at 2.9 KBytes
+minified and gzipped.
+
+Thanks partly due to careful attention to invariants during design and
+partly due to using TypeScript for development, virtually everything here
+worked first time, if you can believe such a thing.
 
 #### TO DO...
 
