@@ -219,4 +219,33 @@
         chk(D, [0], "#Bye.");
     });
 
+    Test.run("Keyed lists.", () => {
+        const x = e("P", { key: "x" });
+        const y = e("SPAN", { key: "y" });
+        const z = e("TABLE", { key: "z" });
+        const A1 = e("DIV", { keyed: true }, [x, y, z]);
+        const B = null;
+        const C = Od.patchDom(A1, B, null);
+        chk(C, [], "DIV", 3);
+        chk(C, [0], "P");
+        chk(C, [1], "SPAN");
+        chk(C, [2], "TABLE");
+        const C0 = nav(C, [0]);
+        const C1 = nav(C, [1]);
+        const C2 = nav(C, [2]);
+        const A2 = e("DIV", { keyed: true }, [y, z, x]);
+        const D = Od.patchDom(A2, C, null);
+        chk(D, [], "DIV", 3);
+        chk(D, [0], "SPAN");
+        chk(D, [1], "TABLE");
+        chk(D, [2], "P");
+        const D0 = nav(D, [0]);
+        const D1 = nav(D, [1]);
+        const D2 = nav(D, [2]);
+        same(C0, D2);
+        same(C1, D0);
+        same(C2, D1);
+        throw ("argh");
+    });
+
 };

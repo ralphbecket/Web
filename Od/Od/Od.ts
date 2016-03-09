@@ -293,8 +293,9 @@ module Od {
 
     const patchChildren =
     (elt: HTMLElement, vdomChildren: Vdom[]): void => {
-        const eltChildren = elt.childNodes;
         if (!vdomChildren) vdomChildren = emptyIVdomList;
+        if ((elt as any).keyed) reorderKeyedChildren(vdomChildren, elt);
+        const eltChildren = elt.childNodes;
         const numEltChildren = eltChildren.length;
         const numVdomChildren = vdomChildren.length;
         // Remove any extraneous existing children.
@@ -314,6 +315,71 @@ module Od {
             trace("Patched child", i + 1);
         }
     };
+
+    // A common vDOM optimisation for supporting lists is to associate
+    // each list item with a key property.  Keyed child nodes are reordered
+    // to suit the vDOM before patching.  This can dramatically reduce
+    // DOM node creation when, say, the list order changes or an item
+    // is removed.  In Od we further insist that the parent element have
+    // the property 'keyed: true'.
+    const reorderKeyedChildren =
+    (vdomChildren: Vdom[], dom: Node): void => {
+
+        trace("  Reordering keyed children.");
+
+        const vChildren = vdomChildren as IVdom[]; // This is safe.
+        const domFirstChild = dom.firstChild;
+        const numVChildren = vChildren.length;
+        if (numVChildren === 0 || !domFirstChild) return;
+
+        // Construct a mapping from keys to DOM nodes.
+        const keyToDom = {} as { [key: string]: Node };
+        for (var domI = dom.firstChild; domI; domI = domI.nextSibling) {
+            const keyI = (domI as any).key;
+            if (isNully(keyI)) return; // We insist that all children have keys.
+            keyToDom[keyI] = domI;
+        }
+
+        // Reorder the DOM nodes to match the vDOM order, unless
+        // we need to insert a new node.
+        var domI = dom.firstChild;
+        for (var i = 0; i < numVChildren; i++) {
+            var vdomI = vChildren[i];
+            var vTagI = vdomI.tag;
+            if (isNully(vTagI) && vdomI.dom) vTagI = vdomI.dom.nodeName;
+            if (!vTagI) return; // This only works for ordinary elements.
+            const vKeyI = vdomPropsKey(vdomI.props);
+            if (isNully(vKeyI)) return;
+            const dKeyI = domI && (domI as any).key;
+            const domVKeyI = keyToDom[vKeyI];
+            if (domI) {
+                if (dKeyI === vKeyI) {
+                    domI = domI.nextSibling;
+                } else if (domVKeyI) {
+                    dom.insertBefore(domVKeyI, domI);
+                } else {
+                    dom.insertBefore(document.createElement(vTagI), domI);
+                }
+            } else if (domVKeyI) {
+                dom.appendChild(domVKeyI);
+            } else {
+                dom.appendChild(document.createElement(vTagI));
+            }
+        }
+    };
+
+    const lookupPropsAssocList =
+    (props: PropAssocList, key: string): any => {
+        if (!props) return null;
+        const iTop = props.length;
+        for (var i = 0; i < iTop; i += 2) {
+            if (props[i] === key) return props[i + 1];
+        }
+        return null;
+    };
+
+    const vdomPropsKey = (props: PropAssocList): string =>
+        lookupPropsAssocList(props, "key");
 
     const getDomComponent = (dom: Node): IVdom =>
         (dom as any).__Od__component;

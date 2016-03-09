@@ -629,9 +629,11 @@ var Od;
     };
     var emptyIVdomList = [];
     var patchChildren = function (elt, vdomChildren) {
-        var eltChildren = elt.childNodes;
         if (!vdomChildren)
             vdomChildren = emptyIVdomList;
+        if (elt.keyed)
+            reorderKeyedChildren(vdomChildren, elt);
+        var eltChildren = elt.childNodes;
         var numEltChildren = eltChildren.length;
         var numVdomChildren = vdomChildren.length;
         // Remove any extraneous existing children.
@@ -650,6 +652,74 @@ var Od;
             Od.patchDom(vdomChild, eltChild, elt);
             trace("Patched child", i + 1);
         }
+    };
+    // A common vDOM optimisation for supporting lists is to associate
+    // each list item with a key property.  Keyed child nodes are reordered
+    // to suit the vDOM before patching.  This can dramatically reduce
+    // DOM node creation when, say, the list order changes or an item
+    // is removed.  In Od we further insist that the parent element have
+    // the property 'keyed: true'.
+    var reorderKeyedChildren = function (vdomChildren, dom) {
+        trace("  Reordering keyed children.");
+        var vChildren = vdomChildren; // This is safe.
+        var domFirstChild = dom.firstChild;
+        var numVChildren = vChildren.length;
+        if (numVChildren === 0 || !domFirstChild)
+            return;
+        // Construct a mapping from keys to DOM nodes.
+        var keyToDom = {};
+        for (var domI = dom.firstChild; domI; domI = domI.nextSibling) {
+            var keyI = domI.key;
+            if (isNully(keyI))
+                return; // We insist that all children have keys.
+            keyToDom[keyI] = domI;
+        }
+        // Reorder the DOM nodes to match the vDOM order, unless
+        // we need to insert a new node.
+        var domI = dom.firstChild;
+        for (var i = 0; i < numVChildren; i++) {
+            var vdomI = vChildren[i];
+            var vTagI = vdomI.tag;
+            if (isNully(vTagI) && vdomI.dom)
+                vTagI = vdomI.dom.nodeName;
+            if (!vTagI)
+                return; // This only works for ordinary elements.
+            var vKeyI = vdomPropsKey(vdomI.props);
+            if (isNully(vKeyI))
+                return;
+            var dKeyI = domI && domI.key;
+            var domVKeyI = keyToDom[vKeyI];
+            if (domI) {
+                if (dKeyI === vKeyI) {
+                    domI = domI.nextSibling;
+                }
+                else if (domVKeyI) {
+                    dom.insertBefore(domVKeyI, domI);
+                }
+                else {
+                    dom.insertBefore(document.createElement(vTagI), domI);
+                }
+            }
+            else if (domVKeyI) {
+                dom.appendChild(domVKeyI);
+            }
+            else {
+                dom.appendChild(document.createElement(vTagI));
+            }
+        }
+    };
+    var lookupPropsAssocList = function (props, key) {
+        if (!props)
+            return null;
+        var iTop = props.length;
+        for (var i = 0; i < iTop; i += 2) {
+            if (props[i] === key)
+                return props[i + 1];
+        }
+        return null;
+    };
+    var vdomPropsKey = function (props) {
+        return lookupPropsAssocList(props, "key");
     };
     var getDomComponent = function (dom) {
         return dom.__Od__component;
@@ -1070,6 +1140,34 @@ window.onload = function () {
         var D = Od.patchDom(A, B, null);
         chk(D, [], "DIV", 1);
         chk(D, [0], "#Bye.");
+    });
+    Test.run("Keyed lists.", function () {
+        var x = e("P", { key: "x" });
+        var y = e("SPAN", { key: "y" });
+        var z = e("TABLE", { key: "z" });
+        var A1 = e("DIV", { keyed: true }, [x, y, z]);
+        var B = null;
+        var C = Od.patchDom(A1, B, null);
+        chk(C, [], "DIV", 3);
+        chk(C, [0], "P");
+        chk(C, [1], "SPAN");
+        chk(C, [2], "TABLE");
+        var C0 = nav(C, [0]);
+        var C1 = nav(C, [1]);
+        var C2 = nav(C, [2]);
+        var A2 = e("DIV", { keyed: true }, [y, z, x]);
+        var D = Od.patchDom(A2, C, null);
+        chk(D, [], "DIV", 3);
+        chk(D, [0], "SPAN");
+        chk(D, [1], "TABLE");
+        chk(D, [2], "P");
+        var D0 = nav(D, [0]);
+        var D1 = nav(D, [1]);
+        var D2 = nav(D, [2]);
+        same(C0, D2);
+        same(C1, D0);
+        same(C2, D1);
+        throw ("argh");
     });
 };
 //# sourceMappingURL=app.js.map
