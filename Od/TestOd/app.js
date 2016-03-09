@@ -1167,7 +1167,6 @@ window.onload = function () {
         same(C0, D2);
         same(C1, D0);
         same(C2, D1);
-        throw ("argh");
     });
 };
 //# sourceMappingURL=app.js.map
