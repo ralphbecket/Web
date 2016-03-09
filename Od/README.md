@@ -118,6 +118,14 @@ computed observable `v` depends on both `x` and `u`, then `v` will be
 re-evaluated only after `u` when `x` is updated (without this, we may find
 `v` being re-evaluated twice: once for `x`; a second time for `u`).
 
+#### Bragging
+
+The combined Obs and Od libraries currently come in at 2.9 KBytes
+minified and gzipped.
+
+Thanks partly due to careful attention to invariants during design and
+partly due to using TypeScript for development, virtually everything here
+worked first time, if you can believe such a thing.
 
 #### TO DO...
 
@@ -125,4 +133,5 @@ re-evaluated only after `u` when `x` is updated (without this, we may find
   `style: "color: red; width: 10em; ..."` approach is implemented).
 - The idea of "keyed lists" is a common optimization for efficient list
   reordering; I need to extend the _patch children_ code to support this.
+- Add lifecycle hooks for components.
 - Performance testing.  I expect this thing to rock.
