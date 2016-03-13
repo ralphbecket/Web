@@ -47,7 +47,7 @@ module Od {
 
     const debug = true;
 
-    // Public interface.
+    // ---- Public interface. ----
 
     export interface IVdom { }
 
@@ -89,6 +89,32 @@ module Od {
         return vdom;
     };
 
+    // Construct a static DOM subtree from an HTML string.
+    // Note: this vDOM node can, like DOM nodes, only appear
+    // in one place in the resulting DOM!  If you need copies,
+    // you need duplicate fromHtml instances.
+    export const fromHtml = (html: string): IVdom => {
+        // First, turn the HTML into a DOM tree.
+        const tmp = document.createElement("DIV");
+        tmp.innerHTML = html;
+        const dom = tmp.firstChild;
+        // We create a pretend component to host the HTML.
+        const vdom =
+            { obs: staticHtmlObs, subs: staticHtmlSubs, dom: dom } as IVdom;
+        return vdom;
+    };
+
+    // Take a DOM subtree directly.
+    // Note: this vDOM node can, like DOM nodes, only appear
+    // in one place in the resulting DOM!  If you need copies,
+    // you need duplicate fromDom instances.
+    export const fromDom = (dom: Node): IVdom => {
+        // We create a pretend component to host the HTML.
+        const vdom =
+            { obs: staticHtmlObs, subs: staticHtmlSubs, dom: dom } as IVdom;
+        return vdom;
+    };
+
     // Bind a vDOM node to a DOM node.  For example,
     // Od.bind(myVdom, document.body.getElementById("foo"));
     export const bind = (vdom: Vdom, dom: Node): void => {
@@ -109,30 +135,10 @@ module Od {
     // deferred).
     export var deferComponentUpdates = true;
 
-    // Implementation detail.
+    // ---- Implementation detail. ----
 
     const isArray = (x: any): boolean => x instanceof Array;
     const isNully = (x: any): boolean => x === null || x === undefined;
-
-    // This is always of even length and consists of consecutive
-    // property-name (string) property-value (any) pairs, in ascending
-    // property-name order.  The reason for this is it allows us to
-    // do property patching in O(n) time.
-    type PropAssocList = any[];
-
-    const emptyPropDict = [] as PropAssocList;
-
-    const propsToPropAssocList = (props: IProps): PropAssocList => {
-        if (!props) return null;
-        const propAssocList = [] as PropAssocList;
-        var keys = Object.keys(props).sort();
-        var iTop = keys.length;
-        for (var i = 0; i < iTop; i++) {
-            const key = keys[i];
-            propAssocList.push(key, props[key]);
-        }
-        return propAssocList;
-    };
 
     export interface IVdom {
 
@@ -212,20 +218,6 @@ module Od {
         patchChildren(newElt, vdomChildren);
         replaceNode(newElt, dom, domParent);
         return newElt;
-    };
-
-    type PropList = string[];
-
-    const emptyPropList = [] as PropList;
-
-    // We attach lists of (ordered) property names to elements so we can
-    // perform property updates in O(n) time.
-
-    const getEltPropList = (elt: Node): PropList =>
-        (elt as any).__Od__props;
-
-    const setEltPropList = (elt: Node, propList: PropList): void => {
-        (elt as any).__Od__props = propList;
     };
 
     // We perform an ordered traversal of the old properties of the element
@@ -366,6 +358,46 @@ module Od {
                 dom.appendChild(document.createElement(vTagI));
             }
         }
+    };
+
+    // This is used for the static HTML constructors to pretend they're
+    // derived from observables.
+
+    const staticHtmlObs = Obs.of(null as IVdom);
+    const staticHtmlSubs = null as Obs.ISubscription;
+
+    // This is always of even length and consists of consecutive
+    // property-name (string) property-value (any) pairs, in ascending
+    // property-name order.  The reason for this is it allows us to
+    // do property patching in O(n) time.
+    type PropAssocList = any[];
+
+    const emptyPropDict = [] as PropAssocList;
+
+    const propsToPropAssocList = (props: IProps): PropAssocList => {
+        if (!props) return null;
+        const propAssocList = [] as PropAssocList;
+        var keys = Object.keys(props).sort();
+        var iTop = keys.length;
+        for (var i = 0; i < iTop; i++) {
+            const key = keys[i];
+            propAssocList.push(key, props[key]);
+        }
+        return propAssocList;
+    };
+
+    type PropList = string[];
+
+    const emptyPropList = [] as PropList;
+
+    // We attach lists of (ordered) property names to elements so we can
+    // perform property updates in O(n) time.
+
+    const getEltPropList = (elt: Node): PropList =>
+        (elt as any).__Od__props;
+
+    const setEltPropList = (elt: Node, propList: PropList): void => {
+        (elt as any).__Od__props = propList;
     };
 
     const lookupPropsAssocList =

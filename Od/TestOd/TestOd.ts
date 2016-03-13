@@ -247,4 +247,15 @@
         same(C2, D1);
     });
 
+    Test.run("Dom from HTML strings.", () => {
+        const X = Od.fromHtml("<H4>xyz<SPAN>pqr</SPAN></H4>");
+        const A = e("DIV", null, X);
+        const B = null;
+        const C = Od.patchDom(A, B, null);
+        chk(C, [], "DIV", 1);
+        chk(C, [0], "H4", 2);
+        chk(C, [0, 0], "#xyz");
+        chk(C, [0, 1], "SPAN", 1);
+        chk(C, [0, 1, 0], "#pqr")
+    });
 };

@@ -471,6 +471,28 @@ var Od;
         subs(); // Initialise the dom component.
         return vdom;
     };
+    // Construct a static DOM subtree from an HTML string.
+    // Note: this vDOM node can, like DOM nodes, only appear
+    // in one place in the resulting DOM!  If you need copies,
+    // you need duplicate fromHtml instances.
+    Od.fromHtml = function (html) {
+        // First, turn the HTML into a DOM tree.
+        var tmp = document.createElement("DIV");
+        tmp.innerHTML = html;
+        var dom = tmp.firstChild;
+        // We create a pretend component to host the HTML.
+        var vdom = { obs: staticHtmlObs, subs: staticHtmlSubs, dom: dom };
+        return vdom;
+    };
+    // Take a DOM subtree directly.
+    // Note: this vDOM node can, like DOM nodes, only appear
+    // in one place in the resulting DOM!  If you need copies,
+    // you need duplicate fromDom instances.
+    Od.fromDom = function (dom) {
+        // We create a pretend component to host the HTML.
+        var vdom = { obs: staticHtmlObs, subs: staticHtmlSubs, dom: dom };
+        return vdom;
+    };
     // Bind a vDOM node to a DOM node.  For example,
     // Od.bind(myVdom, document.body.getElementById("foo"));
     Od.bind = function (vdom, dom) {
@@ -488,22 +510,9 @@ var Od;
     // to false ensures updates happen eagerly (i.e., they will not be
     // deferred).
     Od.deferComponentUpdates = true;
-    // Implementation detail.
+    // ---- Implementation detail. ----
     var isArray = function (x) { return x instanceof Array; };
     var isNully = function (x) { return x === null || x === undefined; };
-    var emptyPropDict = [];
-    var propsToPropAssocList = function (props) {
-        if (!props)
-            return null;
-        var propAssocList = [];
-        var keys = Object.keys(props).sort();
-        var iTop = keys.length;
-        for (var i = 0; i < iTop; i++) {
-            var key = keys[i];
-            propAssocList.push(key, props[key]);
-        }
-        return propAssocList;
-    };
     ;
     Od.patchDom = function (vdomOrString, dom, domParent) {
         var vdom = (typeof (vdomOrString) === "string"
@@ -558,15 +567,6 @@ var Od;
         patchChildren(newElt, vdomChildren);
         replaceNode(newElt, dom, domParent);
         return newElt;
-    };
-    var emptyPropList = [];
-    // We attach lists of (ordered) property names to elements so we can
-    // perform property updates in O(n) time.
-    var getEltPropList = function (elt) {
-        return elt.__Od__props;
-    };
-    var setEltPropList = function (elt, propList) {
-        elt.__Od__props = propList;
     };
     // We perform an ordered traversal of the old properties of the element
     // (if any) and the new properties, deleting, updating, and adding as
@@ -707,6 +707,32 @@ var Od;
                 dom.appendChild(document.createElement(vTagI));
             }
         }
+    };
+    // This is used for the static HTML constructors to pretend they're
+    // derived from observables.
+    var staticHtmlObs = Obs.of(null);
+    var staticHtmlSubs = null;
+    var emptyPropDict = [];
+    var propsToPropAssocList = function (props) {
+        if (!props)
+            return null;
+        var propAssocList = [];
+        var keys = Object.keys(props).sort();
+        var iTop = keys.length;
+        for (var i = 0; i < iTop; i++) {
+            var key = keys[i];
+            propAssocList.push(key, props[key]);
+        }
+        return propAssocList;
+    };
+    var emptyPropList = [];
+    // We attach lists of (ordered) property names to elements so we can
+    // perform property updates in O(n) time.
+    var getEltPropList = function (elt) {
+        return elt.__Od__props;
+    };
+    var setEltPropList = function (elt, propList) {
+        elt.__Od__props = propList;
     };
     var lookupPropsAssocList = function (props, key) {
         if (!props)
@@ -1167,6 +1193,17 @@ window.onload = function () {
         same(C0, D2);
         same(C1, D0);
         same(C2, D1);
+    });
+    Test.run("Dom from HTML strings.", function () {
+        var X = Od.fromHtml("<H4>xyz<SPAN>pqr</SPAN></H4>");
+        var A = e("DIV", null, X);
+        var B = null;
+        var C = Od.patchDom(A, B, null);
+        chk(C, [], "DIV", 1);
+        chk(C, [0], "H4", 2);
+        chk(C, [0, 0], "#xyz");
+        chk(C, [0, 1], "SPAN", 1);
+        chk(C, [0, 1, 0], "#pqr");
     });
 };
 //# sourceMappingURL=app.js.map
