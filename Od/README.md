@@ -70,6 +70,13 @@ is replaced and a new DOM node created to match the vDOM node.  Properties
 on updated (i.e., not replaced) DOM nodes are updated efficiently.  Patching
 procedes recursively into child nodes.
 
+As usual, "keyed" lists have special support: if a parent node has
+property "keyed: true" and each of its children have a string or
+numeric "key" property, then those children will be reordered in the
+DOM to match the corresponding order in the vDOM before patching. This
+saves a lot of unneccesary reconstruction when a list is reordered or
+nodes are inserted or deleted.
+
 The one special aspect of the patching algorithm is that patching never
 procedes into a DOM node managed by a component: that component's udpate
 logic is solely responsible for that DOM node.  If a parent component
@@ -131,7 +138,5 @@ worked first time, if you can believe such a thing.
 
 - Add sensible support for style properties (at the moment only the
   `style: "color: red; width: 10em; ..."` approach is implemented).
-- The idea of "keyed lists" is a common optimization for efficient list
-  reordering; I need to extend the _patch children_ code to support this.
 - Add lifecycle hooks for components.
 - Performance testing.  I expect this thing to rock.
