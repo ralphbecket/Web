@@ -125,8 +125,9 @@ module Obs {
 
     // Create a mutable observable.
     export const of =
-    <T>(x: T, eq: EqualityTest<T> = defaultEq): IObservable<T> => {
+    <T>(x: T, eq: EqualityTest<T> = null): IObservable<T> => {
 
+        eq = (eq ? eq : hasSimpleType(x) ? defaultEq : alwaysUpdate);
         var obs = undefined as Obs<T>;
         // We need 'function' so we can use 'arguments'.  Sorry.
         obs = (function (newX?: T): T {
@@ -138,6 +139,13 @@ module Obs {
         obs.dispose = disposeObs;
 
         return obs;
+    };
+
+    const hasSimpleType = (x: any): boolean => {
+        var typeofX = typeof (x);
+        return typeofX === "number" ||
+            typeofX === "string" ||
+            typeofX === "boolean";
     };
 
     // Create a computed observable.

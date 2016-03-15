@@ -1,117 +1,3 @@
-window.onload = function () {
-    // ---- Preamble.
-    var e = Od.element;
-    var addDemo = function (title, content) {
-        var vdom = e("DIV", null, [
-            e("H3", null, title),
-            e("DIV", { className: "DemoContainer" }, content())
-        ]);
-        Od.appendChild(vdom, document.body);
-    };
-    // ---- A simple incrementing counter component.
-    var counter = function (x, style) {
-        console.log("-- Creating counter.");
-        var inc = function () {
-            x(x() + 1);
-        };
-        var cmpt = Od.component(function () {
-            console.log("-- Updating counter vDOM.");
-            return e("BUTTON", { style: style, onclick: inc }, x().toString());
-        });
-        return cmpt;
-    };
-    addDemo("Simple components", function () {
-        return counter(Obs.of(0));
-    });
-    // ---- A component that swaps sub-components around.  This demonstrates
-    //      how Od does not re-generate, re-patch, or re-render sub-components.
-    var swapper = function (x, y) {
-        console.log("-- Creating swapper.");
-        var X = Obs.of(x);
-        var Y = Obs.of(y);
-        var swap = function () {
-            // This updates two observables, but we only want to update the
-            // vDOM once, hence we do the updates in an atomic update region.
-            Obs.startUpdate();
-            var tmp = X();
-            X(Y());
-            Y(tmp);
-            Obs.endUpdate();
-        };
-        var cmpt = Od.component(function () {
-            console.log("-- Updating swapper vDOM.");
-            return e("DIV", null, [
-                X(),
-                e("BUTTON", { onclick: swap }, "Swap!"),
-                Y()
-            ]);
-        });
-        return cmpt;
-    };
-    addDemo("Nested components", function () {
-        return swapper(counter(Obs.of(0), "color: blue;"), counter(Obs.of(0), "color: red;"));
-    });
-    // ---- More of the same, but deeper.
-    addDemo("Nested nested components", function () {
-        var A = counter(Obs.of(0), "color: blue;");
-        var B = counter(Obs.of(0), "color: red;");
-        var C = counter(Obs.of(0), "color: blue;");
-        var D = counter(Obs.of(0), "color: red;");
-        var AB = e("DIV", { style: "border: 1ex solid yellow; display: inline-block;" }, swapper(A, B));
-        var CD = e("DIV", { style: "border: 1ex solid cyan; display: inline-block;" }, swapper(C, D));
-        return swapper(AB, CD);
-    });
-    // ---- Simple inputs.
-    var bindValueOnChange = function (x, props) {
-        if (props === void 0) { props = {}; }
-        props["value"] = x();
-        props["onchange"] = function (e) {
-            x(e.target.value);
-        };
-        return props;
-    };
-    var bindValue = function (x, props) {
-        if (props === void 0) { props = {}; }
-        props["value"] = x();
-        return props;
-    };
-    addDemo("Simple inputs", function () {
-        var X = Obs.of(2);
-        var Y = Obs.of(2);
-        var Z = Obs.fn(function () { return +X() + +Y(); });
-        var props = { style: "width: 2em; text-align: right;" };
-        return e("DIV", null, [
-            e("INPUT", bindValueOnChange(X, props)),
-            " + ",
-            e("INPUT", bindValueOnChange(Y, props)),
-            " = ",
-            Od.component(function () { return Z().toString(); })
-        ]);
-    });
-    // ---- Simple lists.
-    addDemo("Simple lists", function () {
-        var Xs = Obs.of([1], Obs.alwaysUpdate);
-        var inc = function () {
-            var xs = Xs();
-            xs.push(xs.length + 1);
-            Xs(xs);
-        };
-        var dec = function () {
-            var xs = Xs();
-            if (xs.length <= 1)
-                return;
-            xs.pop();
-            Xs(xs);
-        };
-        return e("DIV", null, [
-            e("BUTTON", { onclick: inc, style: "width: 2em;" }, "+"),
-            e("BUTTON", { onclick: dec, style: "width: 2em;" }, "-"),
-            Od.component(function () {
-                return e("DIV", null, Xs().map(function (x) { return e("SPAN", null, " " + x + " "); }));
-            })
-        ]);
-    });
-};
 // Obs.ts
 // (C) Ralph Becket, 2016
 //
@@ -220,7 +106,8 @@ var Obs;
     Obs.alwaysUpdate = function (x, y) { return false; };
     // Create a mutable observable.
     Obs.of = function (x, eq) {
-        if (eq === void 0) { eq = Obs.defaultEq; }
+        if (eq === void 0) { eq = null; }
+        eq = (eq ? eq : hasSimpleType(x) ? Obs.defaultEq : Obs.alwaysUpdate);
         var obs = undefined;
         // We need 'function' so we can use 'arguments'.  Sorry.
         obs = (function (newX) {
@@ -231,6 +118,12 @@ var Obs;
         obs.toString = obsToString;
         obs.dispose = disposeObs;
         return obs;
+    };
+    var hasSimpleType = function (x) {
+        var typeofX = typeof (x);
+        return typeofX === "number" ||
+            typeofX === "string" ||
+            typeofX === "boolean";
     };
     // Create a computed observable.
     Obs.fn = function (f, eq) {
@@ -1028,3 +921,117 @@ var Od;
         console.log.apply(console, arguments);
     };
 })(Od || (Od = {}));
+window.onload = function () {
+    // ---- Preamble.
+    var e = Od.element;
+    var addDemo = function (title, content) {
+        var vdom = e("DIV", null, [
+            e("H3", null, title),
+            e("DIV", { className: "DemoContainer" }, content())
+        ]);
+        Od.appendChild(vdom, document.body);
+    };
+    // ---- A simple incrementing counter component.
+    var counter = function (x, style) {
+        console.log("-- Creating counter.");
+        var inc = function () {
+            x(x() + 1);
+        };
+        var cmpt = Od.component(function () {
+            console.log("-- Updating counter vDOM.");
+            return e("BUTTON", { style: style, onclick: inc }, x().toString());
+        });
+        return cmpt;
+    };
+    addDemo("Simple components", function () {
+        return counter(Obs.of(0));
+    });
+    // ---- A component that swaps sub-components around.  This demonstrates
+    //      how Od does not re-generate, re-patch, or re-render sub-components.
+    var swapper = function (x, y) {
+        console.log("-- Creating swapper.");
+        var X = Obs.of(x);
+        var Y = Obs.of(y);
+        var swap = function () {
+            // This updates two observables, but we only want to update the
+            // vDOM once, hence we do the updates in an atomic update region.
+            Obs.startUpdate();
+            var tmp = X();
+            X(Y());
+            Y(tmp);
+            Obs.endUpdate();
+        };
+        var cmpt = Od.component(function () {
+            console.log("-- Updating swapper vDOM.");
+            return e("DIV", null, [
+                X(),
+                e("BUTTON", { onclick: swap }, "Swap!"),
+                Y()
+            ]);
+        });
+        return cmpt;
+    };
+    addDemo("Nested components", function () {
+        return swapper(counter(Obs.of(0), "color: blue;"), counter(Obs.of(0), "color: red;"));
+    });
+    // ---- More of the same, but deeper.
+    addDemo("Nested nested components", function () {
+        var A = counter(Obs.of(0), "color: blue;");
+        var B = counter(Obs.of(0), "color: red;");
+        var C = counter(Obs.of(0), "color: blue;");
+        var D = counter(Obs.of(0), "color: red;");
+        var AB = e("DIV", { style: "border: 1ex solid yellow; display: inline-block;" }, swapper(A, B));
+        var CD = e("DIV", { style: "border: 1ex solid cyan; display: inline-block;" }, swapper(C, D));
+        return swapper(AB, CD);
+    });
+    // ---- Simple inputs.
+    var bindValueOnChange = function (x, props) {
+        if (props === void 0) { props = {}; }
+        props["value"] = x();
+        props["onchange"] = function (e) {
+            x(e.target.value);
+        };
+        return props;
+    };
+    var bindValue = function (x, props) {
+        if (props === void 0) { props = {}; }
+        props["value"] = x();
+        return props;
+    };
+    addDemo("Simple inputs", function () {
+        var X = Obs.of(2);
+        var Y = Obs.of(2);
+        var Z = Obs.fn(function () { return +X() + +Y(); });
+        var props = { style: "width: 2em; text-align: right;" };
+        return e("DIV", null, [
+            e("INPUT", bindValueOnChange(X, props)),
+            " + ",
+            e("INPUT", bindValueOnChange(Y, props)),
+            " = ",
+            Od.component(function () { return Z().toString(); })
+        ]);
+    });
+    // ---- Simple lists.
+    addDemo("Simple lists", function () {
+        var Xs = Obs.of([1], Obs.alwaysUpdate);
+        var inc = function () {
+            var xs = Xs();
+            xs.push(xs.length + 1);
+            Xs(xs);
+        };
+        var dec = function () {
+            var xs = Xs();
+            if (xs.length <= 1)
+                return;
+            xs.pop();
+            Xs(xs);
+        };
+        return e("DIV", null, [
+            e("BUTTON", { onclick: inc, style: "width: 2em;" }, "+"),
+            e("BUTTON", { onclick: dec, style: "width: 2em;" }, "-"),
+            Od.component(function () {
+                return e("DIV", null, Xs().map(function (x) { return e("SPAN", null, " " + x + " "); }));
+            })
+        ]);
+    });
+};

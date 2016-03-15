@@ -4,6 +4,7 @@
     text: string;
     comment_count: number;
     children: string[];
+    child_comments?: Obs.IObservable<IComment[]>;
 }
 
 enum State {
@@ -12,36 +13,39 @@ enum State {
     ShowingThreads,
     LoadingComments,
     LoadingCommentsFailed,
-    ShowingComments,
-    SavingComment,
-    SavingCommentFailed
+    ShowingComments
 }
 
 const currentState = Obs.of(State.LoadingThreads);
 
-const loadedComments = Obs.of([] as IComment[]);
+var threads = [] as IComment[];
 
 type CommentDict = { [id: string]: IComment };
 
-const idToComment = Obs.fn<CommentDict>(() => {
-    const comments = loadedComments();
-    const dict = {} as { [id: string]: IComment };
-    const iTop = comments.length;
-    for (var i = 0; i < iTop; i++) {
-        const comment = comments[i];
-        dict[comment.id] = comment;
+var commentDict = {} as CommentDict;
+
+const addNewComment = (newComment: IComment): void => {
+    const id = newComment.id;
+    const parentID = newComment.parent_id;
+    commentDict[id] = newComment;
+    newComment.child_comments = Obs.of([]);
+    const parentComment = parentID && commentDict[parentID];
+    if (parentComment) {
+        const parentChildComments = parentComment.child_comments();
+        parentChildComments.push(newComment);
+        parentComment.child_comments(parentChildComments);
     }
-    return dict;
-});
+};
 
-var currentThreadID = ""; // Set if viewing comments for a thread.
+const updateCommentDict = (newComments: IComment[]): void => {
+    newComments.forEach(addNewComment);
+};
 
-var commentBeingSaved = null as IComment; // Set if saving a new comment.
+var currentThreadID = null as string; // Set if viewing comments for a thread.
 
 const e = Od.element;
 
 const view = Od.component((): Od.Vdom => {
-    const idToC = idToComment();
     var vdom = null as Od.Vdom | Od.Vdom[];
     switch (currentState()) {
         case State.LoadingThreads:
@@ -56,7 +60,7 @@ const view = Od.component((): Od.Vdom => {
             ]);
             break;
         case State.ShowingThreads:
-            vdom = viewThreads(loadedComments());
+            vdom = viewThreads(threads);
             break;
         case State.LoadingComments:
             vdom = "Loading thread comments...";
@@ -73,26 +77,8 @@ const view = Od.component((): Od.Vdom => {
             ]);
             break;
         case State.ShowingComments:
-            vdom = viewComment(idToC, currentThreadID);
-            break;
-        case State.SavingComment:
-            vdom = "Saving comment..."; // XXX This should be more graceful!
-            break;
-        case State.SavingCommentFailed:
-            vdom = e("DIV", null, [
-                "There was an error saving the new comment.",
-                e("P", null, [
-                    e("A",
-                        { onclick: () => { saveComment(commentBeingSaved); } },
-                        "Retry"
-                    ),
-                    " | ",
-                    e("A",
-                        { onclick: () => { currentState(State.ShowingComments); } },
-                        "Forget it"
-                    )
-                ])
-            ]);
+            const currentThread = commentDict[currentThreadID];
+            vdom = viewCommentTree(currentThread);
             break;
         default:
             vdom = "Ohhhhhhh, God, nooooooo!  I am undone.";
@@ -116,44 +102,109 @@ const viewThreads = (threads: IComment[]): Od.Vdom[] => {
     return vdoms;
 };
 
-const viewComment = (idToC: CommentDict, id: string): Od.Vdom => {
-    const comment = idToC[id];
+const viewCommentTree = (comment: IComment): Od.Vdom => {
     const vdom = e("DIV", { className: "comment" }, [
         e("P", null, comment.text),
         e("DIV", { className: "reply" },
-            e("A", null, "Reply!")
+            commentReply(comment.id)
         ),
         e("DIV", { className: "children" },
-            comment.children.map(x => viewComment(idToC, x))
+            comment.child_comments().map(viewCommentTree)
         )
     ]);
     return vdom;
 };
 
+enum ReplyState {
+    NotReplying,
+    EditingReply,
+    SendingReply,
+    ReplyFailed
+}
+
+const commentReply = (parentID: string): Od.IVdom => {
+    var replyText = Obs.of("");
+    var replyState = Obs.of(ReplyState.NotReplying);
+    return Od.component(() => {
+        switch (replyState()) {
+            case ReplyState.NotReplying: return (
+                e("A",
+                    {
+                        onclick: () => { replyState(ReplyState.EditingReply); }
+                    },
+                    "Reply!"
+                )
+            );
+            case ReplyState.EditingReply: return (
+                e("FORM", null, [
+                    e("TEXTAREA",
+                        {
+                            oninput: (e: any) => { replyText(e.target.value); }
+                        }
+                    ),
+                    e("INPUT",
+                        {
+                            type: "submit",
+                            value: "Reply!",
+                            onclick: () => {
+                                submitReply(parentID, replyText, replyState);
+                            }
+                        }
+                    ),
+                    e("DIV", { className: "preview" }, replyText())
+                ])
+            );
+            case ReplyState.SendingReply: return (
+                e("DIV", null, [
+                    e("A", null, "Sending reply..."),
+                    e("DIV", { className: "preview" }, replyText())
+                ])
+            );
+            case ReplyState.ReplyFailed: return (
+                e("DIV", null, [
+                    e("A",
+                        {
+                            onclick: () => {
+                                submitReply(parentID, replyText, replyState);
+                            }
+                        },
+                        "Sending reply failed...  Retry"
+                    ),
+                    e("DIV", { className: "preview" }, replyText())
+                ])
+            );
+        }
+    });
+};
+
+const submitReply =
+(   parentID: string,
+    replyText: Obs.IObservable<string>,
+    replyState: Obs.IObservable<ReplyState>
+): void => {
+    replyState(ReplyState.SendingReply);
+    sendTestReply(parentID, replyText(),
+        (newComment) => {
+            replyText("");
+            addNewComment(newComment);
+            replyState(ReplyState.NotReplying);
+        },
+        (e: any) => {
+            replyState(ReplyState.ReplyFailed);
+        }
+    );
+};
+
 const plural = (n: number, singular: string, plural?: string): string =>
     n.toString() + " " +
-    ( n === 1
-    ? singular
-    : plural
-    ? plural
-    : singular + "s"
-    );
-
-var currentXhrID = 0;
-
-var nextXhrID = 1;
-
-const saveComment = (newComment: IComment): void => {
-    // XXX HERE!
-
-};
+    ( n === 1 ? singular : (plural || singular + "s") );
 
 const fetchThreads = (): void => {
     // Testing code for now.
     currentState(State.LoadingThreads);
     fetchTestThreads(
-        (threads) => {
-            loadedComments(threads);
+        (newThreads) => {
+            threads = newThreads;
             currentState(State.ShowingThreads);
         },
         () => {
@@ -168,13 +219,26 @@ const fetchComments = (id: string): void => {
     currentState(State.LoadingComments);
     fetchTestComments(id,
         (threadComments) => {
-            loadedComments(threadComments);
+            commentDict = {};
+            updateCommentDict(threadComments);
             currentState(State.ShowingComments);
         },
         () => {
             currentState(State.LoadingCommentsFailed);
         }
     );
+};
+
+// ---- Get the show on the road. ----
+
+const main = (): void => {
+    Od.appendChild(view, document.body);
+    window.onhashchange = processLocationHash;
+    processLocationHash();
+};
+
+window.onload = () => {
+    main();
 };
 
 // ---- Testing code. ----
@@ -192,7 +256,10 @@ const fetchTestThreads =
 };
 
 const fetchTestComments =
-(threadID: string, pass: (comments: IComment[]) => void, fail: (e: any) => void): void => {
+(   threadID: string,
+    pass: (comments: IComment[]) => void,
+    fail: (e: any) => void
+): void => {
     setTimeout(() => {
         if (Math.random() < 0.1) {
             fail("Calamity!");
@@ -211,6 +278,28 @@ const fetchTestComments =
         thread.comment_count = children.length;
         threadComments.unshift(thread);
         pass(threadComments);
+    }, 200);
+};
+
+const sendTestReply =
+(   parentID: string,
+    replyText: string,
+    pass: (comment: IComment) => void,
+    fail: (e: any) => void
+): void => {
+    setTimeout(() => {
+        if (Math.random() < 0.4) {
+            fail("Ragnarok!");
+            return;
+        }
+        const comment = {
+            id: (nextTestCommentID++).toString(),
+            text: replyText,
+            children: [],
+            comment_count: 0,
+            parent_id: parentID
+        } as IComment;
+        pass(comment);
     }, 200);
 };
 
@@ -254,15 +343,14 @@ const genTestComments =
         children: children
     } as IComment;
     comments.push(comment);
-    for (var j = 0; j < subComments.length; j++)
-        comments.push(subComments[j]);
+    for (var j = 0; j < subComments.length; j++) comments.push(subComments[j]);
 
     return comments;
 };
 
 // ---- Routing. ----
 
-// This is *really* simple!
+// This is a *really* simple router!
 const processLocationHash = (): void => {
     const hash = window.location.hash.substr(1);
     const parts = hash.split("/");
@@ -274,16 +362,4 @@ const processLocationHash = (): void => {
             fetchThreads();
             return;
     }
-};
-
-// ---- Get the show on the road. ----
-
-const main = (): void => {
-    Od.appendChild(view, document.body);
-    window.onhashchange = processLocationHash;
-    processLocationHash();
-};
-
-window.onload = () => {
-    main();
 };

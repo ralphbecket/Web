@@ -623,7 +623,8 @@ var Obs;
     Obs.alwaysUpdate = function (x, y) { return false; };
     // Create a mutable observable.
     Obs.of = function (x, eq) {
-        if (eq === void 0) { eq = Obs.defaultEq; }
+        if (eq === void 0) { eq = null; }
+        eq = (eq ? eq : hasSimpleType(x) ? Obs.defaultEq : Obs.alwaysUpdate);
         var obs = undefined;
         // We need 'function' so we can use 'arguments'.  Sorry.
         obs = (function (newX) {
@@ -634,6 +635,12 @@ var Obs;
         obs.toString = obsToString;
         obs.dispose = disposeObs;
         return obs;
+    };
+    var hasSimpleType = function (x) {
+        var typeofX = typeof (x);
+        return typeofX === "number" ||
+            typeofX === "string" ||
+            typeofX === "boolean";
     };
     // Create a computed observable.
     Obs.fn = function (f, eq) {
