@@ -1,4 +1,17 @@
-﻿interface IComment {
+﻿// Od version of ThreadIt.
+//
+// This is about thirty lines longer than the Mithril implementation, but,
+// unlike the Mithril version (as of 2016-03-15):
+// - this has full asynchronous activity reporting and error handling;
+// - implements its own rudimentary router (~10 LOC);
+// - implements its own AJAX request scheme (~40 LOC).
+// In practice the latter two would certainly be handled by an external
+// library.
+//
+// What's interesting about Od is that view components update independently
+// without requiring a complete rebuild of the entire vDOM.
+
+interface IComment {
     id: string;
     parent_id?: string;
     text: string;
@@ -79,9 +92,6 @@ const view = Od.component((): Od.Vdom => {
         case State.ShowingComments:
             const currentThread = commentDict[currentThreadID];
             vdom = viewCommentTree(currentThread);
-            break;
-        default:
-            vdom = "Ohhhhhhh, God, nooooooo!  I am undone.";
             break;
     }
     return e("DIV", { className: "main" }, vdom);
@@ -183,7 +193,9 @@ const submitReply =
     replyState: Obs.IObservable<ReplyState>
 ): void => {
     replyState(ReplyState.SendingReply);
-    sendTestReply(parentID, replyText(),
+    //sendTestReply(parentID, replyText(),
+    POST("http://api.threaditjs.com/comments/create",
+        { parent: parentID, text: replyText() },
         (newComment) => {
             replyText("");
             addNewComment(newComment);
@@ -202,7 +214,8 @@ const plural = (n: number, singular: string, plural?: string): string =>
 const fetchThreads = (): void => {
     // Testing code for now.
     currentState(State.LoadingThreads);
-    fetchTestThreads(
+    //fetchTestThreads(
+    GET("http://api.threaditjs.com/threads",
         (newThreads) => {
             threads = newThreads;
             currentState(State.ShowingThreads);
@@ -217,7 +230,8 @@ const fetchComments = (id: string): void => {
     // Testing code for now.
     currentThreadID = id;
     currentState(State.LoadingComments);
-    fetchTestComments(id,
+    //fetchTestComments(id,
+    GET("http://api.threaditjs.com/comments/" + id,
         (threadComments) => {
             commentDict = {};
             updateCommentDict(threadComments);
@@ -227,6 +241,63 @@ const fetchComments = (id: string): void => {
             currentState(State.LoadingCommentsFailed);
         }
     );
+};
+
+// Basic AJAX.
+
+const GET =
+(   url: string,
+    pass: (data: any) => void,
+    fail: (e: any) => void
+): void => {
+    SEND("GET", url, null, pass, fail);
+};
+
+const POST =
+(   url: string,
+    body: any,
+    pass: (data: any) => void,
+    fail: (e: any) => void
+): void => {
+    SEND("POST", url, body, pass, fail);
+};
+
+const SEND =
+(   method: string,
+    url: string,
+    body: any,
+    pass: (data: any) => void,
+    fail: (e: any) => void
+): void => {
+    var xhr = new XMLHttpRequest();
+    xhr.open(method, url);
+    xhr.onreadystatechange = () => {
+        if (xhr.readyState != XMLHttpRequest.DONE) return;
+        try {
+            var package = JSON.parse(xhr.responseText);
+            if (!("data" in package)) throw (xhr.responseText);
+            pass(package.data);
+        } catch (e) {
+            fail(e);
+        }
+    };
+    xhr.send(JSON.stringify(body));
+};
+
+// ---- Routing. ----
+
+// This is a *really* simple router!
+const processLocationHash = (): void => {
+    const hash = window.location.hash.substr(1);
+    const parts = hash.split("/");
+    switch (parts[0]) {
+        case "thread":
+            fetchComments(parts[1]);
+            return;
+        default:
+            fetchThreads();
+            return;
+    }
 };
 
 // ---- Get the show on the road. ----
@@ -346,20 +417,4 @@ const genTestComments =
     for (var j = 0; j < subComments.length; j++) comments.push(subComments[j]);
 
     return comments;
-};
-
-// ---- Routing. ----
-
-// This is a *really* simple router!
-const processLocationHash = (): void => {
-    const hash = window.location.hash.substr(1);
-    const parts = hash.split("/");
-    switch (parts[0]) {
-        case "thread":
-            fetchComments(parts[1]);
-            return;
-        default:
-            fetchThreads();
-            return;
-    }
 };

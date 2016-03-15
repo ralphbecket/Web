@@ -120,10 +120,18 @@ module Obs {
     // The default equality test for observables.
     export const defaultEq = <T>(x: T, y: T) => x === y;
 
+    // This is useful for Dates.
+    export const valueOfEq = <T>(x: T, y: T) =>
+        (x && y && x.valueOf() === y.valueOf()) ||
+        (!x && !y);
+
     // The "equality test" for observables that always indicates a change.
     export const alwaysUpdate = <T>(x: T, y: T) => false;
 
-    // Create a mutable observable.
+    // Create a mutable observable.  The default equality test for 
+    // numbers, strings, and booleans is ===, otherwise any update is
+    // assumed to provide a different value, hence triggering any
+    // dependents.
     export const of =
     <T>(x: T, eq: EqualityTest<T> = null): IObservable<T> => {
 
