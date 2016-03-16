@@ -45,7 +45,7 @@
 //
 module Od {
 
-    const debug = true;
+    const debug = false;
 
     // ---- Public interface. ----
 

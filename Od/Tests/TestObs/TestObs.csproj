@@ -22,41 +22,21 @@
     <Service Include="{4A0DDDB5-7A95-4FBF-97CC-616D07737A77}" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="..\Od\Obs.js">
-      <Link>Obs.js</Link>
-    </Content>
-    <Content Include="..\Od\Obs.min.js">
-      <Link>Obs.min.js</Link>
-      <DependentUpon>Obs.js</DependentUpon>
-    </Content>
-    <Content Include="..\Od\Obs.min.min.js">
-      <Link>Obs.min.min.js</Link>
-      <DependentUpon>Obs.min.js</DependentUpon>
-    </Content>
-    <Content Include="..\Test\Test.js">
-      <Link>Test.js</Link>
-    </Content>
     <Content Include="app.css" />
     <Content Include="index.html" />
     <Content Include="test.css" />
     <Content Include="web.config" />
   </ItemGroup>
   <ItemGroup>
-    <TypeScriptCompile Include="..\Od\Obs.ts">
+    <TypeScriptCompile Include="..\..\Od\Obs.ts">
       <Link>Obs.ts</Link>
     </TypeScriptCompile>
-    <TypeScriptCompile Include="..\Test\Test.ts">
+    <TypeScriptCompile Include="..\TestHarness\Test.ts">
       <Link>Test.ts</Link>
     </TypeScriptCompile>
     <TypeScriptCompile Include="TestObs.ts" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="..\Od\Obs.js.map">
-      <Link>Obs.js.map</Link>
-    </Content>
-    <Content Include="..\Test\Test.js.map">
-      <Link>Test.js.map</Link>
-    </Content>
     <None Include="web.Debug.config">
       <DependentUpon>web.config</DependentUpon>
     </None>

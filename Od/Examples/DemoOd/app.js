@@ -84,13 +84,21 @@
 //          Update regions can be nested; re-evaluation will only take place
 //          once the end of the outermost update region is reached.
 //
+// Forcing re-evaluation of dependents:
+//
+//      Obs.updateDependents(x);
+//          All dependents of x will be re-evaluated.  This is occasionally
+//          useful if the type of x is such that it is infeasible or
+//          inefficient to exactly detect updates (typically when the type
+//          of x is not observable and non-trivial).
+//
 // Observable identities:
 //
 //      x.id is the unique numeric identifier for observable x.
 //
 // Disposal:
 //
-//      x.dispose()
+//      Obs.dispose(x)
 //          Breaks the connection between x and any of its dependencies and
 //          sets its value to undefined.  This is sometimes necessary to
 //          prevent garbage retention, since a dependency link is a two-way
@@ -99,12 +107,20 @@
 var Obs;
 (function (Obs) {
     // The public interface.
-    var debug = true;
+    var debug = false;
     // The default equality test for observables.
     Obs.defaultEq = function (x, y) { return x === y; };
+    // This is useful for Dates.
+    Obs.valueOfEq = function (x, y) {
+        return (x && y && x.valueOf() === y.valueOf()) ||
+            (!x && !y);
+    };
     // The "equality test" for observables that always indicates a change.
     Obs.alwaysUpdate = function (x, y) { return false; };
-    // Create a mutable observable.
+    // Create a mutable observable.  The default equality test for 
+    // numbers, strings, and booleans is ===, otherwise any update is
+    // assumed to provide a different value, hence triggering any
+    // dependents.
     Obs.of = function (x, eq) {
         if (eq === void 0) { eq = null; }
         eq = (eq ? eq : hasSimpleType(x) ? Obs.defaultEq : Obs.alwaysUpdate);
@@ -116,7 +132,6 @@ var Obs;
         obs.id = nextID++;
         obs.value = x;
         obs.toString = obsToString;
-        obs.dispose = disposeObs;
         return obs;
     };
     var hasSimpleType = function (x) {
@@ -137,7 +152,6 @@ var Obs;
         obs.fn = function () { return updateComputedObs(obs, f, eq); };
         obs.dependencies = {};
         obs.toString = obsToString;
-        obs.dispose = disposeObs;
         reevaluateComputedObs(obs);
         return obs;
     };
@@ -165,22 +179,21 @@ var Obs;
         };
         var obs = subsAction;
         var id = nextID++;
-        var obsAnys = obss;
-        for (var i = 0; i < obsAnys.length; i++) {
-            var obsI = obsAnys[i];
-            if (!obsI.dependents)
-                obsI.dependents = {};
-            obsI.dependents[id] = obs;
+        var subsDependencies = obss;
+        for (var i = 0; i < subsDependencies.length; i++) {
+            var obsAnyI = subsDependencies[i];
+            if (!obsAnyI.dependents)
+                obsAnyI.dependents = {};
+            obsAnyI.dependents[id] = obs;
         }
         ;
         obs.id = id;
-        obs.level = 999999999; // Ensure subscriptions run last.
         obs.fn = subsAction;
         obs.value = "{subscription}"; // For obsToString;
         obs.toString = obsToString;
-        obs.dispose = function () {
-            disposeSubs(obs, obsAnys);
-        };
+        obs.subsDependencies = subsDependencies;
+        establishDependencies(obs);
+        obs.level = 999999999; // Ensure subscriptions run last.
         return obs;
     };
     // Implementation detail.
@@ -193,17 +206,25 @@ var Obs;
         }
         return "{obs " + this.id + " = " + valueStr + "}";
     };
-    // We need 'function' rather than '=>' so we can use 'this'.  Sorry.
-    var disposeObs = function () {
-        var obs = this;
-        obs.value = undefined;
-        breakDependencies(obs);
-        obs.dependents = undefined;
-    };
-    var disposeSubs = function (obs, obsAnys) {
-        var id = obs.id;
-        for (var i = 0; i < obsAnys.length; i++)
-            obsAnys[i].dependents[id] = undefined;
+    // Break the connection between an observable and its dependencies.
+    Obs.dispose = function (obs) {
+        var obsAny = obs;
+        obsAny.value = undefined;
+        breakDependencies(obsAny);
+        obsAny.dependents = undefined;
+        // Break any dependencies if this is a subscription.
+        var id = obsAny.id;
+        var subsDependencies = obsAny.subsDependencies;
+        if (!subsDependencies)
+            return;
+        for (var i = 0; i < subsDependencies.length; i++) {
+            var obsDepcy = subsDependencies[i];
+            var dependentsDepcy = obsDepcy.dependents;
+            if (!dependentsDepcy)
+                continue;
+            dependentsDepcy[id] = undefined;
+        }
+        obsAny.subsDependencies = undefined;
     };
     var readOrWriteObs = function (obs, eq, newX, argc) {
         if (argc) {
@@ -213,7 +234,7 @@ var Obs;
             var oldX = obs.value;
             obs.value = newX;
             if (!eq(oldX, newX))
-                updateDependents(obs);
+                Obs.updateDependents(obs);
         }
         if (currentDependencies)
             currentDependencies[obs.id] = obs;
@@ -323,7 +344,7 @@ var Obs;
         establishDependencies(obs);
         currentDependencies = oldCurrentDependencies;
         if (hasChanged)
-            updateDependents(obs);
+            Obs.updateDependents(obs);
         trace("Reevaluating obs", obs.id, "done.");
     };
     // Break the connection between a computed observable and its dependencies
@@ -364,7 +385,7 @@ var Obs;
     };
     // After an observable has been updated, we need to also update its
     // dependents in level order.
-    var updateDependents = function (obs) {
+    Obs.updateDependents = function (obs) {
         var dependents = obs.dependents;
         if (!dependents)
             return;
@@ -451,7 +472,7 @@ var Obs;
 //
 var Od;
 (function (Od) {
-    var debug = true;
+    var debug = false;
     Od.text = function (text) {
         return ({ text: isNully(text) ? "" : text.toString() });
     };
@@ -921,296 +942,117 @@ var Od;
         console.log.apply(console, arguments);
     };
 })(Od || (Od = {}));
-var Test;
-(function (Test) {
-    Test.passedTestsID = "passed";
-    Test.failedTestsID = "failed";
-    Test.addPassReport = function (name) {
-        addReport(Test.passedTestsID, name);
-    };
-    Test.addFailureReport = function (name, e) {
-        var msg = ": " + (typeof (e) === "string" ? e : JSON.stringify(e));
-        if (e === null || e === undefined || e === "")
-            msg = "";
-        addReport(Test.failedTestsID, name + msg);
-    };
-    var addReport = function (id, msg) {
-        var div = document.getElementById(id);
-        var p = document.createElement("P");
-        p.textContent = msg;
-        div.appendChild(p);
-    };
-    Test.expect = function (what, cond) {
-        if (!cond)
-            throw what;
-    };
-    Test.run = function (name, action) {
-        try {
-            window.console && window.console.log("---- " + name + " ----");
-            action();
-            Test.addPassReport(name);
-        }
-        catch (e) {
-            Test.addFailureReport(name, JSON.stringify(e));
-        }
-    };
-    Test.runDeferred = function (timeoutInMS, name, action) {
-        var completed = false;
-        var pass = function () {
-            if (completed)
-                return;
-            Test.addPassReport(name);
-            completed = true;
-        };
-        var fail = function (e) {
-            if (completed)
-                return;
-            Test.addFailureReport(name, e);
-            completed = true;
-        };
-        setTimeout(function () {
-            if (completed)
-                return;
-            fail("timed out");
-            completed = true;
-        }, timeoutInMS);
-        try {
-            action(pass, fail);
-        }
-        catch (e) {
-            fail(e);
-        }
-    };
-})(Test || (Test = {}));
 window.onload = function () {
-    Od.deferComponentUpdates = false; // Deferred updates make testing harder.
+    // ---- Preamble.
     var e = Od.element;
-    var t = Od.text;
-    var d = function (v) { return Od.patchDom(v, null, null); };
-    var nav = function (dom, path) {
-        var iTop = path.length;
-        for (var i = 0; i < iTop; i++) {
-            dom = dom.childNodes[path[i]];
-            if (!dom)
-                throw new Error("Node does not match path " +
-                    JSON.stringify(path));
-        }
-        return dom;
+    var addDemo = function (title, content) {
+        var vdom = e("DIV", null, [
+            e("H3", null, title),
+            e("DIV", { className: "DemoContainer" }, content())
+        ]);
+        Od.appendChild(vdom, document.body);
     };
-    var chk = function (dom, path, tag, numChildren, props) {
-        var dom = nav(dom, path);
-        var textMatches = (dom.nodeType === Node.TEXT_NODE) &&
-            (tag[0] === "#") &&
-            (dom.textContent === tag.substr(1));
-        var tagMatches = (dom.tagName === tag);
-        if (!textMatches && !tagMatches)
-            throw new Error("Node tag is not " + tag);
-        if (numChildren != undefined && dom.childNodes.length != numChildren)
-            throw new Error("Node does not have " + numChildren + " children.");
-        return chkProps(dom, props);
+    // ---- A simple incrementing counter component.
+    var counter = function (x, style) {
+        console.log("-- Creating counter.");
+        var inc = function () {
+            x(x() + 1);
+        };
+        var cmpt = Od.component(function () {
+            console.log("-- Updating counter vDOM.");
+            return e("BUTTON", { style: style, onclick: inc }, x().toString());
+        });
+        return cmpt;
     };
-    var chkProps = function (dom, props) {
-        if (!props)
-            return true;
-        for (var key in props) {
-            var value = props[key];
-            if ((value && dom[key] !== value))
-                throw new Error("Node does not have expected value for " +
-                    key);
-            if ((!value && dom[key]))
-                throw new Error("Node has unexpected value for " +
-                    key);
-        }
-        return true;
+    addDemo("Simple components", function () {
+        return counter(Obs.of(0));
+    });
+    // ---- A component that swaps sub-components around.  This demonstrates
+    //      how Od does not re-generate, re-patch, or re-render sub-components.
+    var swapper = function (x, y) {
+        console.log("-- Creating swapper.");
+        var X = Obs.of(x);
+        var Y = Obs.of(y);
+        var swap = function () {
+            // This updates two observables, but we only want to update the
+            // vDOM once, hence we do the updates in an atomic update region.
+            Obs.startUpdate();
+            var tmp = X();
+            X(Y());
+            Y(tmp);
+            Obs.endUpdate();
+        };
+        var cmpt = Od.component(function () {
+            console.log("-- Updating swapper vDOM.");
+            return e("DIV", null, [
+                X(),
+                e("BUTTON", { onclick: swap }, "Swap!"),
+                Y()
+            ]);
+        });
+        return cmpt;
     };
-    var same = function (x, y) {
-        if (x === y)
-            return true;
-        throw ("Nodes should be identical.");
+    addDemo("Nested components", function () {
+        return swapper(counter(Obs.of(0), "color: blue;"), counter(Obs.of(0), "color: red;"));
+    });
+    // ---- More of the same, but deeper.
+    addDemo("Nested nested components", function () {
+        var A = counter(Obs.of(0), "color: blue;");
+        var B = counter(Obs.of(0), "color: red;");
+        var C = counter(Obs.of(0), "color: blue;");
+        var D = counter(Obs.of(0), "color: red;");
+        var AB = e("DIV", { style: "border: 1ex solid yellow; display: inline-block;" }, swapper(A, B));
+        var CD = e("DIV", { style: "border: 1ex solid cyan; display: inline-block;" }, swapper(C, D));
+        return swapper(AB, CD);
+    });
+    // ---- Simple inputs.
+    var bindValueOnChange = function (x, props) {
+        if (props === void 0) { props = {}; }
+        props["value"] = x();
+        props["onchange"] = function (e) {
+            x(e.target.value);
+        };
+        return props;
     };
-    var diff = function (x, y) {
-        if (x !== y)
-            return true;
-        throw ("Nodes should be different.");
+    var bindValue = function (x, props) {
+        if (props === void 0) { props = {}; }
+        props["value"] = x();
+        return props;
     };
-    Test.run("Patch xyz vs null", function () {
-        var A = "xyz";
-        var B = null;
-        var C = Od.patchDom(A, B, null);
-        chk(C, [], "#xyz");
+    addDemo("Simple inputs", function () {
+        var X = Obs.of(2);
+        var Y = Obs.of(2);
+        var Z = Obs.fn(function () { return +X() + +Y(); });
+        var props = { style: "width: 2em; text-align: right;" };
+        return e("DIV", null, [
+            e("INPUT", bindValueOnChange(X, props)),
+            " + ",
+            e("INPUT", bindValueOnChange(Y, props)),
+            " = ",
+            Od.component(function () { return Z().toString(); })
+        ]);
     });
-    Test.run("Patch xyz vs pqr", function () {
-        var A = "xyz";
-        var B = d("pqr");
-        var C = Od.patchDom(A, B, null);
-        chk(C, [], "#xyz");
-        same(B, C);
-    });
-    Test.run("Patch xyz vs xyz", function () {
-        var A = "xyz";
-        var B = d("xyz");
-        var C = Od.patchDom(A, B, null);
-        chk(C, [], "#xyz");
-        same(B, C);
-    });
-    Test.run("Patch xyz vs DIV", function () {
-        var A = "xyz";
-        var B = d(e("DIV"));
-        var C = Od.patchDom(A, B, null);
-        chk(C, [], "#xyz");
-        diff(B, C);
-    });
-    Test.run("Patch DIV(xyz) vs null", function () {
-        var A = e("DIV", null, "xyz");
-        var B = null;
-        var C = Od.patchDom(A, B, null);
-        chk(C, [], "DIV", 1);
-        chk(C, [0], "#xyz");
-    });
-    Test.run("Patch DIV(xyz) vs pqr", function () {
-        var A = e("DIV", null, "xyz");
-        var B = d("pqr");
-        var C = Od.patchDom(A, B, null);
-        chk(C, [], "DIV", 1);
-        chk(C, [0], "#xyz");
-        diff(B, C);
-    });
-    Test.run("Patch DIV(xyz) vs DIV(pqr)", function () {
-        var A = e("DIV", null, "xyz");
-        var B = d(e("DIV", null, "pqr"));
-        var C = Od.patchDom(A, B, null);
-        chk(C, [], "DIV", 1);
-        chk(C, [0], "#xyz");
-        same(B, C);
-    });
-    Test.run("Patch DIV(xyz) vs P", function () {
-        var A = e("DIV", null, "xyz");
-        var B = d(e("P"));
-        var C = Od.patchDom(A, B, null);
-        chk(C, [], "DIV", 1);
-        chk(C, [0], "#xyz");
-        diff(B, C);
-    });
-    Test.run("Patch DIV vs DIV(pqr, qrs)", function () {
-        var A = e("DIV");
-        var B = d(e("DIV", null, ["pqr", "qrs"]));
-        var C = Od.patchDom(A, B, null);
-        chk(C, [], "DIV", 0);
-        same(B, C);
-    });
-    Test.run("Patch DIV(xyz) vs DIV(pqr, qrs)", function () {
-        var A = e("DIV", null, "xyz");
-        var B = d(e("DIV", null, ["pqr", "qrs"]));
-        var C = Od.patchDom(A, B, null);
-        chk(C, [], "DIV", 1);
-        chk(C, [0], "#xyz");
-        same(B, C);
-    });
-    Test.run("Patch DIV(xyz, wxy) vs DIV(pqr)", function () {
-        var A = e("DIV", null, ["xyz", "wxy"]);
-        var B = d(e("DIV", null, "pqr"));
-        var C = Od.patchDom(A, B, null);
-        chk(C, [], "DIV", 2);
-        chk(C, [0], "#xyz");
-        chk(C, [1], "#wxy");
-        same(B, C);
-    });
-    Test.run("Patch Cmpt(DIV(xyz) -> DIV(wxy)) vs null", function () {
-        var text = Obs.of("xyz");
-        var cmpt = Od.component(function () { return e("DIV", null, text()); });
-        var A = cmpt;
-        var B = null;
-        var C = Od.patchDom(A, B, null);
-        chk(C, [], "DIV", 1);
-        chk(C, [0], "#xyz");
-        text("wxy");
-        chk(C, [], "DIV", 1);
-        chk(C, [0], "#wxy");
-    });
-    Test.run("Patch DIV(Cmpt(DIV), Cmpt(P)) -> DIV(Cmpt(P), Cmpt(DIV)) vs null", function () {
-        var X = Od.component(function () { return e("DIV"); });
-        var Y = Od.component(function () { return e("P"); });
-        var A1 = e("DIV", null, [X, Y]);
-        var B = null;
-        var C1 = Od.patchDom(A1, B, null);
-        chk(C1, [], "DIV", 2);
-        var C10 = nav(C1, [0]);
-        var C11 = nav(C1, [1]);
-        chk(C10, [], "DIV", 0);
-        chk(C11, [], "P", 0);
-        var A2 = e("DIV", null, [Y, X]);
-        var C2 = Od.patchDom(A2, C1, null);
-        chk(C2, [], "DIV", 2);
-        var C20 = nav(C2, [0]);
-        var C21 = nav(C2, [1]);
-        chk(C20, [], "P", 0);
-        chk(C21, [], "DIV", 0);
-        same(C10, C21);
-        same(C11, C20);
-    });
-    Test.run("Patch Cmpt(DIV(P(xyz) -> pqr)) vs null", function () {
-        var X = e("P", null, "xyz");
-        var T = Obs.of(true);
-        var A = Od.component(function () { return e("DIV", null, T() ? X : "pqr"); });
-        var B = null;
-        var C = Od.patchDom(A, B, null);
-        chk(C, [], "DIV", 1);
-        chk(C, [0], "P", 1);
-        chk(C, [0, 0], "#xyz");
-        T(false);
-        chk(C, [], "DIV", 1);
-        chk(C, [0], "#pqr");
-    });
-    Test.run("Deleting the DOM of a live component.", function () {
-        var X = Obs.of("Hi!");
-        var A = Od.component(function () { return e("DIV", null, X()); });
-        var B = null;
-        var C = Od.patchDom(A, B, null);
-        chk(C, [], "DIV", 1);
-        chk(C, [0], "#Hi!");
-        A.dom = null;
-        X("Bye.");
-        var D = Od.patchDom(A, B, null);
-        chk(D, [], "DIV", 1);
-        chk(D, [0], "#Bye.");
-    });
-    Test.run("Keyed lists.", function () {
-        var x = e("P", { key: "x" });
-        var y = e("SPAN", { key: "y" });
-        var z = e("TABLE", { key: "z" });
-        var A1 = e("DIV", { keyed: true }, [x, y, z]);
-        var B = null;
-        var C = Od.patchDom(A1, B, null);
-        chk(C, [], "DIV", 3);
-        chk(C, [0], "P");
-        chk(C, [1], "SPAN");
-        chk(C, [2], "TABLE");
-        var C0 = nav(C, [0]);
-        var C1 = nav(C, [1]);
-        var C2 = nav(C, [2]);
-        var A2 = e("DIV", { keyed: true }, [y, z, x]);
-        var D = Od.patchDom(A2, C, null);
-        chk(D, [], "DIV", 3);
-        chk(D, [0], "SPAN");
-        chk(D, [1], "TABLE");
-        chk(D, [2], "P");
-        var D0 = nav(D, [0]);
-        var D1 = nav(D, [1]);
-        var D2 = nav(D, [2]);
-        same(C0, D2);
-        same(C1, D0);
-        same(C2, D1);
-    });
-    Test.run("Dom from HTML strings.", function () {
-        var X = Od.fromHtml("<H4>xyz<SPAN>pqr</SPAN></H4>");
-        var A = e("DIV", null, X);
-        var B = null;
-        var C = Od.patchDom(A, B, null);
-        chk(C, [], "DIV", 1);
-        chk(C, [0], "H4", 2);
-        chk(C, [0, 0], "#xyz");
-        chk(C, [0, 1], "SPAN", 1);
-        chk(C, [0, 1, 0], "#pqr");
+    // ---- Simple lists.
+    addDemo("Simple lists", function () {
+        var Xs = Obs.of([1], Obs.alwaysUpdate);
+        var inc = function () {
+            var xs = Xs();
+            xs.push(xs.length + 1);
+            Xs(xs);
+        };
+        var dec = function () {
+            var xs = Xs();
+            if (xs.length <= 1)
+                return;
+            xs.pop();
+            Xs(xs);
+        };
+        return e("DIV", null, [
+            e("BUTTON", { onclick: inc, style: "width: 2em;" }, "+"),
+            e("BUTTON", { onclick: dec, style: "width: 2em;" }, "-"),
+            Od.component(function () {
+                return e("DIV", null, Xs().map(function (x) { return e("SPAN", null, " " + x + " "); }));
+            })
+        ]);
     });
 };
-//# sourceMappingURL=app.js.map

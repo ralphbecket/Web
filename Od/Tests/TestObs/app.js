@@ -84,13 +84,21 @@
 //          Update regions can be nested; re-evaluation will only take place
 //          once the end of the outermost update region is reached.
 //
+// Forcing re-evaluation of dependents:
+//
+//      Obs.updateDependents(x);
+//          All dependents of x will be re-evaluated.  This is occasionally
+//          useful if the type of x is such that it is infeasible or
+//          inefficient to exactly detect updates (typically when the type
+//          of x is not observable and non-trivial).
+//
 // Observable identities:
 //
 //      x.id is the unique numeric identifier for observable x.
 //
 // Disposal:
 //
-//      x.dispose()
+//      Obs.dispose(x)
 //          Breaks the connection between x and any of its dependencies and
 //          sets its value to undefined.  This is sometimes necessary to
 //          prevent garbage retention, since a dependency link is a two-way
@@ -99,12 +107,20 @@
 var Obs;
 (function (Obs) {
     // The public interface.
-    var debug = true;
+    var debug = false;
     // The default equality test for observables.
     Obs.defaultEq = function (x, y) { return x === y; };
+    // This is useful for Dates.
+    Obs.valueOfEq = function (x, y) {
+        return (x && y && x.valueOf() === y.valueOf()) ||
+            (!x && !y);
+    };
     // The "equality test" for observables that always indicates a change.
     Obs.alwaysUpdate = function (x, y) { return false; };
-    // Create a mutable observable.
+    // Create a mutable observable.  The default equality test for 
+    // numbers, strings, and booleans is ===, otherwise any update is
+    // assumed to provide a different value, hence triggering any
+    // dependents.
     Obs.of = function (x, eq) {
         if (eq === void 0) { eq = null; }
         eq = (eq ? eq : hasSimpleType(x) ? Obs.defaultEq : Obs.alwaysUpdate);
@@ -116,7 +132,6 @@ var Obs;
         obs.id = nextID++;
         obs.value = x;
         obs.toString = obsToString;
-        obs.dispose = disposeObs;
         return obs;
     };
     var hasSimpleType = function (x) {
@@ -137,7 +152,6 @@ var Obs;
         obs.fn = function () { return updateComputedObs(obs, f, eq); };
         obs.dependencies = {};
         obs.toString = obsToString;
-        obs.dispose = disposeObs;
         reevaluateComputedObs(obs);
         return obs;
     };
@@ -165,22 +179,21 @@ var Obs;
         };
         var obs = subsAction;
         var id = nextID++;
-        var obsAnys = obss;
-        for (var i = 0; i < obsAnys.length; i++) {
-            var obsI = obsAnys[i];
-            if (!obsI.dependents)
-                obsI.dependents = {};
-            obsI.dependents[id] = obs;
+        var subsDependencies = obss;
+        for (var i = 0; i < subsDependencies.length; i++) {
+            var obsAnyI = subsDependencies[i];
+            if (!obsAnyI.dependents)
+                obsAnyI.dependents = {};
+            obsAnyI.dependents[id] = obs;
         }
         ;
         obs.id = id;
-        obs.level = 999999999; // Ensure subscriptions run last.
         obs.fn = subsAction;
         obs.value = "{subscription}"; // For obsToString;
         obs.toString = obsToString;
-        obs.dispose = function () {
-            disposeSubs(obs, obsAnys);
-        };
+        obs.subsDependencies = subsDependencies;
+        establishDependencies(obs);
+        obs.level = 999999999; // Ensure subscriptions run last.
         return obs;
     };
     // Implementation detail.
@@ -193,17 +206,25 @@ var Obs;
         }
         return "{obs " + this.id + " = " + valueStr + "}";
     };
-    // We need 'function' rather than '=>' so we can use 'this'.  Sorry.
-    var disposeObs = function () {
-        var obs = this;
-        obs.value = undefined;
-        breakDependencies(obs);
-        obs.dependents = undefined;
-    };
-    var disposeSubs = function (obs, obsAnys) {
-        var id = obs.id;
-        for (var i = 0; i < obsAnys.length; i++)
-            obsAnys[i].dependents[id] = undefined;
+    // Break the connection between an observable and its dependencies.
+    Obs.dispose = function (obs) {
+        var obsAny = obs;
+        obsAny.value = undefined;
+        breakDependencies(obsAny);
+        obsAny.dependents = undefined;
+        // Break any dependencies if this is a subscription.
+        var id = obsAny.id;
+        var subsDependencies = obsAny.subsDependencies;
+        if (!subsDependencies)
+            return;
+        for (var i = 0; i < subsDependencies.length; i++) {
+            var obsDepcy = subsDependencies[i];
+            var dependentsDepcy = obsDepcy.dependents;
+            if (!dependentsDepcy)
+                continue;
+            dependentsDepcy[id] = undefined;
+        }
+        obsAny.subsDependencies = undefined;
     };
     var readOrWriteObs = function (obs, eq, newX, argc) {
         if (argc) {
@@ -213,7 +234,7 @@ var Obs;
             var oldX = obs.value;
             obs.value = newX;
             if (!eq(oldX, newX))
-                updateDependents(obs);
+                Obs.updateDependents(obs);
         }
         if (currentDependencies)
             currentDependencies[obs.id] = obs;
@@ -323,7 +344,7 @@ var Obs;
         establishDependencies(obs);
         currentDependencies = oldCurrentDependencies;
         if (hasChanged)
-            updateDependents(obs);
+            Obs.updateDependents(obs);
         trace("Reevaluating obs", obs.id, "done.");
     };
     // Break the connection between a computed observable and its dependencies
@@ -364,7 +385,7 @@ var Obs;
     };
     // After an observable has been updated, we need to also update its
     // dependents in level order.
-    var updateDependents = function (obs) {
+    Obs.updateDependents = function (obs) {
         var dependents = obs.dependents;
         if (!dependents)
             return;
@@ -513,10 +534,10 @@ window.onload = function () {
         Test.expect("setup", x() === 123 && u() === 246 && v() === -246);
         x(1);
         Test.expect("propagation 1", x() === 1 && u() === 2 && v() === -2);
-        v.dispose();
+        Obs.dispose(v);
         x(2);
         Test.expect("disposing v", x() === 2 && u() === 4 && v() === undefined);
-        u.dispose();
+        Obs.dispose(u);
         x(3);
         Test.expect("disposing u", x() === 3 && u() === undefined && v() === undefined);
     });
@@ -536,7 +557,7 @@ window.onload = function () {
         y(678);
         Obs.endUpdate();
         Test.expect("propagation 3", k === 3);
-        x.dispose();
+        Obs.dispose(x);
         x(456); // Connection with w should be broken.
         y(789);
         Test.expect("propagation 4", k === 4);

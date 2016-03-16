@@ -84,13 +84,21 @@
 //          Update regions can be nested; re-evaluation will only take place
 //          once the end of the outermost update region is reached.
 //
+// Forcing re-evaluation of dependents:
+//
+//      Obs.updateDependents(x);
+//          All dependents of x will be re-evaluated.  This is occasionally
+//          useful if the type of x is such that it is infeasible or
+//          inefficient to exactly detect updates (typically when the type
+//          of x is not observable and non-trivial).
+//
 // Observable identities:
 //
 //      x.id is the unique numeric identifier for observable x.
 //
 // Disposal:
 //
-//      x.dispose()
+//      Obs.dispose(x)
 //          Breaks the connection between x and any of its dependencies and
 //          sets its value to undefined.  This is sometimes necessary to
 //          prevent garbage retention, since a dependency link is a two-way
@@ -101,14 +109,11 @@ module Obs {
 
     // The public interface.
 
-    const debug = true;
+    const debug = false;
 
     export interface IObservableAny {
         // Every observable has a unique identity.
         id: number;
-
-        // XXX FILL THIS IN!
-        dispose(): void;
     }
 
     export interface IObservable<T> extends IObservableAny {
@@ -144,7 +149,6 @@ module Obs {
         obs.id = nextID++;
         obs.value = x;
         obs.toString = obsToString;
-        obs.dispose = disposeObs;
 
         return obs;
     };
@@ -169,7 +173,6 @@ module Obs {
         obs.fn = () => updateComputedObs(obs, f, eq);
         obs.dependencies = {} as ObsSet;
         obs.toString = obsToString;
-        obs.dispose = disposeObs;
         reevaluateComputedObs(obs);
 
         return obs;
@@ -204,20 +207,19 @@ module Obs {
         };
         const obs = subsAction as any as Obs<void>;
         const id = nextID++;
-        const obsAnys = obss as ObsAny[];
-        for (var i = 0; i < obsAnys.length; i++) {
-            const obsI = obsAnys[i];
-            if (!obsI.dependents) obsI.dependents = {};
-            obsI.dependents[id] = obs;
+        const subsDependencies = obss as ObsAny[];
+        for (var i = 0; i < subsDependencies.length; i++) {
+            const obsAnyI = subsDependencies[i];
+            if (!obsAnyI.dependents) obsAnyI.dependents = {};
+            obsAnyI.dependents[id] = obs;
         };
         obs.id = id;
-        obs.level = 999999999; // Ensure subscriptions run last.
         obs.fn = subsAction as any;
         obs.value = "{subscription}" as any as void; // For obsToString;
         obs.toString = obsToString;
-        obs.dispose = () => {
-            disposeSubs(obs, obsAnys);
-        };
+        obs.subsDependencies = subsDependencies;
+        establishDependencies(obs);
+        obs.level = 999999999; // Ensure subscriptions run last.
 
         return obs;
     };
@@ -235,18 +237,23 @@ module Obs {
         return "{obs " + this.id + " = " + valueStr + "}";
     };
 
-    // We need 'function' rather than '=>' so we can use 'this'.  Sorry.
-    const disposeObs = function (): void {
-        var obs = this as Obs<void>;
-        obs.value = undefined;
-        breakDependencies(obs);
-        obs.dependents = undefined;
-    };
-
-    const disposeSubs = (obs: ObsAny, obsAnys: ObsAny[]): void => {
-        const id = obs.id;
-        for (var i = 0; i < obsAnys.length; i++)
-            obsAnys[i].dependents[id] = undefined;
+    // Break the connection between an observable and its dependencies.
+    export const dispose = (obs: IObservableAny): void => {
+        const obsAny = obs as Obs<void>;
+        obsAny.value = undefined;
+        breakDependencies(obsAny);
+        obsAny.dependents = undefined;
+        // Break any dependencies if this is a subscription.
+        const id = obsAny.id;
+        const subsDependencies = obsAny.subsDependencies;
+        if (!subsDependencies) return;
+        for (var i = 0; i < subsDependencies.length; i++) {
+            const obsDepcy = subsDependencies[i];
+            const dependentsDepcy = obsDepcy.dependents;
+            if (!dependentsDepcy) continue;
+            dependentsDepcy[id] = undefined;
+        }
+        obsAny.subsDependencies = undefined;
     };
 
     const readOrWriteObs =
@@ -290,6 +297,9 @@ module Obs {
 
         // Indicates whether this observable has been scheduled for update.
         isInUpdateQueue?: boolean;
+
+        // The list of dependencies if this is a subscription.
+        subsDependencies?: ObsAny[];
 
         // If this is a computed observable, this function recomputes its value.
         // The result should be true iff the new value differs from the old.
@@ -448,7 +458,7 @@ module Obs {
 
     // After an observable has been updated, we need to also update its
     // dependents in level order.
-    const updateDependents = (obs: ObsAny): void => {
+    export const updateDependents = (obs: ObsAny): void => {
         const dependents = obs.dependents;
         if (!dependents) return;
         startUpdate();

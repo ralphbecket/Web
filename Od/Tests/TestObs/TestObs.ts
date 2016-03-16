@@ -50,10 +50,10 @@
         Test.expect("setup", x() === 123 && u() === 246 && v() === -246);
         x(1);
         Test.expect("propagation 1", x() === 1 && u() === 2 && v() === -2);
-        v.dispose();
+        Obs.dispose(v);
         x(2);
         Test.expect("disposing v", x() === 2 && u() === 4 && v() === undefined);
-        u.dispose();
+        Obs.dispose(u);
         x(3);
         Test.expect("disposing u", x() === 3 && u() === undefined && v() === undefined);
     });
@@ -74,7 +74,7 @@
         y(678);
         Obs.endUpdate();
         Test.expect("propagation 3", k === 3);
-        x.dispose();
+        Obs.dispose(x);
         x(456); // Connection with w should be broken.
         y(789);
         Test.expect("propagation 4", k === 4);

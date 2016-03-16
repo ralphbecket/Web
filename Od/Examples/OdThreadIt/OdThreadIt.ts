@@ -20,22 +20,13 @@ interface IComment {
     child_comments?: Obs.IObservable<IComment[]>;
 }
 
-enum State {
-    LoadingThreads,
-    LoadingThreadsFailed,
-    ShowingThreads,
-    LoadingComments,
-    LoadingCommentsFailed,
-    ShowingComments
-}
-
-const currentState = Obs.of(State.LoadingThreads);
+const e = Od.element;
 
 var threads = [] as IComment[];
 
-type CommentDict = { [id: string]: IComment };
+var commentDict = {} as { [id: string]: IComment };
 
-var commentDict = {} as CommentDict;
+var currentThreadID = null as string; // Set if viewing comments for a thread.
 
 const addNewComment = (newComment: IComment): void => {
     const id = newComment.id;
@@ -54,9 +45,16 @@ const updateCommentDict = (newComments: IComment[]): void => {
     newComments.forEach(addNewComment);
 };
 
-var currentThreadID = null as string; // Set if viewing comments for a thread.
+enum State {
+    LoadingThreads,
+    LoadingThreadsFailed,
+    ShowingThreads,
+    LoadingComments,
+    LoadingCommentsFailed,
+    ShowingComments
+}
 
-const e = Od.element;
+const currentState = Obs.of(State.LoadingThreads);
 
 const view = Od.component((): Od.Vdom => {
     var vdom = null as Od.Vdom | Od.Vdom[];
@@ -65,12 +63,12 @@ const view = Od.component((): Od.Vdom => {
             vdom = "Loading threads...";
             break;
         case State.LoadingThreadsFailed:
-            return e("DIV", null, [
+            vdom = [
                 "There was an error loading the top-level threads.",
                 e("P", null,
                     e("A", { onclick: () => { fetchThreads(); } }, "Retry")
                 )
-            ]);
+            ];
             break;
         case State.ShowingThreads:
             vdom = viewThreads(threads);
@@ -79,7 +77,7 @@ const view = Od.component((): Od.Vdom => {
             vdom = "Loading thread comments...";
             break;
         case State.LoadingCommentsFailed:
-            vdom = e("DIV", null, [
+            vdom = [
                 "There was an error loading the thread comments.",
                 e("P", null,
                     e("A",
@@ -87,11 +85,10 @@ const view = Od.component((): Od.Vdom => {
                         "Retry"
                     )
                 )
-            ]);
+            ];
             break;
         case State.ShowingComments:
-            const currentThread = commentDict[currentThreadID];
-            vdom = viewCommentTree(currentThread);
+            vdom = viewCommentTree(commentDict[currentThreadID]);
             break;
     }
     return e("DIV", { className: "main" }, vdom);
@@ -112,18 +109,14 @@ const viewThreads = (threads: IComment[]): Od.Vdom[] => {
     return vdoms;
 };
 
-const viewCommentTree = (comment: IComment): Od.Vdom => {
-    const vdom = e("DIV", { className: "comment" }, [
+const viewCommentTree = (comment: IComment): Od.Vdom =>
+    e("DIV", { className: "comment" }, [
         e("P", null, comment.text),
-        e("DIV", { className: "reply" },
-            commentReply(comment.id)
-        ),
+        e("DIV", { className: "reply" }, commentReply(comment.id) ),
         e("DIV", { className: "children" },
             comment.child_comments().map(viewCommentTree)
         )
     ]);
-    return vdom;
-};
 
 enum ReplyState {
     NotReplying,
@@ -195,7 +188,7 @@ const submitReply =
     replyState(ReplyState.SendingReply);
     //sendTestReply(parentID, replyText(),
     POST("http://api.threaditjs.com/comments/create",
-        { parent: parentID, text: replyText() },
+        { text: replyText(), parent: parentID },
         (newComment) => {
             replyText("");
             addNewComment(newComment);

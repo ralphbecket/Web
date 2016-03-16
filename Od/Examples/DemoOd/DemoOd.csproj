@@ -22,21 +22,15 @@
     <Service Include="{4A0DDDB5-7A95-4FBF-97CC-616D07737A77}" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="..\Od\Obs.js">
-      <Link>Obs.js</Link>
-    </Content>
-    <Content Include="..\Od\Od.js">
-      <Link>Od.js</Link>
-    </Content>
     <Content Include="app.css" />
     <Content Include="index.html" />
     <Content Include="web.config" />
   </ItemGroup>
   <ItemGroup>
-    <TypeScriptCompile Include="..\Od\Obs.ts">
+    <TypeScriptCompile Include="..\..\Od\Obs.ts">
       <Link>Obs.ts</Link>
     </TypeScriptCompile>
-    <TypeScriptCompile Include="..\Od\Od.ts">
+    <TypeScriptCompile Include="..\..\Od\Od.ts">
       <Link>Od.ts</Link>
     </TypeScriptCompile>
     <TypeScriptCompile Include="DemoOd.ts" />
