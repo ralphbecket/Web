@@ -207,9 +207,10 @@ module Obs {
         };
         const obs = subsAction as any as Obs<void>;
         const id = nextID++;
-        const subsDependencies = obss as ObsAny[];
-        for (var i = 0; i < subsDependencies.length; i++) {
-            const obsAnyI = subsDependencies[i];
+        // Set this up as a dependency of its subscriptions.
+        const subscriptions = obss as ObsAny[];
+        for (var i = 0; i < subscriptions.length; i++) {
+            const obsAnyI = subscriptions[i];
             if (!obsAnyI.dependents) obsAnyI.dependents = {};
             obsAnyI.dependents[id] = obs;
         };
@@ -217,8 +218,7 @@ module Obs {
         obs.fn = subsAction as any;
         obs.value = "{subscription}" as any as void; // For obsToString;
         obs.toString = obsToString;
-        obs.subsDependencies = subsDependencies;
-        establishDependencies(obs);
+        obs.subscriptions = subscriptions;
         obs.level = 999999999; // Ensure subscriptions run last.
 
         return obs;
@@ -245,15 +245,15 @@ module Obs {
         obsAny.dependents = undefined;
         // Break any dependencies if this is a subscription.
         const id = obsAny.id;
-        const subsDependencies = obsAny.subsDependencies;
-        if (!subsDependencies) return;
-        for (var i = 0; i < subsDependencies.length; i++) {
-            const obsDepcy = subsDependencies[i];
-            const dependentsDepcy = obsDepcy.dependents;
-            if (!dependentsDepcy) continue;
-            dependentsDepcy[id] = undefined;
+        const subscriptions = obsAny.subscriptions;
+        if (!subscriptions) return;
+        for (var i = 0; i < subscriptions.length; i++) {
+            const subscription = subscriptions[i];
+            const subscriptionDependents = subscription.dependents;
+            if (!subscriptionDependents) continue;
+            subscriptionDependents[id] = undefined;
         }
-        obsAny.subsDependencies = undefined;
+        obsAny.subscriptions = undefined;
     };
 
     const readOrWriteObs =
@@ -299,7 +299,7 @@ module Obs {
         isInUpdateQueue?: boolean;
 
         // The list of dependencies if this is a subscription.
-        subsDependencies?: ObsAny[];
+        subscriptions?: ObsAny[];
 
         // If this is a computed observable, this function recomputes its value.
         // The result should be true iff the new value differs from the old.

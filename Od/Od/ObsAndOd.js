@@ -696,9 +696,10 @@ var Obs;
         };
         var obs = subsAction;
         var id = nextID++;
-        var subsDependencies = obss;
-        for (var i = 0; i < subsDependencies.length; i++) {
-            var obsAnyI = subsDependencies[i];
+        // Set this up as a dependency of its subscriptions.
+        var subscriptions = obss;
+        for (var i = 0; i < subscriptions.length; i++) {
+            var obsAnyI = subscriptions[i];
             if (!obsAnyI.dependents)
                 obsAnyI.dependents = {};
             obsAnyI.dependents[id] = obs;
@@ -708,8 +709,7 @@ var Obs;
         obs.fn = subsAction;
         obs.value = "{subscription}"; // For obsToString;
         obs.toString = obsToString;
-        obs.subsDependencies = subsDependencies;
-        establishDependencies(obs);
+        obs.subscriptions = subscriptions;
         obs.level = 999999999; // Ensure subscriptions run last.
         return obs;
     };
@@ -731,17 +731,17 @@ var Obs;
         obsAny.dependents = undefined;
         // Break any dependencies if this is a subscription.
         var id = obsAny.id;
-        var subsDependencies = obsAny.subsDependencies;
-        if (!subsDependencies)
+        var subscriptions = obsAny.subscriptions;
+        if (!subscriptions)
             return;
-        for (var i = 0; i < subsDependencies.length; i++) {
-            var obsDepcy = subsDependencies[i];
-            var dependentsDepcy = obsDepcy.dependents;
-            if (!dependentsDepcy)
+        for (var i = 0; i < subscriptions.length; i++) {
+            var subscription = subscriptions[i];
+            var subscriptionDependents = subscription.dependents;
+            if (!subscriptionDependents)
                 continue;
-            dependentsDepcy[id] = undefined;
+            subscriptionDependents[id] = undefined;
         }
-        obsAny.subsDependencies = undefined;
+        obsAny.subscriptions = undefined;
     };
     var readOrWriteObs = function (obs, eq, newX, argc) {
         if (argc) {
