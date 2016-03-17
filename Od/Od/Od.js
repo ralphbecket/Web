@@ -80,7 +80,7 @@ var Od;
         // First, turn the HTML into a DOM tree.
         var tmp = document.createElement("DIV");
         tmp.innerHTML = html;
-        var dom = tmp.firstChild;
+        var dom = (tmp.childNodes.length === 1 ? tmp.firstChild : tmp);
         // We create a pretend component to host the HTML.
         var vdom = { obs: staticHtmlObs, subs: staticHtmlSubs, dom: dom };
         return vdom;

@@ -97,7 +97,8 @@ module Od {
         // First, turn the HTML into a DOM tree.
         const tmp = document.createElement("DIV");
         tmp.innerHTML = html;
-        const dom = tmp.firstChild;
+        // If this is a bunch of nodes, return the whole DIV.
+        const dom = ( tmp.childNodes.length === 1 ? tmp.firstChild : tmp );
         // We create a pretend component to host the HTML.
         const vdom =
             { obs: staticHtmlObs, subs: staticHtmlSubs, dom: dom } as IVdom;

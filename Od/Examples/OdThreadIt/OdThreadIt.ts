@@ -100,7 +100,7 @@ const viewThreads = (threads: IComment[]): Od.Vdom[] => {
     for (var i = 0; i < iTop; i++) {
         const thread = threads[i];
         vdoms.push(e("A", { href: "#thread/" + thread.id },
-            thread.text));
+            Od.fromHtml(thread.text)));
         vdoms.push(e("P", { className: "comment_count" },
             plural(thread.comment_count, "comment")));
         vdoms.push(e("HR"));
@@ -111,7 +111,7 @@ const viewThreads = (threads: IComment[]): Od.Vdom[] => {
 
 const viewCommentTree = (comment: IComment): Od.Vdom =>
     e("DIV", { className: "comment" }, [
-        e("P", null, comment.text),
+        Od.fromHtml(comment.text),
         e("DIV", { className: "reply" }, commentReply(comment.id) ),
         e("DIV", { className: "children" },
             comment.child_comments().map(viewCommentTree)
@@ -186,9 +186,11 @@ const submitReply =
     replyState: Obs.IObservable<ReplyState>
 ): void => {
     replyState(ReplyState.SendingReply);
+    var body = "text=" + encodeURIComponent(replyText());
+    if (parentID) body += "&parent=" + encodeURIComponent(parentID);
     //sendTestReply(parentID, replyText(),
     POST("http://api.threaditjs.com/comments/create",
-        { text: replyText(), parent: parentID },
+        body,
         (newComment) => {
             replyText("");
             addNewComment(newComment);
@@ -248,7 +250,7 @@ const GET =
 
 const POST =
 (   url: string,
-    body: any,
+    body: string,
     pass: (data: any) => void,
     fail: (e: any) => void
 ): void => {
@@ -274,7 +276,8 @@ const SEND =
             fail(e);
         }
     };
-    xhr.send(JSON.stringify(body));
+    if (method === "POST") xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+    xhr.send(body);
 };
 
 // ---- Routing. ----

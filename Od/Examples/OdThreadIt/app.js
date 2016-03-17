@@ -507,7 +507,7 @@ var Od;
         // First, turn the HTML into a DOM tree.
         var tmp = document.createElement("DIV");
         tmp.innerHTML = html;
-        var dom = tmp.firstChild;
+        var dom = (tmp.childNodes.length === 1 ? tmp.firstChild : tmp);
         // We create a pretend component to host the HTML.
         var vdom = { obs: staticHtmlObs, subs: staticHtmlSubs, dom: dom };
         return vdom;
@@ -1018,7 +1018,7 @@ var viewThreads = function (threads) {
     var iTop = threads.length;
     for (var i = 0; i < iTop; i++) {
         var thread = threads[i];
-        vdoms.push(e("A", { href: "#thread/" + thread.id }, thread.text));
+        vdoms.push(e("A", { href: "#thread/" + thread.id }, Od.fromHtml(thread.text)));
         vdoms.push(e("P", { className: "comment_count" }, plural(thread.comment_count, "comment")));
         vdoms.push(e("HR"));
     }
@@ -1027,7 +1027,7 @@ var viewThreads = function (threads) {
 };
 var viewCommentTree = function (comment) {
     return e("DIV", { className: "comment" }, [
-        e("P", null, comment.text),
+        Od.fromHtml(comment.text),
         e("DIV", { className: "reply" }, commentReply(comment.id)),
         e("DIV", { className: "children" }, comment.child_comments().map(viewCommentTree))
     ]);
@@ -1077,8 +1077,11 @@ var commentReply = function (parentID) {
 };
 var submitReply = function (parentID, replyText, replyState) {
     replyState(ReplyState.SendingReply);
+    var body = "text=" + encodeURIComponent(replyText());
+    if (parentID)
+        body += "&parent=" + encodeURIComponent(parentID);
     //sendTestReply(parentID, replyText(),
-    POST("http://api.threaditjs.com/comments/create", { text: replyText(), parent: parentID }, function (newComment) {
+    POST("http://api.threaditjs.com/comments/create", body, function (newComment) {
         replyText("");
         addNewComment(newComment);
         replyState(ReplyState.NotReplying);
@@ -1137,7 +1140,9 @@ var SEND = function (method, url, body, pass, fail) {
             fail(e);
         }
     };
-    xhr.send(JSON.stringify(body));
+    if (method === "POST")
+        xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+    xhr.send(body);
 };
 // ---- Routing. ----
 // This is a *really* simple router!
