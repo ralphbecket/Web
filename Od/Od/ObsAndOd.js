@@ -515,6 +515,7 @@ var Od;
         console.log.apply(console, arguments);
     };
 })(Od || (Od = {}));
+//# sourceMappingURL=Od.js.map
 // Obs.ts
 // (C) Ralph Becket, 2016
 //
@@ -942,4 +943,4 @@ var Obs;
         console.log.apply(console, arguments);
     };
 })(Obs || (Obs = {}));
-//# sourceMappingURL=ObsAndOd.js.map
+//# sourceMappingURL=Obs.js.map

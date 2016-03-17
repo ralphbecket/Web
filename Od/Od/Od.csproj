@@ -22,11 +22,15 @@
   <ItemGroup>
     <TypeScriptCompile Include="Od.ts" />
     <TypeScriptCompile Include="Obs.ts" />
+    <Content Include="ObsAndOd.js" />
+    <Content Include="ObsAndOd.min.js">
+      <DependentUpon>ObsAndOd.js</DependentUpon>
+    </Content>
     <Content Include="web.config" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="bundleconfig.json" />
     <Content Include="packages.config" />
+    <None Include="bundleconfig.json" />
     <None Include="web.Debug.config">
       <DependentUpon>web.config</DependentUpon>
     </None>
@@ -69,7 +73,8 @@
     <TypeScriptJSXEmit>None</TypeScriptJSXEmit>
     <TypeScriptCompileOnSaveEnabled>True</TypeScriptCompileOnSaveEnabled>
     <TypeScriptNoImplicitAny>True</TypeScriptNoImplicitAny>
-    <TypeScriptOutFile>ObsAndOd.js</TypeScriptOutFile>
+    <TypeScriptOutFile>
+    </TypeScriptOutFile>
     <TypeScriptOutDir />
     <TypeScriptGeneratesDeclarations>False</TypeScriptGeneratesDeclarations>
     <TypeScriptNoEmitOnError>True</TypeScriptNoEmitOnError>
