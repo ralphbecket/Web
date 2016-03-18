@@ -508,7 +508,8 @@ var Od;
         // First, turn the HTML into a DOM tree.
         var tmp = document.createElement("DIV");
         tmp.innerHTML = html;
-        var dom = tmp.firstChild;
+        // If this is a bunch of nodes, return the whole DIV.
+        var dom = (tmp.childNodes.length === 1 ? tmp.firstChild : tmp);
         // We create a pretend component to host the HTML.
         var vdom = { obs: staticHtmlObs, subs: staticHtmlSubs, dom: dom };
         return vdom;
@@ -524,6 +525,7 @@ var Od;
     };
     // Bind a vDOM node to a DOM node.  For example,
     // Od.bind(myVdom, document.body.getElementById("foo"));
+    // This will either update or replace the DOM node in question.
     Od.bind = function (vdom, dom) {
         var domParent = dom.parentNode;
         Od.patchDom(vdom, dom, domParent);
@@ -533,6 +535,24 @@ var Od;
     Od.appendChild = function (vdom, domParent) {
         var dom = null;
         Od.patchDom(vdom, dom, domParent);
+    };
+    // Dispose of a component, removing any observable dependencies
+    // it may have.
+    Od.dispose = function (vdom) {
+        if (!vdom)
+            return;
+        if (vdom.obs) {
+            Obs.dispose(vdom.obs);
+            vdom.obs = undefined;
+        }
+        if (vdom.subs) {
+            Obs.dispose(vdom.subs);
+            vdom.subs = undefined;
+        }
+        if (vdom.dom) {
+            enqueueNodeForStripping(vdom.dom);
+            vdom.dom = undefined;
+        }
     };
     // Normally, component updates will be batched via requestAnimationFrame
     // (i.e., they will occur at most once per display frame).  Setting this
