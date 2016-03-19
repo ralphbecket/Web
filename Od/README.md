@@ -127,7 +127,7 @@ re-evaluated only after `u` when `x` is updated (without this, we may find
 
 #### Bragging
 
-The combined Obs and Od libraries currently come in at 2.9 KBytes
+The combined Obs and Od libraries currently come in at 3.8 KBytes
 minified and gzipped.
 
 Thanks partly due to careful attention to invariants during design and
