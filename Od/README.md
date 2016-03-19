@@ -1,6 +1,13 @@
 # Od
 (C) Ralph Becket, 2016
 
+## Interactive tutorials
+
+* [Od - Hello, World!](https://jsfiddle.net/ralphbecket/2Laqcewa/)  - the very, very basics.
+* [Obs - Observables](https://jsfiddle.net/ralphbecket/wo5pb7m4/)   - the underlying magic.
+* [Od - Components](https://jsfiddle.net/ralphbecket/kyvfcj7h/)     - dynamic, interactive HTML components.
+These are still work in progress; any feedback would be greatly appreciated.
+
 ## Observables-based vDOM.
 
 Virtual-DOM schemes are all the rage.  Because manually updating the
