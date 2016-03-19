@@ -266,8 +266,10 @@ module Obs {
             const oldX = obs.value;
             obs.value = newX;
             if (!eq(oldX, newX)) updateDependents(obs);
+        } else {
+            // This is a read -- we need to record it as a dependency.
+            if (currentDependencies) currentDependencies[obs.id] = obs;
         }
-        if (currentDependencies) currentDependencies[obs.id] = obs;
         return obs.value;
     };
 

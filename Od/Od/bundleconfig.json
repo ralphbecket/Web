@@ -2,8 +2,13 @@
   {
     "outputFileName": "ObsAndOd.js",
     "inputFiles": [
-      "Obs.js",
-      "Od.js"
+      "ObsAndOd.js"
+    ]
+  },
+  {
+    "outputFileName": "Obs.js",
+    "inputFiles": [
+      "Obs.js"
     ]
   }
 ]

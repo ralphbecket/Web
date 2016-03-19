@@ -236,8 +236,11 @@ var Obs;
             if (!eq(oldX, newX))
                 Obs.updateDependents(obs);
         }
-        if (currentDependencies)
-            currentDependencies[obs.id] = obs;
+        else {
+            // This is a read -- we need to record it as a dependency.
+            if (currentDependencies)
+                currentDependencies[obs.id] = obs;
+        }
         return obs.value;
     };
     var updateComputedObs = function (obs, f, eq) {
