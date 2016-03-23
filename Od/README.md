@@ -1,6 +1,20 @@
 # Od
 (C) Ralph Becket, 2016
 
+## Why try Od?
+* It's small (under 4 KBytes).
+* It has a tiny API (three main functions, a handful of auxiliary functions).
+* It's fast: 50% faster than Mithril without any attempt at optimisation.
+* It's consistent: there are no funny corner cases (e.g., nothing goes wrong when you move UI components around).
+* It's predictable: components render independently; an update in one place has no cost for other places.
+* It's simple: updates happen automatically.
+* It's unopinionated: design your application as you will.
+
+## Demonstrations to whet the appetite
+
+* [Od - Demo - Hello](https://jsfiddle.net/ralphbecket/t2xcbjqo/)
+* [Od - Demo - Basic To-do List](https://jsfiddle.net/ralphbecket/bbvtwyuq/)
+
 ## Interactive tutorials
 
 * [Od - Hello, World!](https://jsfiddle.net/ralphbecket/2Laqcewa/)  - the very, very basics.
