@@ -1,6 +1,8 @@
 # Od
 (C) Ralph Becket, 2016
 
+A compact virtual-DOM library in the style of Mithril.
+
 ## Why try Od?
 * It's small (under 4 KBytes).
 * It has a tiny API (three main functions, a handful of auxiliary functions).
