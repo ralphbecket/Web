@@ -68,6 +68,22 @@ Mithril, Inferno, and React.  I'd also like to mention the reactive school,
 but in the end I find the observables-based approach more natural.  
 For today, at least.
 
+### Patching algorithm
+
+Patching is the process of changing a DOM subtree to match a vDOM tree.  
+* An _update_ changes the existing DOM node.
+* A _replacement_ substitutes a new DOM node for the old.
+
+| Old\New   | Text       | Element    | Component  |
+| :-------- | :--------: | :--------: | :--------: |
+| Text      | Update     | Replace    | Replace    |
+| Element   | Replace    | Depends on tags | Replace |
+| Component | Replace    | Replace    | Depends on components |
+
+* Element/element patching: _update_ if tags match, otherwise _replace_.
+* Component/component patching: do nothing if components are the same, 
+  otherwise _replace_ with the new component's DOM.
+
 ### Finer details
 
 An Od application constructs one or more _vDOM_ structures which it binds to
