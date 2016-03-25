@@ -180,4 +180,4 @@ worked first time, if you can believe such a thing.
 - Add sensible support for style properties (at the moment only the
   `style: "color: red; width: 10em; ..."` approach is implemented).
 - Add lifecycle hooks for components.
-- Performance testing.  I expect this thing to rock.
+- Performance tweaking.  It's 50% faster than Mithril, but we can probably do better.
