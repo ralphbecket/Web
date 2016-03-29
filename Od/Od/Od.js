@@ -28,7 +28,7 @@
 // behind observables is that one can attach functions to them (subscriptions)
 // to be executed whenever the value of the observable changes.
 //
-// Every "active" DOM subtree (i.e., something that can change as the
+// Every "dynamic" DOM subtree (i.e., something that can change as the
 // application runs) is managed via an observable whose value is a vDOM
 // subtree.  When the observable changes, the patching algorithm is only
 // applied to the affected DOM subtree.
@@ -46,10 +46,10 @@
 var Od;
 (function (Od) {
     var debug = false;
+    ;
     Od.text = function (text) {
         return ({ text: isNully(text) ? "" : text.toString() });
     };
-    ;
     // Construct a vDOM node.
     Od.element = function (tag, props, childOrChildren) {
         tag = tag.toUpperCase();
@@ -63,14 +63,60 @@ var Od;
     };
     // Construct a component node from a function computing a vDOM node.
     Od.component = function (fn) {
+        return Od.namedComponent(null, fn);
+    };
+    // A named component persists within the scope of the component within
+    // which it is defined.  That is, the parent component can be re-evaluated,
+    // but any named child components will persist from the original
+    // construction of the parent, rather than being recreated.  Passing a
+    // falsy name is equivalent to calling the plain 'component' function.
+    Od.namedComponent = function (name, fn) {
+        var existingVdom = existingNamedComponentInstance(name);
+        if (existingVdom)
+            return existingVdom;
         var obs = (Obs.isObservable(fn)
             ? fn
             : Obs.fn(fn));
-        var vdom = { obs: obs, subs: null, dom: null };
+        var vdom = {
+            obs: obs,
+            subscription: null,
+            subcomponents: null,
+            dom: null
+        };
         var subs = Obs.subscribe([obs], updateComponent.bind(vdom));
-        vdom.subs = subs;
-        subs(); // Initialise the dom component.
+        vdom.subscription = subs;
+        // Attach this component as a subcomponent of the parent context.
+        addAsParentSubcomponent(name, vdom);
+        // Set the component context for the component body.
+        var tmp = parentSubcomponents;
+        parentSubcomponents = null;
+        // Initialise the dom component.
+        subs();
+        // Record any subcomponents we have.
+        vdom.subcomponents = parentSubcomponents;
+        // Restore the parent subcomponent context.
+        parentSubcomponents = tmp;
         return vdom;
+    };
+    // Any subcomponents of the component currently being defined.
+    var parentSubcomponents = null;
+    var existingNamedComponentInstance = function (name) {
+        return name &&
+            parentSubcomponents &&
+            parentSubcomponents[name];
+    };
+    var addAsParentSubcomponent = function (name, child) {
+        if (!parentSubcomponents)
+            parentSubcomponents = {};
+        if (name) {
+            parentSubcomponents[name] = child;
+            return;
+        }
+        // Otherwise, this child has no name.  Aww.  In this case we
+        // store a list of these nameless children under the special name "".
+        if (!("" in parentSubcomponents))
+            parentSubcomponents[""] = [];
+        parentSubcomponents[""].push(child);
     };
     // Construct a static DOM subtree from an HTML string.
     // Note: this vDOM node can, like DOM nodes, only appear
@@ -83,7 +129,11 @@ var Od;
         // If this is a bunch of nodes, return the whole DIV.
         var dom = (tmp.childNodes.length === 1 ? tmp.firstChild : tmp);
         // We create a pretend component to host the HTML.
-        var vdom = { obs: staticHtmlObs, subs: staticHtmlSubs, dom: dom };
+        var vdom = {
+            obs: staticHtmlObs,
+            subscription: staticHtmlSubs,
+            dom: dom
+        };
         return vdom;
     };
     // Take a DOM subtree directly.
@@ -92,7 +142,11 @@ var Od;
     // you need duplicate fromDom instances.
     Od.fromDom = function (dom) {
         // We create a pretend component to host the HTML.
-        var vdom = { obs: staticHtmlObs, subs: staticHtmlSubs, dom: dom };
+        var vdom = {
+            obs: staticHtmlObs,
+            subscription: staticHtmlSubs,
+            dom: dom
+        };
         return vdom;
     };
     // Bind a vDOM node to a DOM node.  For example,
@@ -115,15 +169,31 @@ var Od;
             return;
         if (vdom.obs) {
             Obs.dispose(vdom.obs);
-            vdom.obs = undefined;
+            vdom.obs = null;
         }
-        if (vdom.subs) {
-            Obs.dispose(vdom.subs);
-            vdom.subs = undefined;
+        if (vdom.subscription) {
+            Obs.dispose(vdom.subscription);
+            vdom.subscription = null;
         }
         if (vdom.dom) {
             enqueueNodeForStripping(vdom.dom);
-            vdom.dom = undefined;
+            vdom.dom = null;
+        }
+        if (vdom.subcomponents) {
+            disposeSubcomponents(vdom.subcomponents);
+            vdom.subcomponents = null;
+        }
+    };
+    var disposeSubcomponents = function (subcomponents) {
+        for (var name in subcomponents) {
+            var subcomponent = subcomponents[name];
+            if (name === "") {
+                // These are anonymous subcomponents, kept in an list.
+                subcomponent.forEach(Od.dispose);
+            }
+            else {
+                Od.dispose(subcomponent);
+            }
         }
     };
     // Normally, component updates will be batched via requestAnimationFrame
@@ -133,8 +203,7 @@ var Od;
     Od.deferComponentUpdates = true;
     // ---- Implementation detail. ----
     var isArray = function (x) { return x instanceof Array; };
-    var isNully = function (x) { return x === null || x === undefined; };
-    ;
+    var isNully = function (x) { return x == null; };
     Od.patchDom = function (vdomOrString, dom, domParent) {
         var vdom = (typeof (vdomOrString) === "string"
             ? Od.text(vdomOrString)
@@ -240,7 +309,7 @@ var Od;
     // XXX We can put special property handling here (e.g., 'className' vs
     // 'class', and 'style' etc.)
     var removeDomProp = function (dom, prop) {
-        dom[prop] = undefined;
+        dom[prop] = null;
         if (dom instanceof HTMLElement)
             dom.removeAttribute(prop);
     };
@@ -380,6 +449,10 @@ var Od;
     };
     function updateComponent() {
         var component = this;
+        // If the component has anonymous subcomponents, we should dispose
+        // of them now -- they will be recreated if needed.  Named
+        // subcomponents will persist.
+        disposeAnonymousSubcomponents(component);
         var dom = component.dom;
         // If a DOM node is already associated with the component, we
         // can defer the patching operation (which is nicer for the
@@ -396,6 +469,13 @@ var Od;
         setDomComponent(newDom, component);
         component.dom = newDom;
     }
+    var disposeAnonymousSubcomponents = function (vdom) {
+        var anonymousSubcomponents = vdom.subcomponents && vdom.subcomponents[""];
+        if (!anonymousSubcomponents)
+            return;
+        anonymousSubcomponents.forEach(Od.dispose);
+        vdom.subcomponents[""] = null;
+    };
     // We defer DOM updates using requestAnimationFrame.  It's better to
     // batch DOM updates where possible.
     var requestAnimationFrameSubstitute = function (callback) {
@@ -421,7 +501,7 @@ var Od;
         var iTop = componentsAwaitingUpdate.length;
         for (var i = 0; i < iTop; i++) {
             var component_1 = componentsAwaitingUpdate[i];
-            var id = component_1.obs.id;
+            var id = component_1.obs.obsid;
             if (patchedComponents[id])
                 continue;
             trace("Patching queued component #", id);
@@ -492,7 +572,7 @@ var Od;
         var props = getEltPropList(dom) || [];
         var numProps = props.length;
         for (var i = 0; i < numProps; i++)
-            dom[props[i]] = undefined;
+            dom[props[i]] = null;
         // Recursively strip any child nodes.
         var children = dom.childNodes;
         var numChildren = children.length;

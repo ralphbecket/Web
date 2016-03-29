@@ -112,7 +112,7 @@ var ENV = ENV || (function () {
             }
             for (var j in object.lastSample.queries) {
                 var value = object.lastSample.queries[j];
-                if (j <= nbQueries) {
+                if (j as any <= nbQueries) {
                     updateQuery(value);
                 } else {
                     cleanQuery(value);

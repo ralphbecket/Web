@@ -105,7 +105,7 @@
 //          relation.
 //
 
-module Obs {
+namespace Obs {
 
     // The public interface.
 
@@ -113,7 +113,7 @@ module Obs {
 
     export interface IObservableAny {
         // Every observable has a unique identity.
-        id: number;
+        obsid: number;
     }
 
     export interface IObservable<T> extends IObservableAny {
@@ -141,12 +141,12 @@ module Obs {
     <T>(x: T, eq: EqualityTest<T> = null): IObservable<T> => {
 
         eq = (eq ? eq : hasSimpleType(x) ? defaultEq : alwaysUpdate);
-        var obs = undefined as Obs<T>;
+        var obs = null as Obs<T>;
         // We need 'function' so we can use 'arguments'.  Sorry.
         obs = (function (newX?: T): T {
             return readOrWriteObs(obs, eq, newX, arguments.length);
         }) as Obs<T>;
-        obs.id = nextID++;
+        obs.obsid = nextID++;
         obs.value = x;
         obs.toString = obsToString;
 
@@ -164,12 +164,12 @@ module Obs {
     export const fn =
     <T>(f: () => T, eq: EqualityTest<T> = defaultEq): IObservable<T> => {
 
-        var obs = undefined as Obs<T>;
+        var obs = null as Obs<T>;
         // We need 'function' so we can use 'arguments'.  Sorry.
         obs = (function (newX?: T): T {
             return readOrWriteObs(obs, eq, newX, arguments.length);
         }) as Obs<T>;
-        obs.id = nextID++;
+        obs.obsid = nextID++;
         obs.fn = () => updateComputedObs(obs, f, eq);
         obs.dependencies = {} as ObsSet;
         obs.toString = obsToString;
@@ -182,9 +182,9 @@ module Obs {
     export const peek = <T>(obs: IObservable<T>): T => (obs as Obs<T>).value;
 
     // Decide if an object is observable or not.
-    // This just tests whether the object has an 'id' property.
+    // This just tests whether the object is a function with an 'obsid' property.
     export const isObservable = (obs: any): boolean =>
-        !!(obs as ObsAny).id;
+        obs && (obs as ObsAny).obsid && (typeof (obs) === "function");
 
     // Decide if an observable is computed or not.
     // This just tests whether the object has a 'fn' property.
@@ -201,7 +201,7 @@ module Obs {
 
         const subsAction = () => {
             var tmp = currentDependencies;
-            currentDependencies = undefined; // Suspend dependency tracking.
+            currentDependencies = null; // Suspend dependency tracking.
             action();
             currentDependencies = tmp;
         };
@@ -214,7 +214,7 @@ module Obs {
             if (!obsAnyI.dependents) obsAnyI.dependents = {};
             obsAnyI.dependents[id] = obs;
         };
-        obs.id = id;
+        obs.obsid = id;
         obs.fn = subsAction as any;
         obs.value = "{subscription}" as any as void; // For obsToString;
         obs.toString = obsToString;
@@ -223,6 +223,12 @@ module Obs {
 
         return obs;
     };
+
+    // This is occasionally useful.
+    export type IObservablish<T> = T | IObservable<T>;
+
+    export const value = <T>(ish: IObservablish<T>): T =>
+        isObservable(ish) ? (ish as IObservable<T>)() : (ish as T);
 
     // Implementation detail.
 
@@ -240,20 +246,20 @@ module Obs {
     // Break the connection between an observable and its dependencies.
     export const dispose = (obs: IObservableAny): void => {
         const obsAny = obs as Obs<void>;
-        obsAny.value = undefined;
+        obsAny.value = null;
         breakDependencies(obsAny);
-        obsAny.dependents = undefined;
+        obsAny.dependents = null;
         // Break any dependencies if this is a subscription.
-        const id = obsAny.id;
+        const id = obsAny.obsid;
         const subscriptions = obsAny.subscriptions;
         if (!subscriptions) return;
         for (var i = 0; i < subscriptions.length; i++) {
             const subscription = subscriptions[i];
             const subscriptionDependents = subscription.dependents;
             if (!subscriptionDependents) continue;
-            subscriptionDependents[id] = undefined;
+            subscriptionDependents[id] = null;
         }
-        obsAny.subscriptions = undefined;
+        obsAny.subscriptions = null;
     };
 
     const readOrWriteObs =
@@ -262,13 +268,13 @@ module Obs {
             if (obs.fn) throw new Error(
                 "Computed observables cannot be assigned to."
             );
-            trace("Updating obs", obs.id);
+            trace("Updating obs", obs.obsid);
             const oldX = obs.value;
             obs.value = newX;
             if (!eq(oldX, newX)) updateDependents(obs);
         } else {
             // This is a read -- we need to record it as a dependency.
-            if (currentDependencies) currentDependencies[obs.id] = obs;
+            if (currentDependencies) currentDependencies[obs.obsid] = obs;
         }
         return obs.value;
     };
@@ -331,7 +337,7 @@ module Obs {
 
     const enqueueUpdate = (obs: ObsAny): void => {
         if (obs.isInUpdateQueue) return;
-        trace("  Enqueueing obs", obs.id);
+        trace("  Enqueueing obs", obs.obsid);
         // This is usually called "DownHeap" in the literature.
         var i = updateQ.length;
         updateQ.push(obs);
@@ -347,7 +353,7 @@ module Obs {
             j = i >> 1;
         }
         updateQ[i] = obs;
-        trace("    UpdateQ =", JSON.stringify(updateQ.map(x => x.id)));
+        trace("    UpdateQ =", JSON.stringify(updateQ.map(x => x.obsid)));
     };
 
     const dequeueUpdate = (): ObsAny => {
@@ -355,7 +361,7 @@ module Obs {
 
         const obs = updateQ[0];
         obs.isInUpdateQueue = false;
-        trace("  Dequeueing obs", obs.id);
+        trace("  Dequeueing obs", obs.obsid);
 
         // This is usually called "UpHeap" in the literature.
         const obsI = updateQ.pop();
@@ -411,10 +417,10 @@ module Obs {
 
     // The dependencies identified while performing an update.
     // If this is undefined then no dependencies will be recorded.
-    var currentDependencies = undefined as ObsSet;
+    var currentDependencies = null as ObsSet;
 
     const reevaluateComputedObs = (obs: ObsAny): void => {
-        trace("Reevaluating obs", obs.id, "...");
+        trace("Reevaluating obs", obs.obsid, "...");
         const oldCurrentDependencies = currentDependencies;
         currentDependencies = obs.dependencies;
         breakDependencies(obs);
@@ -422,28 +428,28 @@ module Obs {
         establishDependencies(obs);
         currentDependencies = oldCurrentDependencies;
         if (hasChanged) updateDependents(obs);
-        trace("Reevaluating obs", obs.id, "done.");
+        trace("Reevaluating obs", obs.obsid, "done.");
     };
 
     // Break the connection between a computed observable and its dependencies
     // prior to reevaluating its value (reevaluation may change the set of
     // dependencies).
     const breakDependencies = (obs: ObsAny): void => {
-        const obsID = obs.id;
+        const obsID = obs.obsid;
         const dependencies = obs.dependencies;
         if (!dependencies) return;
         for (var id in dependencies) {
             const obsDepcy = dependencies[id];
             if (!obsDepcy) continue;
-            dependencies[id] = undefined;
-            obsDepcy.dependents[obsID] = undefined;
+            dependencies[id] = null;
+            obsDepcy.dependents[obsID] = null;
         }
     };
 
     // Establish a connection with observables used while reevaluating a
     // computed observable.
     const establishDependencies = (obs: ObsAny): void => {
-        const obsID = obs.id;
+        const obsID = obs.obsid;
         const dependencies = obs.dependencies;
         var obsLevel = 0;
         for (var id in dependencies) {
@@ -451,7 +457,7 @@ module Obs {
             if (!obsDepcy) continue;
             if (!obsDepcy.dependents) obsDepcy.dependents = {};
             obsDepcy.dependents[obsID] = obs;
-            trace("  Obs", obsID, "depends on obs", obsDepcy.id);
+            trace("  Obs", obsID, "depends on obs", obsDepcy.obsid);
             const obsDepcyLevel = obsDepcy.level | 0;
             if (obsLevel <= obsDepcyLevel) obsLevel = 1 + obsDepcyLevel;
         }
@@ -460,8 +466,8 @@ module Obs {
 
     // After an observable has been updated, we need to also update its
     // dependents in level order.
-    export const updateDependents = (obs: ObsAny): void => {
-        const dependents = obs.dependents;
+    export const updateDependents = (obs: IObservableAny): void => {
+        const dependents = (obs as ObsAny).dependents;
         if (!dependents) return;
         startUpdate();
         for (var id in dependents) {

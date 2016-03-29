@@ -28,7 +28,7 @@
 // behind observables is that one can attach functions to them (subscriptions)
 // to be executed whenever the value of the observable changes.
 //
-// Every "active" DOM subtree (i.e., something that can change as the
+// Every "dynamic" DOM subtree (i.e., something that can change as the
 // application runs) is managed via an observable whose value is a vDOM
 // subtree.  When the observable changes, the patching algorithm is only
 // applied to the affected DOM subtree.
@@ -43,7 +43,7 @@
 // and React.  I'd also like to mention the reactive school, but in the end
 // I find the observables-based approach more natural.  For today, at least.
 //
-module Od {
+namespace Od {
 
     const debug = false;
 
@@ -53,16 +53,16 @@ module Od {
 
     export type Vdom = string | IVdom;
 
-    export const text = (text: string): IVdom =>
-        ({ text: isNully(text) ? "" : text.toString() });
+    export type Vdoms = Vdom | Vdom[];
 
     export interface IProps { [prop: string]: any };
 
-    type VdomChildren = Vdom | Vdom[];
+    export const text = (text: string): IVdom =>
+        ({ text: isNully(text) ? "" : text.toString() });
 
     // Construct a vDOM node.
     export const element =
-    (tag: string, props?: IProps, childOrChildren?: VdomChildren): IVdom => {
+    (tag: string, props?: IProps, childOrChildren?: Vdoms): IVdom => {
         tag = tag.toUpperCase();
         const propAssocList = propsToPropAssocList(props);
         const children =
@@ -76,18 +76,63 @@ module Od {
     };
 
     // Construct a component node from a function computing a vDOM node.
-    export const component = (fn: () => Vdom): IVdom => {
+    export const component = (fn: () => Vdom): IVdom =>
+        namedComponent(null, fn);
+
+    // A named component persists within the scope of the component within
+    // which it is defined.  That is, the parent component can be re-evaluated,
+    // but any named child components will persist from the original
+    // construction of the parent, rather than being recreated.  Passing a
+    // falsy name is equivalent to calling the plain 'component' function.
+    export const namedComponent = (name: string, fn: () => Vdom): IVdom => {
+        const existingVdom = existingNamedComponentInstance(name);
+        if (existingVdom) return existingVdom;
         const obs =
             ( Obs.isObservable(fn)
             ? fn as Obs.IObservable<Vdom>
             : Obs.fn(fn)
             );
-        const vdom = { obs: obs, subs: null, dom: null } as IVdom;
+        const vdom = {
+            obs: obs,
+            subscription: null,
+            subcomponents: null,
+            dom: null
+        } as IVdom;
         const subs = Obs.subscribe([obs], updateComponent.bind(vdom));
-        vdom.subs = subs;
-        subs(); // Initialise the dom component.
+        vdom.subscription = subs;
+        // Attach this component as a subcomponent of the parent context.
+        addAsParentSubcomponent(name, vdom);
+        // Set the component context for the component body.
+        const tmp = parentSubcomponents;
+        parentSubcomponents = null;
+        // Initialise the dom component.
+        subs();
+        // Record any subcomponents we have.
+        vdom.subcomponents = parentSubcomponents;
+        // Restore the parent subcomponent context.
+        parentSubcomponents = tmp;
         return vdom;
     };
+
+    // Any subcomponents of the component currently being defined.
+    var parentSubcomponents = null as ISubComponents;
+
+    const existingNamedComponentInstance = (name: string): IVdom =>
+        name &&
+        parentSubcomponents &&
+        parentSubcomponents[name];
+
+    const addAsParentSubcomponent = (name: string, child: IVdom): void => {
+        if (!parentSubcomponents) parentSubcomponents = {} as ISubComponents;
+        if (name) {
+            parentSubcomponents[name] = child;
+            return;
+        }
+        // Otherwise, this child has no name.  Aww.  In this case we
+        // store a list of these nameless children under the special name "".
+        if (!("" in parentSubcomponents)) parentSubcomponents[""] = [];
+        (parentSubcomponents[""] as IVdom[]).push(child);
+    }
 
     // Construct a static DOM subtree from an HTML string.
     // Note: this vDOM node can, like DOM nodes, only appear
@@ -100,8 +145,11 @@ module Od {
         // If this is a bunch of nodes, return the whole DIV.
         const dom = ( tmp.childNodes.length === 1 ? tmp.firstChild : tmp );
         // We create a pretend component to host the HTML.
-        const vdom =
-            { obs: staticHtmlObs, subs: staticHtmlSubs, dom: dom } as IVdom;
+        const vdom = {
+            obs: staticHtmlObs,
+            subscription: staticHtmlSubs,
+            dom: dom
+        } as IVdom;
         return vdom;
     };
 
@@ -111,8 +159,11 @@ module Od {
     // you need duplicate fromDom instances.
     export const fromDom = (dom: Node): IVdom => {
         // We create a pretend component to host the HTML.
-        const vdom =
-            { obs: staticHtmlObs, subs: staticHtmlSubs, dom: dom } as IVdom;
+        const vdom = {
+            obs: staticHtmlObs,
+            subscription: staticHtmlSubs,
+            dom: dom
+        } as IVdom;
         return vdom;
     };
 
@@ -137,15 +188,31 @@ module Od {
         if (!vdom) return;
         if (vdom.obs) {
             Obs.dispose(vdom.obs);
-            vdom.obs = undefined;
+            vdom.obs = null;
         }
-        if (vdom.subs) {
-            Obs.dispose(vdom.subs);
-            vdom.subs = undefined;
+        if (vdom.subscription) {
+            Obs.dispose(vdom.subscription);
+            vdom.subscription = null;
         }
         if (vdom.dom) {
             enqueueNodeForStripping(vdom.dom);
-            vdom.dom = undefined;
+            vdom.dom = null;
+        }
+        if (vdom.subcomponents) {
+            disposeSubcomponents(vdom.subcomponents);
+            vdom.subcomponents = null;
+        }
+    };
+
+    const disposeSubcomponents = (subcomponents: ISubComponents): void => {
+        for (var name in subcomponents) {
+            const subcomponent = subcomponents[name];
+            if (name === "") {
+                // These are anonymous subcomponents, kept in an list.
+                (subcomponent as IVdom[]).forEach(dispose);
+            } else {
+                dispose(subcomponent);
+            }
         }
     };
 
@@ -158,7 +225,14 @@ module Od {
     // ---- Implementation detail. ----
 
     const isArray = (x: any): boolean => x instanceof Array;
-    const isNully = (x: any): boolean => x === null || x === undefined;
+    const isNully = (x: any): boolean => x == null;
+
+    // Components need to track their immediate sub-components
+    // for two reasons: one, so named components can have
+    // persistence (i.e., a named component is reused, never
+    // recreated); two, so components can implement a sensible
+    // disposal strategy.
+    export interface ISubComponents { [name: string]: (IVdom | IVdom[]) }
 
     export interface IVdom {
 
@@ -170,12 +244,13 @@ module Od {
         props?: PropAssocList;
         children?: Vdom[];
 
-        // For "active" nodes.
-        obs?: Obs.IObservable<Vdom>
-        subs?: Obs.ISubscription;
+        // For component ("dynamic") nodes.
+        obs?: Obs.IObservable<Vdom>;
+        subscription?: Obs.ISubscription;
+        subcomponents?: ISubComponents;
         dom?: Node;
 
-    };
+    }
 
     export const patchDom =
     (vdomOrString: Vdom, dom: Node, domParent?: Node): Node => {
@@ -291,7 +366,7 @@ module Od {
 
     const removeDomProp =
     (dom: Node, prop: string): void => {
-        (dom as any)[prop] = undefined;
+        (dom as any)[prop] = null;
         if (dom instanceof HTMLElement) dom.removeAttribute(prop);
     };
 
@@ -390,7 +465,7 @@ module Od {
     // property-name (string) property-value (any) pairs, in ascending
     // property-name order.  The reason for this is it allows us to
     // do property patching in O(n) time.
-    type PropAssocList = any[];
+    export type PropAssocList = any[];
 
     const emptyPropDict = [] as PropAssocList;
 
@@ -445,6 +520,10 @@ module Od {
 
     function updateComponent(): void {
         const component = this as IVdom;
+        // If the component has anonymous subcomponents, we should dispose
+        // of them now -- they will be recreated if needed.  Named
+        // subcomponents will persist.
+        disposeAnonymousSubcomponents(component);
         const dom = component.dom;
         // If a DOM node is already associated with the component, we
         // can defer the patching operation (which is nicer for the
@@ -461,6 +540,14 @@ module Od {
         setDomComponent(newDom, component);
         component.dom = newDom;
     }
+
+    const disposeAnonymousSubcomponents = (vdom: IVdom): void => {
+        const anonymousSubcomponents =
+            vdom.subcomponents && vdom.subcomponents[""] as IVdom[];
+        if (!anonymousSubcomponents) return;
+        anonymousSubcomponents.forEach(dispose);
+        vdom.subcomponents[""] = null;
+    };
 
     // We defer DOM updates using requestAnimationFrame.  It's better to
     // batch DOM updates where possible.
@@ -493,7 +580,7 @@ module Od {
         const iTop = componentsAwaitingUpdate.length;
         for (var i = 0; i < iTop; i++) {
             const component = componentsAwaitingUpdate[i];
-            const id = component.obs.id;
+            const id = component.obs.obsid;
             if (patchedComponents[id]) continue;
             trace("Patching queued component #", id);
             patchUpdatedComponent(component);
@@ -563,7 +650,7 @@ module Od {
         // Strip any properties...
         const props = getEltPropList(dom) || [];
         const numProps = props.length;
-        for (var i = 0; i < numProps; i++) (dom as any)[props[i]] = undefined;
+        for (var i = 0; i < numProps; i++) (dom as any)[props[i]] = null;
         // Recursively strip any child nodes.
         const children = dom.childNodes;
         const numChildren = children.length;

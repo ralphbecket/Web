@@ -124,12 +124,12 @@ var Obs;
     Obs.of = function (x, eq) {
         if (eq === void 0) { eq = null; }
         eq = (eq ? eq : hasSimpleType(x) ? Obs.defaultEq : Obs.alwaysUpdate);
-        var obs = undefined;
+        var obs = null;
         // We need 'function' so we can use 'arguments'.  Sorry.
         obs = (function (newX) {
             return readOrWriteObs(obs, eq, newX, arguments.length);
         });
-        obs.id = nextID++;
+        obs.obsid = nextID++;
         obs.value = x;
         obs.toString = obsToString;
         return obs;
@@ -143,12 +143,12 @@ var Obs;
     // Create a computed observable.
     Obs.fn = function (f, eq) {
         if (eq === void 0) { eq = Obs.defaultEq; }
-        var obs = undefined;
+        var obs = null;
         // We need 'function' so we can use 'arguments'.  Sorry.
         obs = (function (newX) {
             return readOrWriteObs(obs, eq, newX, arguments.length);
         });
-        obs.id = nextID++;
+        obs.obsid = nextID++;
         obs.fn = function () { return updateComputedObs(obs, f, eq); };
         obs.dependencies = {};
         obs.toString = obsToString;
@@ -158,9 +158,9 @@ var Obs;
     // Peek at the value of an observable without establishing a dependency.
     Obs.peek = function (obs) { return obs.value; };
     // Decide if an object is observable or not.
-    // This just tests whether the object has an 'id' property.
+    // This just tests whether the object is a function with an 'obsid' property.
     Obs.isObservable = function (obs) {
-        return !!obs.id;
+        return obs && obs.obsid && (typeof (obs) === "function");
     };
     // Decide if an observable is computed or not.
     // This just tests whether the object has a 'fn' property.
@@ -173,7 +173,7 @@ var Obs;
     Obs.subscribe = function (obss, action) {
         var subsAction = function () {
             var tmp = currentDependencies;
-            currentDependencies = undefined; // Suspend dependency tracking.
+            currentDependencies = null; // Suspend dependency tracking.
             action();
             currentDependencies = tmp;
         };
@@ -188,13 +188,16 @@ var Obs;
             obsAnyI.dependents[id] = obs;
         }
         ;
-        obs.id = id;
+        obs.obsid = id;
         obs.fn = subsAction;
         obs.value = "{subscription}"; // For obsToString;
         obs.toString = obsToString;
         obs.subscriptions = subscriptions;
         obs.level = 999999999; // Ensure subscriptions run last.
         return obs;
+    };
+    Obs.value = function (ish) {
+        return Obs.isObservable(ish) ? ish() : ish;
     };
     // Implementation detail.
     Obs.toStringMaxValueLength = 32;
@@ -209,11 +212,11 @@ var Obs;
     // Break the connection between an observable and its dependencies.
     Obs.dispose = function (obs) {
         var obsAny = obs;
-        obsAny.value = undefined;
+        obsAny.value = null;
         breakDependencies(obsAny);
-        obsAny.dependents = undefined;
+        obsAny.dependents = null;
         // Break any dependencies if this is a subscription.
-        var id = obsAny.id;
+        var id = obsAny.obsid;
         var subscriptions = obsAny.subscriptions;
         if (!subscriptions)
             return;
@@ -222,15 +225,15 @@ var Obs;
             var subscriptionDependents = subscription.dependents;
             if (!subscriptionDependents)
                 continue;
-            subscriptionDependents[id] = undefined;
+            subscriptionDependents[id] = null;
         }
-        obsAny.subscriptions = undefined;
+        obsAny.subscriptions = null;
     };
     var readOrWriteObs = function (obs, eq, newX, argc) {
         if (argc) {
             if (obs.fn)
                 throw new Error("Computed observables cannot be assigned to.");
-            trace("Updating obs", obs.id);
+            trace("Updating obs", obs.obsid);
             var oldX = obs.value;
             obs.value = newX;
             if (!eq(oldX, newX))
@@ -239,7 +242,7 @@ var Obs;
         else {
             // This is a read -- we need to record it as a dependency.
             if (currentDependencies)
-                currentDependencies[obs.id] = obs;
+                currentDependencies[obs.obsid] = obs;
         }
         return obs.value;
     };
@@ -257,7 +260,7 @@ var Obs;
     var enqueueUpdate = function (obs) {
         if (obs.isInUpdateQueue)
             return;
-        trace("  Enqueueing obs", obs.id);
+        trace("  Enqueueing obs", obs.obsid);
         // This is usually called "DownHeap" in the literature.
         var i = updateQ.length;
         updateQ.push(obs);
@@ -274,14 +277,14 @@ var Obs;
             j = i >> 1;
         }
         updateQ[i] = obs;
-        trace("    UpdateQ =", JSON.stringify(updateQ.map(function (x) { return x.id; })));
+        trace("    UpdateQ =", JSON.stringify(updateQ.map(function (x) { return x.obsid; })));
     };
     var dequeueUpdate = function () {
         if (!updateQ.length)
             return undefined;
         var obs = updateQ[0];
         obs.isInUpdateQueue = false;
-        trace("  Dequeueing obs", obs.id);
+        trace("  Dequeueing obs", obs.obsid);
         // This is usually called "UpHeap" in the literature.
         var obsI = updateQ.pop();
         var levelI = obsI.level;
@@ -337,9 +340,9 @@ var Obs;
     };
     // The dependencies identified while performing an update.
     // If this is undefined then no dependencies will be recorded.
-    var currentDependencies = undefined;
+    var currentDependencies = null;
     var reevaluateComputedObs = function (obs) {
-        trace("Reevaluating obs", obs.id, "...");
+        trace("Reevaluating obs", obs.obsid, "...");
         var oldCurrentDependencies = currentDependencies;
         currentDependencies = obs.dependencies;
         breakDependencies(obs);
@@ -348,13 +351,13 @@ var Obs;
         currentDependencies = oldCurrentDependencies;
         if (hasChanged)
             Obs.updateDependents(obs);
-        trace("Reevaluating obs", obs.id, "done.");
+        trace("Reevaluating obs", obs.obsid, "done.");
     };
     // Break the connection between a computed observable and its dependencies
     // prior to reevaluating its value (reevaluation may change the set of
     // dependencies).
     var breakDependencies = function (obs) {
-        var obsID = obs.id;
+        var obsID = obs.obsid;
         var dependencies = obs.dependencies;
         if (!dependencies)
             return;
@@ -362,14 +365,14 @@ var Obs;
             var obsDepcy = dependencies[id];
             if (!obsDepcy)
                 continue;
-            dependencies[id] = undefined;
-            obsDepcy.dependents[obsID] = undefined;
+            dependencies[id] = null;
+            obsDepcy.dependents[obsID] = null;
         }
     };
     // Establish a connection with observables used while reevaluating a
     // computed observable.
     var establishDependencies = function (obs) {
-        var obsID = obs.id;
+        var obsID = obs.obsid;
         var dependencies = obs.dependencies;
         var obsLevel = 0;
         for (var id in dependencies) {
@@ -379,7 +382,7 @@ var Obs;
             if (!obsDepcy.dependents)
                 obsDepcy.dependents = {};
             obsDepcy.dependents[obsID] = obs;
-            trace("  Obs", obsID, "depends on obs", obsDepcy.id);
+            trace("  Obs", obsID, "depends on obs", obsDepcy.obsid);
             var obsDepcyLevel = obsDepcy.level | 0;
             if (obsLevel <= obsDepcyLevel)
                 obsLevel = 1 + obsDepcyLevel;

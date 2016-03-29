@@ -124,7 +124,7 @@ var Obs;
     Obs.of = function (x, eq) {
         if (eq === void 0) { eq = null; }
         eq = (eq ? eq : hasSimpleType(x) ? Obs.defaultEq : Obs.alwaysUpdate);
-        var obs = undefined;
+        var obs = null;
         // We need 'function' so we can use 'arguments'.  Sorry.
         obs = (function (newX) {
             return readOrWriteObs(obs, eq, newX, arguments.length);
@@ -143,7 +143,7 @@ var Obs;
     // Create a computed observable.
     Obs.fn = function (f, eq) {
         if (eq === void 0) { eq = Obs.defaultEq; }
-        var obs = undefined;
+        var obs = null;
         // We need 'function' so we can use 'arguments'.  Sorry.
         obs = (function (newX) {
             return readOrWriteObs(obs, eq, newX, arguments.length);
@@ -173,7 +173,7 @@ var Obs;
     Obs.subscribe = function (obss, action) {
         var subsAction = function () {
             var tmp = currentDependencies;
-            currentDependencies = undefined; // Suspend dependency tracking.
+            currentDependencies = null; // Suspend dependency tracking.
             action();
             currentDependencies = tmp;
         };
@@ -209,9 +209,9 @@ var Obs;
     // Break the connection between an observable and its dependencies.
     Obs.dispose = function (obs) {
         var obsAny = obs;
-        obsAny.value = undefined;
+        obsAny.value = null;
         breakDependencies(obsAny);
-        obsAny.dependents = undefined;
+        obsAny.dependents = null;
         // Break any dependencies if this is a subscription.
         var id = obsAny.id;
         var subscriptions = obsAny.subscriptions;
@@ -222,9 +222,9 @@ var Obs;
             var subscriptionDependents = subscription.dependents;
             if (!subscriptionDependents)
                 continue;
-            subscriptionDependents[id] = undefined;
+            subscriptionDependents[id] = null;
         }
-        obsAny.subscriptions = undefined;
+        obsAny.subscriptions = null;
     };
     var readOrWriteObs = function (obs, eq, newX, argc) {
         if (argc) {
@@ -337,7 +337,7 @@ var Obs;
     };
     // The dependencies identified while performing an update.
     // If this is undefined then no dependencies will be recorded.
-    var currentDependencies = undefined;
+    var currentDependencies = null;
     var reevaluateComputedObs = function (obs) {
         trace("Reevaluating obs", obs.id, "...");
         var oldCurrentDependencies = currentDependencies;
@@ -564,7 +564,7 @@ var Od;
     Od.deferComponentUpdates = true;
     // ---- Implementation detail. ----
     var isArray = function (x) { return x instanceof Array; };
-    var isNully = function (x) { return x === null || x === undefined; };
+    var isNully = function (x) { return x == null; };
     ;
     Od.patchDom = function (vdomOrString, dom, domParent) {
         var vdom = (typeof (vdomOrString) === "string"

@@ -1,0 +1,10 @@
+﻿.OdTabComponent { background: #f0f0f0; }
+.OdTabHeadings { width: 100%; background: #e8e8e8; }
+.OdTabHeading {
+    display: inline-block;
+    border-bottom: 4px solid #e8e8e8;
+    padding: 4px;
+    margin: 4px 0px 0px 4px;
+}
+.OdTabSelection { border-bottom: 4px solid #f0f0f0; background: #f0f0f0; }
+.OdTabBody { width: 100%; padding: 4px; }

@@ -1,0 +1,34 @@
+﻿<!DOCTYPE html>
+
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>TypeScript HTML App</title>
+    <link rel="stylesheet" href="app.css" type="text/css" />
+    <script src="app.js"></script>
+</head>
+<body>
+    <h1>Od - TabComponent</h1>
+    <script>
+        window.onload = () => {
+            var e = Od.element;
+            var tabs = [
+                { heading: "One", body: "This" },
+                { heading: "Two", body: "That" },
+                { heading: "Three", body: ["The ", "other"] },
+                { heading: "Four", body: 
+                    e("UL", null, [
+                        e("LI", null, "Tom"),
+                        e("LI", null, "Dick"),
+                        e("LI", null, "Harry")
+                    ])
+                }
+            ];
+            Od.appendChild(Od.tabComponent({
+                tabs: tabs,
+                props: { style: "width: 40%;" }
+            }), document.body);
+        };
+    </script>
+</body>
+</html>
