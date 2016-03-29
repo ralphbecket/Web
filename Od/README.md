@@ -1,6 +1,24 @@
 # Od
 (C) Ralph Becket, 2016
 
+A compact virtual-DOM library in the style of Mithril.
+
+## Why try Od?
+* It's small (under 4 KBytes).
+* It has a tiny API (three main functions, a handful of auxiliary functions).
+* It's fast: 50% faster than Mithril without any attempt at optimisation.
+* It's consistent: there are no funny corner cases (e.g., nothing goes wrong when you move UI components around).
+* It's predictable: components render independently; an update in one place has no cost for other places.
+* It's simple: updates happen automatically.
+* It's unopinionated: design your application as you will.
+
+## Demonstrations to whet the appetite
+
+* [Od - Demo - Hello](https://jsfiddle.net/ralphbecket/t2xcbjqo/)
+* [Od - Demo - Calculator](https://jsfiddle.net/ralphbecket/df8bfnhe/)
+* [Od - Demo - Basic To-do List](https://jsfiddle.net/ralphbecket/bbvtwyuq/)
+* [Od - Demo - Tabs](https://jsfiddle.net/ralphbecket/beLjfmsj/)
+
 ## Interactive tutorials
 
 * [Od - Hello, World!](https://jsfiddle.net/ralphbecket/2Laqcewa/)  - the very, very basics.
@@ -51,6 +69,22 @@ particularly in the first case, of enormous practical benefit: Knockout,
 Mithril, Inferno, and React.  I'd also like to mention the reactive school, 
 but in the end I find the observables-based approach more natural.  
 For today, at least.
+
+### Patching algorithm
+
+Patching is the process of changing a DOM subtree to match a vDOM tree.  
+* An _update_ changes the existing DOM node.
+* A _replacement_ substitutes a new DOM node for the old.
+
+| Old\New   | Text       | Element    | Component  |
+| :-------- | :--------: | :--------: | :--------: |
+| Text      | Update     | Replace    | Replace    |
+| Element   | Replace    | Depends on tags | Replace |
+| Component | Replace    | Replace    | Depends on components |
+
+* Element/element patching: _update_ if tags match, otherwise _replace_.
+* Component/component patching: do nothing if components are the same, 
+  otherwise _replace_ with the new component's DOM.
 
 ### Finer details
 
@@ -146,4 +180,4 @@ worked first time, if you can believe such a thing.
 - Add sensible support for style properties (at the moment only the
   `style: "color: red; width: 10em; ..."` approach is implemented).
 - Add lifecycle hooks for components.
-- Performance testing.  I expect this thing to rock.
+- Performance tweaking.  It's 50% faster than Mithril, but we can probably do better.
