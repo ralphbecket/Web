@@ -1,4 +1,7 @@
-﻿window.onload = () => {
+﻿/// <reference path="../../Od/Obs.ts"/>
+/// <reference path="../TestHarness/Test.ts"/>
+
+window.onload = () => {
 // const go = () => {
 
     Test.run("Mutable observables", () => {
@@ -52,10 +55,10 @@
         Test.expect("propagation 1", x() === 1 && u() === 2 && v() === -2);
         Obs.dispose(v);
         x(2);
-        Test.expect("disposing v", x() === 2 && u() === 4 && v() === undefined);
+        Test.expect("disposing v", x() === 2 && u() === 4 && v() == null);
         Obs.dispose(u);
         x(3);
-        Test.expect("disposing u", x() === 3 && u() === undefined && v() === undefined);
+        Test.expect("disposing u", x() === 3 && u() == null && v() == null);
     });
 
     Test.run("Subscriptions", () => {

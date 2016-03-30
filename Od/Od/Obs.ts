@@ -105,7 +105,7 @@
 //          relation.
 //
 
-namespace Obs {
+module Obs {
 
     // The public interface.
 
@@ -133,14 +133,13 @@ namespace Obs {
     // The "equality test" for observables that always indicates a change.
     export const alwaysUpdate = <T>(x: T, y: T) => false;
 
-    // Create a mutable observable.  The default equality test for 
-    // numbers, strings, and booleans is ===, otherwise any update is
-    // assumed to provide a different value, hence triggering any
-    // dependents.
+    // Create a mutable observable.  The default equality test is ===.
+    // This, of course, cannot spot changes to the contents of objects
+    // and arrays.  In those cases, you may need Obs.updateDependents.
     export const of =
     <T>(x: T, eq: EqualityTest<T> = null): IObservable<T> => {
 
-        eq = (eq ? eq : hasSimpleType(x) ? defaultEq : alwaysUpdate);
+        eq = eq || defaultEq;
         var obs = null as Obs<T>;
         // We need 'function' so we can use 'arguments'.  Sorry.
         obs = (function (newX?: T): T {
@@ -151,13 +150,6 @@ namespace Obs {
         obs.toString = obsToString;
 
         return obs;
-    };
-
-    const hasSimpleType = (x: any): boolean => {
-        var typeofX = typeof (x);
-        return typeofX === "number" ||
-            typeofX === "string" ||
-            typeofX === "boolean";
     };
 
     // Create a computed observable.

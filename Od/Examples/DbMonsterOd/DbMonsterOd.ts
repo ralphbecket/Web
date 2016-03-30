@@ -1,4 +1,6 @@
-﻿namespace DbMonsterOd {
+﻿/// <reference path="../../Od/Od.ts"/>
+
+namespace DbMonsterOd {
 
     // Arguably, this is not the way you'd do this in practice.  However,
     // this whole exercise is artificial, in that we're showing pages of

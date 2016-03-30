@@ -27,12 +27,6 @@
     <Content Include="web.config" />
   </ItemGroup>
   <ItemGroup>
-    <TypeScriptCompile Include="..\..\Od\Obs.ts">
-      <Link>Obs.ts</Link>
-    </TypeScriptCompile>
-    <TypeScriptCompile Include="..\..\Od\Od.ts">
-      <Link>Od.ts</Link>
-    </TypeScriptCompile>
     <TypeScriptCompile Include="BasicToDoList.ts" />
   </ItemGroup>
   <ItemGroup>

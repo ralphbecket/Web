@@ -1,4 +1,6 @@
-﻿namespace DemoEndsSelectComponent {
+﻿/// <reference path="../../Od/Od.ts"/>
+
+namespace DemoEndsSelectComponent {
 
     export const vdom = (): Od.Vdom => {
 

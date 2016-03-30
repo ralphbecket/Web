@@ -476,6 +476,7 @@ var Obs;
 // and React.  I'd also like to mention the reactive school, but in the end
 // I find the observables-based approach more natural.  For today, at least.
 //
+/// <reference path="./Obs.ts"/>
 var Od;
 (function (Od) {
     var debug = false;
@@ -1060,6 +1061,7 @@ var Od;
 //
 // What's interesting about Od is that view components update independently
 // without requiring a complete rebuild of the entire vDOM.
+/// <reference path="../../Od/Od.ts"/>
 var e = Od.element;
 var threads = [];
 var commentDict = {};

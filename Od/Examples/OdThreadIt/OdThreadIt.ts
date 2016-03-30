@@ -11,6 +11,8 @@
 // What's interesting about Od is that view components update independently
 // without requiring a complete rebuild of the entire vDOM.
 
+/// <reference path="../../Od/Od.ts"/>
+
 interface IComment {
     id: string;
     parent_id?: string;

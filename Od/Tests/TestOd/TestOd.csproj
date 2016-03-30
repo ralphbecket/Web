@@ -28,15 +28,6 @@
     <Content Include="web.config" />
   </ItemGroup>
   <ItemGroup>
-    <TypeScriptCompile Include="..\..\Od\Obs.ts">
-      <Link>Obs.ts</Link>
-    </TypeScriptCompile>
-    <TypeScriptCompile Include="..\..\Od\Od.ts">
-      <Link>Od.ts</Link>
-    </TypeScriptCompile>
-    <TypeScriptCompile Include="..\TestHarness\Test.ts">
-      <Link>Test.ts</Link>
-    </TypeScriptCompile>
     <TypeScriptCompile Include="TestOd.ts" />
   </ItemGroup>
   <ItemGroup>
@@ -75,12 +66,13 @@
   </ProjectExtensions>
   <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
     <TypeScriptRemoveComments>false</TypeScriptRemoveComments>
-    <TypeScriptSourceMap>true</TypeScriptSourceMap>
+    <TypeScriptSourceMap>False</TypeScriptSourceMap>
     <TypeScriptTarget>ES5</TypeScriptTarget>
     <TypeScriptJSXEmit>None</TypeScriptJSXEmit>
     <TypeScriptCompileOnSaveEnabled>True</TypeScriptCompileOnSaveEnabled>
     <TypeScriptNoImplicitAny>False</TypeScriptNoImplicitAny>
-    <TypeScriptModuleKind>None</TypeScriptModuleKind>
+    <TypeScriptModuleKind>
+    </TypeScriptModuleKind>
     <TypeScriptOutFile>app.js</TypeScriptOutFile>
     <TypeScriptOutDir />
     <TypeScriptGeneratesDeclarations>False</TypeScriptGeneratesDeclarations>

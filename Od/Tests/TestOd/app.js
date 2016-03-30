@@ -476,6 +476,7 @@ var Obs;
 // and React.  I'd also like to mention the reactive school, but in the end
 // I find the observables-based approach more natural.  For today, at least.
 //
+/// <reference path="./Obs.ts"/>
 var Od;
 (function (Od) {
     var debug = false;
@@ -1109,6 +1110,8 @@ var Test;
         }
     };
 })(Test || (Test = {}));
+/// <reference path="../../Od/Od.ts"/>
+/// <reference path="../TestHarness/Test.ts"/>
 window.onload = function () {
     Od.deferComponentUpdates = false; // Deferred updates make testing harder.
     var e = Od.element;
@@ -1340,4 +1343,3 @@ window.onload = function () {
         chk(C, [0, 1, 0], "#pqr");
     });
 };
-//# sourceMappingURL=app.js.map

@@ -43,6 +43,7 @@
 // and React.  I'd also like to mention the reactive school, but in the end
 // I find the observables-based approach more natural.  For today, at least.
 //
+/// <reference path="./Obs.ts"/>
 namespace Od {
 
     const debug = false;

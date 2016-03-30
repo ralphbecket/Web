@@ -1,4 +1,7 @@
-﻿window.onload = () => {
+﻿/// <reference path="../../Od/Od.ts"/>
+/// <reference path="../TestHarness/Test.ts"/>
+
+window.onload = () => {
 
     Od.deferComponentUpdates = false; // Deferred updates make testing harder.
 

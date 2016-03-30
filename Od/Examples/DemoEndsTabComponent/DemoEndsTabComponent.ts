@@ -1,4 +1,6 @@
-﻿namespace DemoEndsTabComponent {
+﻿/// <reference path="../../Od/Od.ts"/>
+
+namespace DemoEndsTabComponent {
 
     export const vdom = (): Od.Vdom => {
 

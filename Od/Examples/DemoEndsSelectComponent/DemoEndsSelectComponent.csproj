@@ -30,12 +30,6 @@
     <TypeScriptCompile Include="..\..\Ends\SelectComponent.ts">
       <Link>SelectComponent.ts</Link>
     </TypeScriptCompile>
-    <TypeScriptCompile Include="..\..\Od\Obs.ts">
-      <Link>Obs.ts</Link>
-    </TypeScriptCompile>
-    <TypeScriptCompile Include="..\..\Od\Od.ts">
-      <Link>Od.ts</Link>
-    </TypeScriptCompile>
     <TypeScriptCompile Include="DemoEndsSelectComponent.ts" />
   </ItemGroup>
   <ItemGroup>

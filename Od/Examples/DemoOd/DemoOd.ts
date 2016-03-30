@@ -1,4 +1,6 @@
-﻿window.onload = () => {
+﻿/// <reference path="../../Od/Od.ts"/>
+
+window.onload = () => {
 
     // ---- Preamble.
 

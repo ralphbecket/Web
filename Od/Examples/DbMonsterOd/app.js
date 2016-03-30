@@ -476,6 +476,7 @@ var Obs;
 // and React.  I'd also like to mention the reactive school, but in the end
 // I find the observables-based approach more natural.  For today, at least.
 //
+/// <reference path="./Obs.ts"/>
 var Od;
 (function (Od) {
     var debug = false;
@@ -1048,6 +1049,7 @@ var Od;
         console.log.apply(console, arguments);
     };
 })(Od || (Od = {}));
+/// <reference path="../../Od/Od.ts"/>
 var DbMonsterOd;
 (function (DbMonsterOd) {
     // Arguably, this is not the way you'd do this in practice.  However,

@@ -1,4 +1,6 @@
-﻿namespace BasicToDoList {
+﻿/// <reference path="../../Od/Od.ts"/>
+
+namespace BasicToDoList {
     var e = Od.element;
     var todos = Obs.of([]);
     var total = Obs.fn(() => todos().length);
