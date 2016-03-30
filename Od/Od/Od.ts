@@ -65,7 +65,6 @@ namespace Od {
     export const element =
     (tag: string, props?: IProps, childOrChildren?: Vdoms): IVdom => {
         tag = tag.toUpperCase();
-        const propAssocList = propsToPropAssocList(props);
         const children =
             ( !childOrChildren
             ? null
@@ -73,7 +72,7 @@ namespace Od {
             ? childOrChildren
             : [childOrChildren]
             ) as Vdom[];
-        return { tag: tag, props: propAssocList, children: children };
+        return { tag: tag, props: props, children: children };
     };
 
     // Construct a component node from a function computing a vDOM node.
@@ -242,7 +241,7 @@ namespace Od {
 
         // For non-text nodes.
         tag?: string; // This MUST be in upper case!
-        props?: PropAssocList;
+        props?: IProps;
         children?: Vdom[];
 
         // For component ("dynamic") nodes.
@@ -301,7 +300,7 @@ namespace Od {
     const patchElement =
     (vdom: IVdom, dom: Node, domParent?: Node): Node => {
         const tag = vdom.tag;
-        const vdomPropDict = vdom.props;
+        const vdomProps = vdom.props;
         const vdomChildren = vdom.children;
         const elt = dom as HTMLElement;
         const newElt =
@@ -310,71 +309,32 @@ namespace Od {
             : elt
             );
         if (newElt !== elt) trace("  Created", tag);
-        patchProps(newElt, vdomPropDict);
+        patchProps(newElt, vdomProps);
         patchChildren(newElt, vdomChildren);
         replaceNode(newElt, dom, domParent);
         return newElt;
     };
 
-    // We perform an ordered traversal of the old properties of the element
-    // (if any) and the new properties, deleting, updating, and adding as
-    // required.
     const patchProps =
-    (elt: HTMLElement, vdomPropDict: PropAssocList): void => {
-        var eltPropList = getEltPropList(elt);
-        if (!vdomPropDict && !eltPropList) return;
-        if (!eltPropList) eltPropList = emptyPropList;
-        if (!vdomPropDict) vdomPropDict = emptyPropDict;
-        var iElt = 0;
-        var iVdom = 0;
-        var iEltTop = eltPropList.length;
-        var iVdomTop = vdomPropDict.length;
-        const newEltPropList = [] as string[];
-        // Clear out any old properties that aren't replaced.
-        // Update any changed properties.
-        // Add any new properties.
-        while (iElt < iEltTop && iVdom < iVdomTop) {
-            const eltProp = eltPropList[iElt];
-            const vdomProp = vdomPropDict[iVdom];
-            if (eltProp < vdomProp) {
-                removeDomProp(elt, eltProp);
-                iElt += 1;
-            } else {
-                const vdomPropValue = vdomPropDict[iVdom + 1];
-                setDomProp(elt, vdomProp, vdomPropValue, newEltPropList);
-                iVdom += 2;
-                iElt += (eltProp === vdomProp ? 1 : 0);
-            }
-        }
-        while (iElt < iEltTop) {
-            const eltProp = eltPropList[iElt];
-            removeDomProp(elt, eltProp);
-            iElt += 1;
-        }
-        while (iVdom < iVdomTop) {
-            const vdomProp = vdomPropDict[iVdom];
-            const vdomPropValue = vdomPropDict[iVdom + 1];
-            setDomProp(elt, vdomProp, vdomPropValue, newEltPropList);
-            iVdom += 2;
-        }
-        // Update the property list for the element so we can update it
-        // correctly next time we visit it.
-        setEltPropList(elt, newEltPropList);
+    (elt: HTMLElement, vdomProps: IProps): void => {
+        const eltProps = getEltOdProps(elt);
+        for (var prop in vdomProps)
+            setDomProp(elt, prop, vdomProps[prop]);
+        for (var prop in eltProps) if (!(prop in vdomProps))
+            removeDomProp(elt, prop);
+        setEltOdProps(elt, vdomProps);
     };
 
     // XXX We can put special property handling here (e.g., 'className' vs
     // 'class', and 'style' etc.)
 
-    const removeDomProp =
-    (dom: Node, prop: string): void => {
+    const removeDomProp = (dom: Node, prop: string): void => {
         (dom as any)[prop] = null;
         if (dom instanceof HTMLElement) dom.removeAttribute(prop);
     };
 
-    const setDomProp =
-    (dom: Node, prop: string, value: any, propList: PropList): void => {
+    const setDomProp = (dom: Node, prop: string, value: any): void => {
         (dom as any)[prop] = value;
-        propList.push(prop);
     };
 
     const emptyIVdomList = [] as IVdom[];
@@ -489,25 +449,15 @@ namespace Od {
     // We attach lists of (ordered) property names to elements so we can
     // perform property updates in O(n) time.
 
-    const getEltPropList = (elt: Node): PropList =>
+    const getEltOdProps = (elt: Node): IProps =>
         (elt as any).__Od__props;
 
-    const setEltPropList = (elt: Node, propList: PropList): void => {
-        (elt as any).__Od__props = propList;
+    const setEltOdProps = (elt: Node, props: IProps): void => {
+        (elt as any).__Od__props = props;
     };
 
-    const lookupPropsAssocList =
-    (props: PropAssocList, key: string): any => {
-        if (!props) return null;
-        const iTop = props.length;
-        for (var i = 0; i < iTop; i += 2) {
-            if (props[i] === key) return props[i + 1];
-        }
-        return null;
-    };
-
-    const vdomPropsKey = (props: PropAssocList): string =>
-        lookupPropsAssocList(props, "key");
+    const vdomPropsKey = (props: IProps): string =>
+        props && props["key"];
 
     const getDomComponent = (dom: Node): IVdom =>
         (dom as any).__Od__component;
@@ -649,9 +599,8 @@ namespace Od {
         // We don't want to strip anything owned by a sub-component.
         if (domBelongsToComponent(dom)) return; // Can't touch this!
         // Strip any properties...
-        const props = getEltPropList(dom) || [];
-        const numProps = props.length;
-        for (var i = 0; i < numProps; i++) (dom as any)[props[i]] = null;
+        const props = getEltOdProps(dom);
+        for (var prop in props) (dom as any)[prop] = null;
         // Recursively strip any child nodes.
         const children = dom.childNodes;
         const numChildren = children.length;

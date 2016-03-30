@@ -117,13 +117,12 @@ var Obs;
     };
     // The "equality test" for observables that always indicates a change.
     Obs.alwaysUpdate = function (x, y) { return false; };
-    // Create a mutable observable.  The default equality test for 
-    // numbers, strings, and booleans is ===, otherwise any update is
-    // assumed to provide a different value, hence triggering any
-    // dependents.
+    // Create a mutable observable.  The default equality test is ===.
+    // This, of course, cannot spot changes to the contents of objects
+    // and arrays.  In those cases, you may need Obs.updateDependents.
     Obs.of = function (x, eq) {
         if (eq === void 0) { eq = null; }
-        eq = (eq ? eq : hasSimpleType(x) ? Obs.defaultEq : Obs.alwaysUpdate);
+        eq = eq || Obs.defaultEq;
         var obs = null;
         // We need 'function' so we can use 'arguments'.  Sorry.
         obs = (function (newX) {
@@ -133,12 +132,6 @@ var Obs;
         obs.value = x;
         obs.toString = obsToString;
         return obs;
-    };
-    var hasSimpleType = function (x) {
-        var typeofX = typeof (x);
-        return typeofX === "number" ||
-            typeofX === "string" ||
-            typeofX === "boolean";
     };
     // Create a computed observable.
     Obs.fn = function (f, eq) {
@@ -582,4 +575,3 @@ window.onload = function () {
         Test.expect("peek", u() === 222);
     });
 };
-//# sourceMappingURL=app.js.map

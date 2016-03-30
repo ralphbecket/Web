@@ -117,13 +117,12 @@ var Obs;
     };
     // The "equality test" for observables that always indicates a change.
     Obs.alwaysUpdate = function (x, y) { return false; };
-    // Create a mutable observable.  The default equality test for 
-    // numbers, strings, and booleans is ===, otherwise any update is
-    // assumed to provide a different value, hence triggering any
-    // dependents.
+    // Create a mutable observable.  The default equality test is ===.
+    // This, of course, cannot spot changes to the contents of objects
+    // and arrays.  In those cases, you may need Obs.updateDependents.
     Obs.of = function (x, eq) {
         if (eq === void 0) { eq = null; }
-        eq = (eq ? eq : hasSimpleType(x) ? Obs.defaultEq : Obs.alwaysUpdate);
+        eq = eq || Obs.defaultEq;
         var obs = null;
         // We need 'function' so we can use 'arguments'.  Sorry.
         obs = (function (newX) {
@@ -133,12 +132,6 @@ var Obs;
         obs.value = x;
         obs.toString = obsToString;
         return obs;
-    };
-    var hasSimpleType = function (x) {
-        var typeofX = typeof (x);
-        return typeofX === "number" ||
-            typeofX === "string" ||
-            typeofX === "boolean";
     };
     // Create a computed observable.
     Obs.fn = function (f, eq) {
@@ -487,13 +480,12 @@ var Od;
     // Construct a vDOM node.
     Od.element = function (tag, props, childOrChildren) {
         tag = tag.toUpperCase();
-        var propAssocList = propsToPropAssocList(props);
         var children = (!childOrChildren
             ? null
             : isArray(childOrChildren)
                 ? childOrChildren
                 : [childOrChildren]);
-        return { tag: tag, props: propAssocList, children: children };
+        return { tag: tag, props: props, children: children };
     };
     // Construct a component node from a function computing a vDOM node.
     Od.component = function (fn) {
@@ -679,7 +671,7 @@ var Od;
     };
     var patchElement = function (vdom, dom, domParent) {
         var tag = vdom.tag;
-        var vdomPropDict = vdom.props;
+        var vdomProps = vdom.props;
         var vdomChildren = vdom.children;
         var elt = dom;
         var newElt = (!elt || elt.tagName !== tag || domBelongsToComponent(elt)
@@ -687,58 +679,19 @@ var Od;
             : elt);
         if (newElt !== elt)
             trace("  Created", tag);
-        patchProps(newElt, vdomPropDict);
+        patchProps(newElt, vdomProps);
         patchChildren(newElt, vdomChildren);
         replaceNode(newElt, dom, domParent);
         return newElt;
     };
-    // We perform an ordered traversal of the old properties of the element
-    // (if any) and the new properties, deleting, updating, and adding as
-    // required.
-    var patchProps = function (elt, vdomPropDict) {
-        var eltPropList = getEltPropList(elt);
-        if (!vdomPropDict && !eltPropList)
-            return;
-        if (!eltPropList)
-            eltPropList = emptyPropList;
-        if (!vdomPropDict)
-            vdomPropDict = emptyPropDict;
-        var iElt = 0;
-        var iVdom = 0;
-        var iEltTop = eltPropList.length;
-        var iVdomTop = vdomPropDict.length;
-        var newEltPropList = [];
-        // Clear out any old properties that aren't replaced.
-        // Update any changed properties.
-        // Add any new properties.
-        while (iElt < iEltTop && iVdom < iVdomTop) {
-            var eltProp = eltPropList[iElt];
-            var vdomProp = vdomPropDict[iVdom];
-            if (eltProp < vdomProp) {
-                removeDomProp(elt, eltProp);
-                iElt += 1;
-            }
-            else {
-                var vdomPropValue = vdomPropDict[iVdom + 1];
-                setDomProp(elt, vdomProp, vdomPropValue, newEltPropList);
-                iVdom += 2;
-                iElt += (eltProp === vdomProp ? 1 : 0);
-            }
-        }
-        while (iElt < iEltTop) {
-            var eltProp = eltPropList[iElt];
-            removeDomProp(elt, eltProp);
-            iElt += 1;
-        }
-        while (iVdom < iVdomTop) {
-            var vdomProp = vdomPropDict[iVdom];
-            var vdomPropValue = vdomPropDict[iVdom + 1];
-            setDomProp(elt, vdomProp, vdomPropValue, newEltPropList);
-            iVdom += 2;
-        }
-        // Update the property list for the element so we can update it
-        // correctly next time we visit it.
-        setEltPropList(elt, newEltPropList);
+    var patchProps = function (elt, vdomProps) {
+        var eltProps = getEltOdProps(elt);
+        for (var prop in vdomProps)
+            setDomProp(elt, prop, vdomProps[prop]);
+        for (var prop in eltProps)
+            if (!(prop in vdomProps))
+                removeDomProp(elt, prop);
+        setEltOdProps(elt, vdomProps);
     };
     // XXX We can put special property handling here (e.g., 'className' vs
     // 'class', and 'style' etc.)
@@ -747,9 +700,8 @@ var Od;
         if (dom instanceof HTMLElement)
             dom.removeAttribute(prop);
     };
-    var setDomProp = function (dom, prop, value, propList) {
+    var setDomProp = function (dom, prop, value) {
         dom[prop] = value;
-        propList.push(prop);
     };
     var emptyIVdomList = [];
     var patchChildren = function (elt, vdomChildren) {
@@ -852,24 +804,14 @@ var Od;
     var emptyPropList = [];
     // We attach lists of (ordered) property names to elements so we can
     // perform property updates in O(n) time.
-    var getEltPropList = function (elt) {
+    var getEltOdProps = function (elt) {
         return elt.__Od__props;
     };
-    var setEltPropList = function (elt, propList) {
-        elt.__Od__props = propList;
-    };
-    var lookupPropsAssocList = function (props, key) {
-        if (!props)
-            return null;
-        var iTop = props.length;
-        for (var i = 0; i < iTop; i += 2) {
-            if (props[i] === key)
-                return props[i + 1];
-        }
-        return null;
+    var setEltOdProps = function (elt, props) {
+        elt.__Od__props = props;
     };
     var vdomPropsKey = function (props) {
-        return lookupPropsAssocList(props, "key");
+        return props && props["key"];
     };
     var getDomComponent = function (dom) {
         return dom.__Od__component;
@@ -1003,10 +945,9 @@ var Od;
         if (domBelongsToComponent(dom))
             return; // Can't touch this!
         // Strip any properties...
-        var props = getEltPropList(dom) || [];
-        var numProps = props.length;
-        for (var i = 0; i < numProps; i++)
-            dom[props[i]] = null;
+        var props = getEltOdProps(dom);
+        for (var prop in props)
+            dom[prop] = null;
         // Recursively strip any child nodes.
         var children = dom.childNodes;
         var numChildren = children.length;
