@@ -175,7 +175,7 @@ Thanks partly due to careful attention to invariants during design and
 partly due to using TypeScript for development, virtually everything here
 worked first time, if you can believe such a thing.
 
-Preliminary benchmarking with [dbmonster(http://mathieuancelin.github.io/js-repaint-perfs/#) 
+Preliminary benchmarking with [dbmonster](http://mathieuancelin.github.io/js-repaint-perfs) 
 on my machine gives the following results (as of 2016-03-31):
 
 | Library  | dbmonster @ 1% | dbmonster @ 100% |
