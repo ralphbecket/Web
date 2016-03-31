@@ -6,7 +6,7 @@ A compact virtual-DOM library in the style of Mithril.
 ## Why try Od?
 * It's small (under 4 KBytes).
 * It has a tiny API (three main functions, a handful of auxiliary functions).
-* It's fast: 50% faster than Mithril without any attempt at optimisation.
+* It's fast: twice as fast as Mithril without any attempt at optimisation.
 * It's consistent: there are no funny corner cases (e.g., nothing goes wrong when you move UI components around).
 * It's predictable: components render independently; an update in one place has no cost for other places.
 * It's simple: updates happen automatically.
