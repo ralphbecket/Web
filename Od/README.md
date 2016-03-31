@@ -175,6 +175,26 @@ Thanks partly due to careful attention to invariants during design and
 partly due to using TypeScript for development, virtually everything here
 worked first time, if you can believe such a thing.
 
+Preliminary benchmarking with [dbmonster](http://mathieuancelin.github.io/js-repaint-perfs) 
+on my machine gives the following results (as of 2016-03-31):
+
+| Library  | dbmonster @ 1% | dbmonster @ 100% |
+| :------- | -------------: | ---------------: |
+| Od       |        95 fps  |          27 fps  |
+| Mithril  |        25 fps  |          15 fps  |
+| Inferno  |       160 fps  |          33 fps  |
+| DomVM    |        88 fps  |          28 fps  |
+| Angular  |       120 fps  |           9 fps  |
+
+Take these numbers with a pinch of salt: some of the libraries will
+have moved on somewhat; I'm also somewhat suspicious of Angular's
+120 fps score in the low-frequency update rate column.
+
+Note also that this really is just a test of raw speed in a
+particular, unlikely, situation.  Od's real strength is in how easy
+it is to use without having to know about the underlying
+implementation details.
+
 #### TO DO...
 
 - Add sensible support for style properties (at the moment only the
