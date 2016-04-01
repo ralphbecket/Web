@@ -18,9 +18,11 @@
 namespace Od {
 
     const isVdoms = (x: any): boolean =>
-        (x instanceof Array) ||
-        (typeof (x) === "string") ||
-        ("tag" in x || "obs" in x || "text" in x);
+        x && (
+            (x instanceof Array) ||
+            (typeof (x) === "string") ||
+            ("tag" in x || "obs" in x || "text" in x)
+        );
 
     const elt = (tag: string, fst: IProps | Vdoms, snd?: Vdoms): IVdom => {
         const fstIsVdoms = isVdoms(fst);

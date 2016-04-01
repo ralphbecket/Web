@@ -1009,9 +1009,9 @@ var Od;
 var Od;
 (function (Od) {
     var isVdoms = function (x) {
-        return (x instanceof Array) ||
+        return x && ((x instanceof Array) ||
             (typeof (x) === "string") ||
-            ("tag" in x || "obs" in x || "text" in x);
+            ("tag" in x || "obs" in x || "text" in x));
     };
     var elt = function (tag, fst, snd) {
         var fstIsVdoms = isVdoms(fst);
