@@ -15,5 +15,10 @@ window.onload = () => {
             ])
         ])
     );
+    vdom = Od.DIV([
+        "Name: ",
+        Od.INPUT({ type: "text" }),
+        Od.BR(),
+        Od.H
     Od.appendChild(vdom, document.body);
 };
