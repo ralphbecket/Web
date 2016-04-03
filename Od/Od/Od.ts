@@ -31,10 +31,21 @@
 // Every "dynamic" DOM subtree (i.e., something that can change as the
 // application runs) is managed via an observable whose value is a vDOM
 // subtree.  When the observable changes, the patching algorithm is only
-// applied to the affected DOM subtree.
+// applied to the affected DOM subtree.  In Od terms, such a structure is
+// a 'component'.  A DOM subtree managed by a component is handled entirely
+// and only by that component: parent components and subcomponents 
+// operate entirely independently.
 //
 // This mechanism is general: "components" are just observables, like any
 // other managed part of the DOM/vDOM relationship.
+//
+// Any DOM nodes that are removed are queued for "stripping" where any
+// dangling event handlers are removed (this is important to avoid garbage
+// retention).  Stripping happens in the background so it doesn't interfere
+// with rendering.
+//
+// Unless explicitly told otherwise, Od normally batches DOM updates to be
+// applied via requestAnimationFrame or some equivalent fallback mechanism.
 //
 //
 //
@@ -56,6 +67,11 @@ namespace Od {
 
     export type Vdoms = Vdom | Vdom[];
 
+    // Properties are used to set attributes, event handlers, and so forth.
+    // There are two special property names: "class" is allowed as a synonym
+    // for "className"; and "style" can be either a string of the form
+    // "color: red; width: 2em;" or an object of the form { color: "red",
+    // width: "2em" }.
     export interface IProps { [prop: string]: any };
 
     export const text = (text: string): IVdom =>
