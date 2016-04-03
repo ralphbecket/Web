@@ -288,7 +288,9 @@ var Od;
     };
     var patchStyleProps = function (elt, oldStyleProps, newStyleProps) {
         if (!newStyleProps) {
-            elt.style = null;
+            // Don't reset all style properties unless there were some before.
+            if (oldStyleProps)
+                elt.style = null;
             return;
         }
         var eltStyle = elt.style;

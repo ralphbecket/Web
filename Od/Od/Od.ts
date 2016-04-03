@@ -354,7 +354,8 @@ namespace Od {
     const patchStyleProps =
     (elt: HTMLElement, oldStyleProps: IProps, newStyleProps: IProps): void => {
         if (!newStyleProps) {
-            elt.style = null;
+            // Don't reset all style properties unless there were some before.
+            if (oldStyleProps) elt.style = null;
             return;
         }
         const eltStyle = elt.style as IProps;
