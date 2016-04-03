@@ -190,14 +190,12 @@ Take these numbers with a pinch of salt: some of the libraries will
 have moved on somewhat; I'm also somewhat suspicious of Angular's
 120 fps score in the low-frequency update rate column.
 
-Note also that this really is just a test of raw speed in a
+Note also that this is just a test of raw speed in a
 particular, unlikely, situation.  Od's real strength is in how easy
 it is to use without having to know about the underlying
-implementation details.
+implementation details.  Od's abstraction does not leak all over the
+place when you get into the corner cases.
 
 #### TO DO...
 
-- Add sensible support for style properties (at the moment only the
-  `style: "color: red; width: 10em; ..."` approach is implemented).
 - Add lifecycle hooks for components.
-- Performance tweaking.  It's 50% faster than Mithril, but we can probably do better.
