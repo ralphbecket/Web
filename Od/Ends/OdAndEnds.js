@@ -475,7 +475,7 @@ var Od;
     var debug = false;
     ;
     Od.text = function (text) {
-        return ({ text: isNully(text) ? "" : text.toString() });
+        return ({ isIVdom: true, text: isNully(text) ? "" : text.toString() });
     };
     // Construct a vDOM node.
     Od.element = function (tag, props, childOrChildren) {
@@ -485,7 +485,7 @@ var Od;
             : isArray(childOrChildren)
                 ? childOrChildren
                 : [childOrChildren]);
-        return { tag: tag, props: props, children: children };
+        return { isIVdom: true, tag: tag, props: props, children: children };
     };
     // Construct a component node from a function computing a vDOM node.
     Od.component = function (fn) {
@@ -504,6 +504,7 @@ var Od;
             ? fn
             : Obs.fn(fn));
         var vdom = {
+            isIVdom: true,
             obs: obs,
             subscription: null,
             subcomponents: null,
@@ -556,6 +557,7 @@ var Od;
         var dom = (tmp.childNodes.length === 1 ? tmp.firstChild : tmp);
         // We create a pretend component to host the HTML.
         var vdom = {
+            isIVdom: true,
             obs: staticHtmlObs,
             subscription: staticHtmlSubs,
             dom: dom
@@ -569,6 +571,7 @@ var Od;
     Od.fromDom = function (dom) {
         // We create a pretend component to host the HTML.
         var vdom = {
+            isIVdom: true,
             obs: staticHtmlObs,
             subscription: staticHtmlSubs,
             dom: dom
@@ -684,23 +687,42 @@ var Od;
         replaceNode(newElt, dom, domParent);
         return newElt;
     };
-    var patchProps = function (elt, vdomProps) {
-        var eltProps = getEltOdProps(elt);
-        for (var prop in vdomProps)
-            setDomProp(elt, prop, vdomProps[prop]);
-        for (var prop in eltProps)
-            if (!(prop in vdomProps))
+    var patchProps = function (elt, newProps) {
+        var oldProps = getEltOdProps(elt);
+        for (var prop in newProps)
+            if (prop !== "style")
+                setDomProp(elt, prop, newProps[prop]);
+        for (var prop in oldProps)
+            if (!(prop in newProps))
                 removeDomProp(elt, prop);
-        setEltOdProps(elt, vdomProps);
+        // Style properties are special.
+        var eltStyleProps = oldProps && oldProps["style"];
+        var vdomStyleProps = newProps && newProps["style"];
+        patchStyleProps(elt, eltStyleProps, vdomStyleProps);
+        setEltOdProps(elt, newProps);
     };
-    // XXX We can put special property handling here (e.g., 'className' vs
-    // 'class', and 'style' etc.)
+    var patchStyleProps = function (elt, oldStyleProps, newStyleProps) {
+        if (!newStyleProps) {
+            elt.style = null;
+            return;
+        }
+        var eltStyle = elt.style;
+        for (var prop in newStyleProps)
+            eltStyle[prop] = newStyleProps[prop];
+        if (!oldStyleProps)
+            return;
+        for (var prop in oldStyleProps)
+            if (!(prop in newStyleProps))
+                eltStyle[prop] = null;
+    };
     var removeDomProp = function (dom, prop) {
         dom[prop] = null;
         if (dom instanceof HTMLElement)
             dom.removeAttribute(prop);
     };
     var setDomProp = function (dom, prop, value) {
+        if (prop === "class")
+            prop = "className"; // This is convenient.
         dom[prop] = value;
     };
     var emptyIVdomList = [];
@@ -995,12 +1017,14 @@ var Od;
 // This library provides some handy syntactic sugar.  Rather than writing
 // any of
 //
+//  Od.element("HR")
 //  Od.element("DIV", null, [children...])
 //  Od.element("A", { href: "..." }, [children...])
 //  Od.element("INPUT", { type: "text" })
 //
 // you can write the somewhat more perspicuous
 //
+//  Od.HR()
 //  Od.DIV([children...])
 //  Od.A({ href: "..." }, [children...])
 //  Od.INPUT({ type: "text" })
@@ -1009,9 +1033,9 @@ var Od;
 var Od;
 (function (Od) {
     var isVdoms = function (x) {
-        return x && ((x instanceof Array) ||
-            (typeof (x) === "string") ||
-            ("tag" in x || "obs" in x || "text" in x));
+        return (x != null) && ((x.isIVdom) ||
+            (x instanceof Array) ||
+            (typeof (x) === "string"));
     };
     var elt = function (tag, fst, snd) {
         var fstIsVdoms = isVdoms(fst);
@@ -1169,6 +1193,7 @@ var Od;
     });
 })(Od || (Od = {}));
 /// <reference path="../Od/Od.ts"/>
+/// <reference path="./Elements.ts" />
 var Od;
 (function (Od) {
     Od.selectComponent = function (args) {
@@ -1192,7 +1217,7 @@ var Od;
                 i = -1;
             }
             props["selectedIndex"] = i;
-            var vdom = e("SELECT", props, options.map(function (x) { return e("OPTION", null, optionView(x)); }));
+            var vdom = Od.SELECT(props, options.map(function (x) { return Od.OPTION(optionView(x)); }));
             return vdom;
         });
         return vdom;
@@ -1206,6 +1231,7 @@ var Od;
         return (x == null) ? "null" : x.toString();
     };
 })(Od || (Od = {}));
+/// <reference path="../Od/Od.ts" />
 var Od;
 (function (Od) {
     Od.withClassName = function (name, props) {
@@ -1218,6 +1244,7 @@ var Od;
         return props;
     };
 })(Od || (Od = {}));
+/// <reference path="./Elements.ts" />
 /// <reference path="./WithClassName.ts" />
 var Od;
 (function (Od) {
@@ -1226,9 +1253,9 @@ var Od;
         var selection = args.selection || Obs.of(null);
         var vdom = Od.component(function () {
             var tabs = Obs.value(args.tabs);
-            var vdom = e("DIV", Od.withClassName("OdTabComponent", Obs.value(args.props)), [
-                e("DIV", { className: "OdTabHeadings" }, tabs.map(function (tab) { return tabHeading(selection, tab); })),
-                e("DIV", { className: "OdTabBody" }, tabBody(selection()))
+            var vdom = Od.DIV(Od.withClassName("OdTabComponent", Obs.value(args.props)), [
+                Od.DIV({ className: "OdTabHeadings" }, tabs.map(function (tab) { return tabHeading(selection, tab); })),
+                Od.DIV({ className: "OdTabBody" }, tabBody(selection()))
             ]);
             return vdom;
         });
@@ -1241,7 +1268,7 @@ var Od;
         var className = (seln === tab
             ? "OdTabHeading OdTabSelection"
             : "OdTabHeading");
-        var vdom = e("DIV", {
+        var vdom = Od.DIV({
             className: className,
             onclick: function () {
                 if (seln !== tab)
@@ -1250,8 +1277,8 @@ var Od;
         }, heading);
         return vdom;
     };
-    var tabBody = function (selection) {
-        return selection ? selection.body : "";
+    var tabBody = function (tab) {
+        return Obs.value(tab && tab.body) || "";
     };
 })(Od || (Od = {}));
 //# sourceMappingURL=OdAndEnds.js.map

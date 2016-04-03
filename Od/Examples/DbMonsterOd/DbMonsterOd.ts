@@ -1,29 +1,27 @@
-﻿/// <reference path="../../Od/Od.ts"/>
+﻿/// <reference path="../../Ends/Elements.ts"/>
 
 namespace DbMonsterOd {
 
     const rows = Obs.of([] as any[]);
 
-    const e = Od.element;
-
+    // We might shave off an FPS or two by not using the Ends/Elements
+    // shorthand (Od.TABLE etc.), but who would do that in practice?
     export const vdom = Od.component(() => 
-        e("TABLE", { className: "table table-striped latest-data" },
-            e("TBODY", null, rows().map(row => 
-                e("TR", null, [
-                    e("TD", { className: "dbname" }, row.dbname),
-                    e("TD", { className: "query-count" },
-                        e("SPAN", { className: row.lastSample.countClassName },
+        Od.TABLE({ className: "table table-striped latest-data" },
+            Od.TBODY(rows().map(row => 
+                Od.TR([
+                    Od.TD({ className: "dbname" }, row.dbname),
+                    Od.TD({ className: "query-count" },
+                        Od.SPAN({ className: row.lastSample.countClassName },
                             row.lastSample.nbQueries.toString()
                         )
                     )
                 ].concat(row.lastSample.topFiveQueries.map(col =>
-                    e("TD", { className: col.elapsedClassName }, [
-                        e("SPAN", null, col.formatElapsed),
-                        e("DIV", { className: "popover left" }, [
-                            e("DIV", { className: "popover-content" },
-                                col.query
-                            ),
-                            e("DIV", { className: "arrow" })
+                    Od.TD({ className: col.elapsedClassName }, [
+                        Od.SPAN(col.formatElapsed),
+                        Od.DIV({ className: "popover left" }, [
+                            Od.DIV({ className: "popover-content" }, col.query),
+                            Od.DIV({ className: "arrow" })
                         ])
                     ])
                 )))

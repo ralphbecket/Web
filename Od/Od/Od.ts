@@ -59,7 +59,7 @@ namespace Od {
     export interface IProps { [prop: string]: any };
 
     export const text = (text: string): IVdom =>
-        ({ text: isNully(text) ? "" : text.toString() });
+        ({ isIVdom: true, text: isNully(text) ? "" : text.toString() });
 
     // Construct a vDOM node.
     export const element =
@@ -72,7 +72,7 @@ namespace Od {
             ? childOrChildren
             : [childOrChildren]
             ) as Vdom[];
-        return { tag: tag, props: props, children: children };
+        return { isIVdom: true, tag: tag, props: props, children: children };
     };
 
     // Construct a component node from a function computing a vDOM node.
@@ -93,6 +93,7 @@ namespace Od {
             : Obs.fn(fn)
             );
         const vdom = {
+            isIVdom: true,
             obs: obs,
             subscription: null,
             subcomponents: null,
@@ -120,7 +121,7 @@ namespace Od {
     const existingNamedComponentInstance = (name: string): IVdom =>
         name &&
         parentSubcomponents &&
-        parentSubcomponents[name];
+        parentSubcomponents[name] as IVdom;
 
     const addAsParentSubcomponent = (name: string, child: IVdom): void => {
         if (!parentSubcomponents) parentSubcomponents = {} as ISubComponents;
@@ -146,6 +147,7 @@ namespace Od {
         const dom = ( tmp.childNodes.length === 1 ? tmp.firstChild : tmp );
         // We create a pretend component to host the HTML.
         const vdom = {
+            isIVdom: true,
             obs: staticHtmlObs,
             subscription: staticHtmlSubs,
             dom: dom
@@ -160,6 +162,7 @@ namespace Od {
     export const fromDom = (dom: Node): IVdom => {
         // We create a pretend component to host the HTML.
         const vdom = {
+            isIVdom: true,
             obs: staticHtmlObs,
             subscription: staticHtmlSubs,
             dom: dom
@@ -211,7 +214,7 @@ namespace Od {
                 // These are anonymous subcomponents, kept in an list.
                 (subcomponent as IVdom[]).forEach(dispose);
             } else {
-                dispose(subcomponent);
+                dispose(subcomponent as IVdom);
             }
         }
     };
@@ -235,6 +238,9 @@ namespace Od {
     export interface ISubComponents { [name: string]: (IVdom | IVdom[]) }
 
     export interface IVdom {
+
+        // One of us.
+        isIVdom: boolean;
 
         // For text nodes.
         text?: string;
@@ -316,17 +322,31 @@ namespace Od {
     };
 
     const patchProps =
-    (elt: HTMLElement, vdomProps: IProps): void => {
-        const eltProps = getEltOdProps(elt);
-        for (var prop in vdomProps)
-            setDomProp(elt, prop, vdomProps[prop]);
-        for (var prop in eltProps) if (!(prop in vdomProps))
+    (elt: HTMLElement, newProps: IProps): void => {
+        const oldProps = getEltOdProps(elt);
+        for (var prop in newProps) if (prop !== "style")
+            setDomProp(elt, prop, newProps[prop]);
+        for (var prop in oldProps) if (!(prop in newProps))
             removeDomProp(elt, prop);
-        setEltOdProps(elt, vdomProps);
+        // Style properties are special.
+        const eltStyleProps = oldProps && oldProps["style"];
+        const vdomStyleProps = newProps && newProps["style"];
+        patchStyleProps(elt, eltStyleProps, vdomStyleProps);
+        setEltOdProps(elt, newProps);
     };
 
-    // XXX We can put special property handling here (e.g., 'className' vs
-    // 'class', and 'style' etc.)
+    const patchStyleProps =
+    (elt: HTMLElement, oldStyleProps: IProps, newStyleProps: IProps): void => {
+        if (!newStyleProps) {
+            elt.style = null;
+            return;
+        }
+        const eltStyle = elt.style as IProps;
+        for (var prop in newStyleProps) eltStyle[prop] = newStyleProps[prop];
+        if (!oldStyleProps) return;
+        for (var prop in oldStyleProps) if (!(prop in newStyleProps))
+            eltStyle[prop] = null;
+    };
 
     const removeDomProp = (dom: Node, prop: string): void => {
         (dom as any)[prop] = null;
@@ -334,6 +354,7 @@ namespace Od {
     };
 
     const setDomProp = (dom: Node, prop: string, value: any): void => {
+        if (prop === "class") prop = "className"; // This is convenient.
         (dom as any)[prop] = value;
     };
 

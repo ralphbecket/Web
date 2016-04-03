@@ -1,4 +1,4 @@
-﻿/// <reference path="../../Od/Od.ts"/>
+﻿/// <reference path="../../Ends/TabComponent.ts"/>
 
 namespace DemoEndsTabComponent {
 
@@ -7,12 +7,12 @@ namespace DemoEndsTabComponent {
         const e = Od.element;
 
         const tabs = Obs.of([
-            { heading: "One", body: e("B", null, "First tab.") },
-            { heading: "Two", body: e("I", null, "Second tab.") },
+            { heading: "One", body: Od.B("First tab.") },
+            { heading: "Two", body: Od.I("Second tab.") },
             {
-                heading: "Three", body: e("UL", null, [
-                    e("LI", null, "Third"),
-                    e("LI", null, "tab.")
+                heading: "Three", body: Od.UL([
+                    Od.LI("Third"),
+                    Od.LI("tab.")
                 ])
             }
         ] as Od.ITab[]);
@@ -39,9 +39,9 @@ namespace DemoEndsTabComponent {
         };
 
         const vdom = e("DIV", null, [
-            e("BUTTON", { onclick: rotateTabs }, "Rotate"),
-            e("BUTTON", { onclick: jumpTab }, "Jump"),
-            e("HR"),
+            Od.BUTTON({ onclick: rotateTabs }, "Rotate"),
+            Od.BUTTON({ onclick: jumpTab }, "Jump"),
+            Od.HR(),
             Od.tabComponent({ tabs: tabs, selection: selection })
         ]);
 

@@ -1,4 +1,6 @@
-﻿namespace Od {
+﻿/// <reference path="../Od/Od.ts" />
+
+namespace Od {
     export const withClassName =
     (name: string, props: Od.IProps): Od.IProps => {
         props = props || {};

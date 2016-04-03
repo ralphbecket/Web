@@ -261,4 +261,28 @@ window.onload = () => {
         chk(C, [0, 1], "SPAN", 1);
         chk(C, [0, 1, 0], "#pqr")
     });
+
+    Test.run("Style properties.", () => {
+        const A1 = e("DIV", null, "xyz");
+        const B = null;
+        const C = Od.patchDom(A1, B, null) as HTMLElement;
+        chk(C, [], "DIV", 1);
+        chk(C, [0], "#xyz");
+        Test.expect("Initial colour is not set.", C.style.color === "");
+        const A2 = e("DIV", {
+            style: { color: "red" }
+        });
+        Od.patchDom(A2, C, null);
+        Test.expect("Colour is now red.", C.style.color === "red");
+        const A3 = e("DIV", {
+            style: { color: "blue" }
+        });
+        Od.patchDom(A3, C, null);
+        Test.expect("Colour is now blue.", C.style.color === "blue");
+        const A4 = e("DIV", {
+            style: null
+        });
+        Od.patchDom(A4, C, null);
+        Test.expect("Colour is not set again.", C.style.color === "");
+    });
 };

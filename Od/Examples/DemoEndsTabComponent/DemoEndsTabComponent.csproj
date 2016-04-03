@@ -35,12 +35,6 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <TypeScriptCompile Include="..\..\Ends\TabComponent.ts">
-      <Link>TabComponent.ts</Link>
-    </TypeScriptCompile>
-    <TypeScriptCompile Include="..\..\Ends\WithClassName.ts">
-      <Link>WithClassName.ts</Link>
-    </TypeScriptCompile>
     <TypeScriptCompile Include="DemoEndsTabComponent.ts" />
   </ItemGroup>
   <PropertyGroup>

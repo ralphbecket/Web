@@ -1,122 +1,3 @@
-// /// <reference path="../../Od/Od.ts"/>
-// 
-// namespace DbMonsterOd {
-// 
-//     // Arguably, this is not the way you'd do this in practice.  However,
-//     // this whole exercise is artificial, in that we're showing pages of
-//     // data updating at high speed.  There's a good argument that if you
-//     // really do have to do that, then manipulate the DOM directly.  Still,
-//     // here is how you'd get top speed going via Od.  DO NOT take this as
-//     // representative of "idiomatic" Od!
-//     //
-//     var vdom = null as Od.Vdom;
-// 
-//     var obss = null as Obs.IObservable<string>[];
-// 
-//     const update = (): void => {
-//         const keepIdentity = true;
-//         var rows = ENV.generateData(keepIdentity).toArray();
-//         if (vdom) {
-//             // We've already initialised the vDOM, we just need to update
-//             // the underlying observables which will trigger any required
-//             // DOM patching.
-//             //Obs.startUpdate(); // Batch all updates together.
-//             var i = 0;
-//             rows.forEach(row => {
-//                 const lastSample = row.lastSample;
-//                 obss[i++](lastSample.nbQueries.toString());
-//                 obss[i++](lastSample.countClassName);
-//                 const cols = lastSample.topFiveQueries;
-//                 cols.forEach(col => {
-//                     obss[i++](col.query);
-//                     obss[i++](col.formatElapsed);
-//                     obss[i++](col.elapsedClassName);
-//                 });
-//             });
-//             //Obs.endUpdate();
-//         } else {
-//             // We're just getting started.  We need to set up the vDOM and
-//             // the observables on which it depends.  Since this is an high
-//             // speed application, we arrange for the minimal amount of
-//             // patching work to be redone with respect to each kind of update.
-//             // In practice, we'd be unlikely to go to such lengths.
-//             //
-//             // The approach used here is to make each thing which can update
-//             // independently into a separate component.  It is only when the
-//             // observables change on which a component depends that the
-//             // component (and its corresponding DOM subtree) will be updated.
-//             // Assigning the same value to an observable does not trigger an
-//             // update, an update will only trigger when an observable is
-//             // assigned a new value distinct from its previous one.
-//             //
-//             const e = Od.element;
-//             obss = [];
-//             var tableRows = [] as Od.Vdom[];
-//             var i = 0;
-//             rows.forEach(row => {
-//                 const lastSample = row.lastSample;
-//                 const tableCols = [] as Od.Vdom[];
-// 
-//                 tableCols.push(e("TD", { className: "dbname" }, row.dbname));
-// 
-//                 var nbQueries =
-//                     (obss[i++] = Obs.of(lastSample.nbQueries.toString()));
-//                 var countClassName =
-//                     (obss[i++] = Obs.of(lastSample.countClassName));
-// 
-//                 tableCols.push(
-//                     Od.component(() =>
-//                         e("TD", { className: "query-count" },
-//                             e("SPAN", { className: countClassName() },
-//                                 nbQueries()
-//                             )
-//                         )
-//                     )
-//                 );
-// 
-//                 const cols = lastSample.topFiveQueries;
-//                 cols.forEach(col => {
-//                     var query = (obss[i++] = Obs.of(col.query));
-//                     var formatElapsed = (obss[i++] = Obs.of(col.formatElapsed));
-//                     var elapsedClassName = (obss[i++] = Obs.of(col.elapsedClassName));
-//                     var elapsedTextCmpt = Od.component(formatElapsed);
-//                     var popoverTextCmpt = Od.component(query);
-//                     var popoverCmpt = Od.component(() =>
-//                         e("DIV", { className: "popover left" }, [
-//                             e("DIV", { className: "popover-content" },
-//                                 popoverTextCmpt
-//                             ),
-//                             e("DIV", { className: "arrow" })
-//                         ])
-//                     );
-//                     const elapsedCmpt = Od.component(() =>
-//                         e("TD", { className: elapsedClassName() }, [
-//                             e("SPAN", null, elapsedTextCmpt),
-//                             popoverCmpt
-//                         ])
-//                     );
-//                     tableCols.push(elapsedCmpt);
-//                 });
-// 
-//                 tableRows.push(e("TR", null, tableCols));
-//             });
-//             vdom =
-//                 e("TABLE", { className: "table table-striped latest-data" }, [
-//                     e("TBODY", null,
-//                         tableRows
-//                     )
-//                 ]);
-//             Od.appendChild(vdom, document.getElementById("app"));
-//         }
-//     };
-// 
-//     export const run = (): void => {
-//         update();
-//         Monitoring.renderRate.ping();
-//         setTimeout(run, ENV.timeout);
-//     };
-// }
-//  
 // Obs.ts
 // (C) Ralph Becket, 2016
 //
@@ -594,7 +475,7 @@ var Od;
     var debug = false;
     ;
     Od.text = function (text) {
-        return ({ text: isNully(text) ? "" : text.toString() });
+        return ({ isIVdom: true, text: isNully(text) ? "" : text.toString() });
     };
     // Construct a vDOM node.
     Od.element = function (tag, props, childOrChildren) {
@@ -604,7 +485,7 @@ var Od;
             : isArray(childOrChildren)
                 ? childOrChildren
                 : [childOrChildren]);
-        return { tag: tag, props: props, children: children };
+        return { isIVdom: true, tag: tag, props: props, children: children };
     };
     // Construct a component node from a function computing a vDOM node.
     Od.component = function (fn) {
@@ -623,6 +504,7 @@ var Od;
             ? fn
             : Obs.fn(fn));
         var vdom = {
+            isIVdom: true,
             obs: obs,
             subscription: null,
             subcomponents: null,
@@ -675,6 +557,7 @@ var Od;
         var dom = (tmp.childNodes.length === 1 ? tmp.firstChild : tmp);
         // We create a pretend component to host the HTML.
         var vdom = {
+            isIVdom: true,
             obs: staticHtmlObs,
             subscription: staticHtmlSubs,
             dom: dom
@@ -688,6 +571,7 @@ var Od;
     Od.fromDom = function (dom) {
         // We create a pretend component to host the HTML.
         var vdom = {
+            isIVdom: true,
             obs: staticHtmlObs,
             subscription: staticHtmlSubs,
             dom: dom
@@ -803,23 +687,42 @@ var Od;
         replaceNode(newElt, dom, domParent);
         return newElt;
     };
-    var patchProps = function (elt, vdomProps) {
-        var eltProps = getEltOdProps(elt);
-        for (var prop in vdomProps)
-            setDomProp(elt, prop, vdomProps[prop]);
-        for (var prop in eltProps)
-            if (!(prop in vdomProps))
+    var patchProps = function (elt, newProps) {
+        var oldProps = getEltOdProps(elt);
+        for (var prop in newProps)
+            if (prop !== "style")
+                setDomProp(elt, prop, newProps[prop]);
+        for (var prop in oldProps)
+            if (!(prop in newProps))
                 removeDomProp(elt, prop);
-        setEltOdProps(elt, vdomProps);
+        // Style properties are special.
+        var eltStyleProps = oldProps && oldProps["style"];
+        var vdomStyleProps = newProps && newProps["style"];
+        patchStyleProps(elt, eltStyleProps, vdomStyleProps);
+        setEltOdProps(elt, newProps);
     };
-    // XXX We can put special property handling here (e.g., 'className' vs
-    // 'class', and 'style' etc.)
+    var patchStyleProps = function (elt, oldStyleProps, newStyleProps) {
+        if (!newStyleProps) {
+            elt.style = null;
+            return;
+        }
+        var eltStyle = elt.style;
+        for (var prop in newStyleProps)
+            eltStyle[prop] = newStyleProps[prop];
+        if (!oldStyleProps)
+            return;
+        for (var prop in oldStyleProps)
+            if (!(prop in newStyleProps))
+                eltStyle[prop] = null;
+    };
     var removeDomProp = function (dom, prop) {
         dom[prop] = null;
         if (dom instanceof HTMLElement)
             dom.removeAttribute(prop);
     };
     var setDomProp = function (dom, prop, value) {
+        if (prop === "class")
+            prop = "className"; // This is convenient.
         dom[prop] = value;
     };
     var emptyIVdomList = [];
@@ -1109,22 +1012,203 @@ var Od;
         console.log.apply(console, arguments);
     };
 })(Od || (Od = {}));
-/// <reference path="../../Od/Od.ts"/>
+// Elements.ts
+//
+// This library provides some handy syntactic sugar.  Rather than writing
+// any of
+//
+//  Od.element("HR")
+//  Od.element("DIV", null, [children...])
+//  Od.element("A", { href: "..." }, [children...])
+//  Od.element("INPUT", { type: "text" })
+//
+// you can write the somewhat more perspicuous
+//
+//  Od.HR()
+//  Od.DIV([children...])
+//  Od.A({ href: "..." }, [children...])
+//  Od.INPUT({ type: "text" })
+// 
+/// <reference path="../Od/Od.ts"/>
+var Od;
+(function (Od) {
+    var isVdoms = function (x) {
+        return (x != null) && ((x.isIVdom) ||
+            (x instanceof Array) ||
+            (typeof (x) === "string"));
+    };
+    var elt = function (tag, fst, snd) {
+        var fstIsVdoms = isVdoms(fst);
+        if (fstIsVdoms && snd != null)
+            throw new Error("Od." + tag + ": given two args, but first arg is not props.");
+        return (fstIsVdoms
+            ? Od.element(tag, null, fst)
+            : Od.element(tag, fst, snd));
+    };
+    // This approach is short, but sweet.
+    ["A",
+        "ABBR",
+        "ACRONYM",
+        "ADDRESS",
+        "APPLET",
+        "AREA",
+        "ARTICLE",
+        "ASIDE",
+        "AUDIO",
+        "B",
+        "BASE",
+        "BASEFONT",
+        "BDI",
+        "BDO",
+        "BGSOUND",
+        "BIG",
+        "BLINK",
+        "BLOCKQUOTE",
+        "BODY",
+        "BR",
+        "BUTTON",
+        "CANVAS",
+        "CAPTION",
+        "CENTER",
+        "CITE",
+        "CODE",
+        "COL",
+        "COLGROUP",
+        "COMMAND",
+        "CONTENT",
+        "DATA",
+        "DATALIST",
+        "DD",
+        "DEL",
+        "DETAILS",
+        "DFN",
+        "DIALOG",
+        "DIR",
+        "DIV",
+        "DL",
+        "DT",
+        "ELEMENT",
+        "EM",
+        "EMBED",
+        "FIELDSET",
+        "FIGCAPTION",
+        "FIGURE",
+        "FONT",
+        "FOOTER",
+        "FORM",
+        "FRAME",
+        "FRAMESET",
+        "H1",
+        "H2",
+        "H3",
+        "H4",
+        "H5",
+        "H6",
+        "HEAD",
+        "HEADER",
+        "HGROUP",
+        "HR",
+        "HTML",
+        "I",
+        "IFRAME",
+        "IMAGE",
+        "IMG",
+        "INPUT",
+        "INS",
+        "ISINDEX",
+        "KBD",
+        "KEYGEN",
+        "LABEL",
+        "LEGEND",
+        "LI",
+        "LINK",
+        "LISTING",
+        "MAIN",
+        "MAP",
+        "MARK",
+        "MARQUEE",
+        "MENU",
+        "MENUITEM",
+        "META",
+        "METER",
+        "MULTICOL",
+        "NAV",
+        "NOBR",
+        "NOEMBED",
+        "NOFRAMES",
+        "NOSCRIPT",
+        "OBJECT",
+        "OL",
+        "OPTGROUP",
+        "OPTION",
+        "OUTPUT",
+        "P",
+        "PARAM",
+        "PICTURE",
+        "PLAINTEXT",
+        "PRE",
+        "PROGRESS",
+        "Q",
+        "RP",
+        "RT",
+        "RTC",
+        "RUBY",
+        "S",
+        "SAMP",
+        "SCRIPT",
+        "SECTION",
+        "SELECT",
+        "SHADOW",
+        "SMALL",
+        "SOURCE",
+        "SPACER",
+        "SPAN",
+        "STRIKE",
+        "STRONG",
+        "STYLE",
+        "SUB",
+        "SUMMARY",
+        "SUP",
+        "TABLE",
+        "TBODY",
+        "TD",
+        "TEMPLATE",
+        "TEXTAREA",
+        "TFOOT",
+        "TH",
+        "THEAD",
+        "TIME",
+        "TITLE",
+        "TR",
+        "TRACK",
+        "TT",
+        "U",
+        "UL",
+        "VAR",
+        "VIDEO",
+        "WBR",
+        "XMP"
+    ].forEach(function (tag) {
+        Od[tag] = function (fst, snd) { return elt(tag, fst, snd); };
+    });
+})(Od || (Od = {}));
+/// <reference path="../../Ends/Elements.ts"/>
 var DbMonsterOd;
 (function (DbMonsterOd) {
     var rows = Obs.of([]);
-    var e = Od.element;
+    // We might shave off an FPS or two by not using the Ends/Elements
+    // shorthand (Od.TABLE etc.), but who would do that in practice?
     DbMonsterOd.vdom = Od.component(function () {
-        return e("TABLE", { className: "table table-striped latest-data" }, e("TBODY", null, rows().map(function (row) {
-            return e("TR", null, [
-                e("TD", { className: "dbname" }, row.dbname),
-                e("TD", { className: "query-count" }, e("SPAN", { className: row.lastSample.countClassName }, row.lastSample.nbQueries.toString()))
+        return Od.TABLE({ className: "table table-striped latest-data" }, Od.TBODY(rows().map(function (row) {
+            return Od.TR([
+                Od.TD({ className: "dbname" }, row.dbname),
+                Od.TD({ className: "query-count" }, Od.SPAN({ className: row.lastSample.countClassName }, row.lastSample.nbQueries.toString()))
             ].concat(row.lastSample.topFiveQueries.map(function (col) {
-                return e("TD", { className: col.elapsedClassName }, [
-                    e("SPAN", null, col.formatElapsed),
-                    e("DIV", { className: "popover left" }, [
-                        e("DIV", { className: "popover-content" }, col.query),
-                        e("DIV", { className: "arrow" })
+                return Od.TD({ className: col.elapsedClassName }, [
+                    Od.SPAN(col.formatElapsed),
+                    Od.DIV({ className: "popover left" }, [
+                        Od.DIV({ className: "popover-content" }, col.query),
+                        Od.DIV({ className: "arrow" })
                     ])
                 ]);
             })));
@@ -1345,10 +1429,10 @@ var ENV = ENV || (function () {
     };
 })();
 /**
- * @author mrdoob / http://mrdoob.com/
- * @author jetienne / http://jetienne.com/
- * @author paulirish / http://paulirish.com/
- */
+* @author mrdoob / http://mrdoob.com/
+* @author jetienne / http://jetienne.com/
+* @author paulirish / http://paulirish.com/
+*/
 var MemoryStats = function () {
     var msMin = 100;
     var msMax = 0;

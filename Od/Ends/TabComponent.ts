@@ -1,4 +1,5 @@
-﻿/// <reference path="./WithClassName.ts" />
+﻿/// <reference path="./Elements.ts" />
+/// <reference path="./WithClassName.ts" />
 
 namespace Od {
 
@@ -20,14 +21,14 @@ namespace Od {
         const vdom = Od.component(() => {
             const tabs = Obs.value(args.tabs);
             const vdom =
-                e("DIV",
+                Od.DIV(
                     withClassName("OdTabComponent", Obs.value(args.props)),
                     [
-                        e("DIV",
+                        Od.DIV(
                             { className: "OdTabHeadings" },
                             tabs.map(tab => tabHeading(selection, tab))
                         ),
-                        e("DIV",
+                        Od.DIV(
                             { className: "OdTabBody" },
                             tabBody(selection())
                         )
@@ -49,7 +50,7 @@ namespace Od {
             ? "OdTabHeading OdTabSelection"
             : "OdTabHeading"
             );
-        const vdom = e("DIV",
+        const vdom = Od.DIV(
             {
                 className: className,
                 onclick: () => {
@@ -61,6 +62,6 @@ namespace Od {
         return vdom;
     };
 
-    const tabBody = (selection: ITab): Od.Vdom =>
-        selection ? selection.body : "";
+    const tabBody = (tab: ITab): Od.Vdoms =>
+        Obs.value(tab && tab.body) || "";
 }

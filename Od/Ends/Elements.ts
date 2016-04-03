@@ -3,12 +3,14 @@
 // This library provides some handy syntactic sugar.  Rather than writing
 // any of
 //
+//  Od.element("HR")
 //  Od.element("DIV", null, [children...])
 //  Od.element("A", { href: "..." }, [children...])
 //  Od.element("INPUT", { type: "text" })
 //
 // you can write the somewhat more perspicuous
 //
+//  Od.HR()
 //  Od.DIV([children...])
 //  Od.A({ href: "..." }, [children...])
 //  Od.INPUT({ type: "text" })
@@ -18,10 +20,10 @@
 namespace Od {
 
     const isVdoms = (x: any): boolean =>
-        x && (
+        (x != null) && (
+            (x.isIVdom) ||
             (x instanceof Array) ||
-            (typeof (x) === "string") ||
-            ("tag" in x || "obs" in x || "text" in x)
+            (typeof (x) === "string")
         );
 
     const elt = (tag: string, fst: IProps | Vdoms, snd?: Vdoms): IVdom => {
@@ -30,7 +32,7 @@ namespace Od {
             "Od." + tag + ": given two args, but first arg is not props."
         );
         return ( fstIsVdoms
-               ? Od.element(tag, null, fst)
+               ? Od.element(tag, null, fst as Vdoms)
                : Od.element(tag, fst as IProps, snd)
                );
     };
@@ -179,11 +181,11 @@ namespace Od {
         "WBR",
         "XMP"
     ].forEach(tag => {
-        Od[tag] = (fst: any, snd?: any) => elt(tag, fst, snd);
+        Od[tag] = (fst?: any, snd?: any) => elt(tag, fst, snd);
     });
 
     export type ElementConstructor =
-        (fst: IProps | Vdoms, snd?: Vdoms) => IVdom;
+        (fst?: IProps | Vdoms, snd?: Vdoms) => IVdom;
 
     export declare const A: ElementConstructor;
     export declare const ABBR: ElementConstructor;

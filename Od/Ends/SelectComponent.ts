@@ -1,4 +1,6 @@
-﻿namespace Od {
+﻿/// <reference path="./Elements.ts" />
+
+namespace Od {
 
     export const selectComponent = <T>(args: {
         options: Obs.IObservablish<T[]>;
@@ -26,8 +28,8 @@
                 i = -1;
             }
             props["selectedIndex"] = i;
-            const vdom = e("SELECT", props,
-                options.map(x => e("OPTION", null, optionView(x)))
+            const vdom = Od.SELECT(props,
+                options.map(x => Od.OPTION(optionView(x)))
             );
             return vdom;
         });
