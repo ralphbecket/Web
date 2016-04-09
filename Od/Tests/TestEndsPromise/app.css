@@ -1,0 +1,7 @@
+﻿body {
+    font-family: 'Segoe UI', sans-serif;
+}
+
+.TestReportArea { width: 45%; float: left; margin-right: 4%; }
+#failed { color: red; }
+#passed { color: blue; }

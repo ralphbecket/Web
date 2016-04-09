@@ -214,6 +214,7 @@ namespace Od {
             vdom.subscription = null;
         }
         if (vdom.dom) {
+            lifecycleHooks("destroyed", vdom.dom);
             enqueueNodeForStripping(vdom.dom);
             vdom.dom = null;
         }
@@ -353,6 +354,10 @@ namespace Od {
 
     const patchStyleProps =
     (elt: HTMLElement, oldStyleProps: IProps, newStyleProps: IProps): void => {
+        if (typeof (newStyleProps) === "string") {
+            (elt as any).style = newStyleProps;
+            return;
+        }
         if (!newStyleProps) {
             // Don't reset all style properties unless there were some before.
             if (oldStyleProps) elt.style = null;
@@ -528,6 +533,7 @@ namespace Od {
         const newDom = patchDom(vdom, dom, domParent);
         setDomComponent(newDom, component);
         component.dom = newDom;
+        lifecycleHooks("created", newDom);
     }
 
     const disposeAnonymousSubcomponents = (vdom: IVdom): void => {
@@ -596,6 +602,7 @@ namespace Od {
         }
         const newDom = patchDom(vdom, dom, domParent);
         setDomComponent(newDom, component);
+        lifecycleHooks("updated", newDom);
         component.dom = newDom;
     };
 
@@ -664,6 +671,14 @@ namespace Od {
                 if (domParent) domParent.replaceChild(newDom, oldDom);
             }
         }
+    };
+
+    // Some component nodes will have life-cycle hooks to call.
+    const lifecycleHooks = (what: string, dom: Node): void => {
+        const props = dom && getEltOdProps(dom);
+        const hook = props && props["lifecycle"];
+        if (hook) hook(what, dom);
+        console.log([what, dom]);
     };
 
     // Debugging.

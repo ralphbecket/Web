@@ -190,6 +190,7 @@ var Od;
             vdom.subscription = null;
         }
         if (vdom.dom) {
+            lifecycleHooks("destroyed", vdom.dom);
             enqueueNodeForStripping(vdom.dom);
             vdom.dom = null;
         }
@@ -287,6 +288,10 @@ var Od;
         setEltOdProps(elt, newProps);
     };
     var patchStyleProps = function (elt, oldStyleProps, newStyleProps) {
+        if (typeof (newStyleProps) === "string") {
+            elt.style = newStyleProps;
+            return;
+        }
         if (!newStyleProps) {
             // Don't reset all style properties unless there were some before.
             if (oldStyleProps)
@@ -453,6 +458,7 @@ var Od;
         var newDom = Od.patchDom(vdom, dom, domParent);
         setDomComponent(newDom, component);
         component.dom = newDom;
+        lifecycleHooks("created", newDom);
     }
     var disposeAnonymousSubcomponents = function (vdom) {
         var anonymousSubcomponents = vdom.subcomponents && vdom.subcomponents[""];
@@ -514,6 +520,7 @@ var Od;
         }
         var newDom = Od.patchDom(vdom, dom, domParent);
         setDomComponent(newDom, component);
+        lifecycleHooks("updated", newDom);
         component.dom = newDom;
     };
     // A DOM node will be replaced by a new DOM structure if it
@@ -589,6 +596,14 @@ var Od;
                     domParent.replaceChild(newDom, oldDom);
             }
         }
+    };
+    // Some component nodes will have life-cycle hooks to call.
+    var lifecycleHooks = function (what, dom) {
+        var props = dom && getEltOdProps(dom);
+        var hook = props && props["lifecycle"];
+        if (hook)
+            hook(what, dom);
+        console.log([what, dom]);
     };
     // Debugging.
     var trace = function () {
