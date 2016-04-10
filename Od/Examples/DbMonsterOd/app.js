@@ -743,30 +743,27 @@ var Od;
             prop = "className"; // This is convenient.
         dom[prop] = value;
     };
-    var emptyIVdomList = [];
     var patchChildren = function (elt, vdomChildren) {
         if (!vdomChildren)
-            vdomChildren = emptyIVdomList;
+            vdomChildren = [];
         if (elt.keyed)
             reorderKeyedChildren(vdomChildren, elt);
-        var eltChildren = elt.childNodes;
-        var numEltChildren = eltChildren.length;
+        var eltChild = elt.firstChild;
         var numVdomChildren = vdomChildren.length;
-        // Remove any extraneous existing children.
-        // We do this first, and backwards, because removing a child node
-        // changes the indices of any succeeding children.
-        for (var i = numEltChildren - 1; numVdomChildren <= i; i--) {
-            var eltChild = eltChildren[i];
-            replaceNode(null, eltChild, elt);
-            trace("Removed child", i + 1);
-        }
         // Patch or add the number of required children.
         for (var i = 0; i < numVdomChildren; i++) {
             trace("Patching child", i + 1);
             var vdomChild = vdomChildren[i];
-            var eltChild = eltChildren[i];
             Od.patchDom(vdomChild, eltChild, elt);
+            eltChild = eltChild && eltChild.nextSibling;
             trace("Patched child", i + 1);
+        }
+        // Remove any extraneous children.
+        while (eltChild) {
+            var nextSibling = eltChild.nextSibling;
+            replaceNode(null, eltChild, elt);
+            eltChild = nextSibling;
+            trace("Removed child", ++i);
         }
     };
     // A common vDOM optimisation for supporting lists is to associate
@@ -828,7 +825,6 @@ var Od;
     // derived from observables.
     var staticHtmlObs = Obs.of(null);
     var staticHtmlSubs = null;
-    var emptyPropDict = [];
     var propsToPropAssocList = function (props) {
         if (!props)
             return null;

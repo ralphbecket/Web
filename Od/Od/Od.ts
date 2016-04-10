@@ -380,30 +380,26 @@ namespace Od {
         (dom as any)[prop] = value;
     };
 
-    const emptyIVdomList = [] as IVdom[];
-
     const patchChildren =
     (elt: HTMLElement, vdomChildren: Vdom[]): void => {
-        if (!vdomChildren) vdomChildren = emptyIVdomList;
+        if (!vdomChildren) vdomChildren = [];
         if ((elt as any).keyed) reorderKeyedChildren(vdomChildren, elt);
-        const eltChildren = elt.childNodes;
-        const numEltChildren = eltChildren.length;
+        var eltChild = elt.firstChild;
         const numVdomChildren = vdomChildren.length;
-        // Remove any extraneous existing children.
-        // We do this first, and backwards, because removing a child node
-        // changes the indices of any succeeding children.
-        for (var i = numEltChildren - 1; numVdomChildren <= i; i--) {
-            const eltChild = eltChildren[i];
-            replaceNode(null, eltChild, elt);
-            trace("Removed child", i + 1);
-        }
         // Patch or add the number of required children.
         for (var i = 0; i < numVdomChildren; i++) {
             trace("Patching child", i + 1);
             const vdomChild = vdomChildren[i];
-            const eltChild = eltChildren[i];
             patchDom(vdomChild, eltChild, elt);
+            eltChild = eltChild && eltChild.nextSibling;
             trace("Patched child", i + 1);
+        }
+        // Remove any extraneous children.
+        while (eltChild) {
+            const nextSibling = eltChild.nextSibling;
+            replaceNode(null, eltChild, elt);
+            eltChild = nextSibling;
+            trace("Removed child", ++i);
         }
     };
 
@@ -470,8 +466,6 @@ namespace Od {
     // property-name order.  The reason for this is it allows us to
     // do property patching in O(n) time.
     export type PropAssocList = any[];
-
-    const emptyPropDict = [] as PropAssocList;
 
     const propsToPropAssocList = (props: IProps): PropAssocList => {
         if (!props) return null;
