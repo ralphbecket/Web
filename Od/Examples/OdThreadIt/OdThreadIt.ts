@@ -1,17 +1,15 @@
 ﻿// Od version of ThreadIt.
 //
 // This is about thirty lines longer than the Mithril implementation, but,
-// unlike the Mithril version (as of 2016-03-15):
-// - this has full asynchronous activity reporting and error handling;
-// - implements its own rudimentary router (~10 LOC);
-// - implements its own AJAX request scheme (~40 LOC).
-// In practice the latter two would certainly be handled by an external
-// library.
+// unlike the Mithril version (as of 2016-03-15) this has full asynchronous
+// activity reporting and error handling.
 //
 // What's interesting about Od is that view components update independently
 // without requiring a complete rebuild of the entire vDOM.
 
-/// <reference path="../../Od/Od.ts"/>
+/// <reference path="../../Ends/Elements.ts"/>
+/// <reference path="../../Ends/Jigsaw.ts"/>
+/// <reference path="../../Ends/Xhr.ts"/>
 
 interface IComment {
     id: string;
@@ -21,8 +19,6 @@ interface IComment {
     children: string[];
     child_comments?: Obs.IObservable<IComment[]>;
 }
-
-const e = Od.element;
 
 var threads = [] as IComment[];
 
@@ -37,9 +33,8 @@ const addNewComment = (newComment: IComment): void => {
     newComment.child_comments = Obs.of([]);
     const parentComment = parentID && commentDict[parentID];
     if (parentComment) {
-        const parentChildComments = parentComment.child_comments();
-        parentChildComments.push(newComment);
-        parentComment.child_comments(parentChildComments);
+        parentComment.child_comments().push(newComment);
+        Obs.updateDependents(parentComment.child_comments);
     }
 };
 
@@ -67,9 +62,7 @@ const view = Od.component((): Od.Vdom => {
         case State.LoadingThreadsFailed:
             vdom = [
                 "There was an error loading the top-level threads.",
-                e("P", null,
-                    e("A", { onclick: () => { fetchThreads(); } }, "Retry")
-                )
+                Od.P(Od.A({ onclick: () => { fetchThreads(); } }, "Retry"))
             ];
             break;
         case State.ShowingThreads:
@@ -81,8 +74,8 @@ const view = Od.component((): Od.Vdom => {
         case State.LoadingCommentsFailed:
             vdom = [
                 "There was an error loading the thread comments.",
-                e("P", null,
-                    e("A",
+                Od.P(
+                    Od.A(
                         { onclick: () => { fetchComments(currentThreadID); } },
                         "Retry"
                     )
@@ -93,7 +86,7 @@ const view = Od.component((): Od.Vdom => {
             vdom = viewCommentTree(commentDict[currentThreadID]);
             break;
     }
-    return e("DIV", { className: "main" }, vdom);
+    return Od.DIV({ className: "main" }, vdom);
 });
 
 const viewThreads = (threads: IComment[]): Od.Vdom[] => {
@@ -101,21 +94,21 @@ const viewThreads = (threads: IComment[]): Od.Vdom[] => {
     const iTop = threads.length;
     for (var i = 0; i < iTop; i++) {
         const thread = threads[i];
-        vdoms.push(e("A", { href: "#thread/" + thread.id },
+        vdoms.push(Od.A({ href: "#thread/" + thread.id },
             Od.fromHtml(thread.text)));
-        vdoms.push(e("P", { className: "comment_count" },
+        vdoms.push(Od.P({ className: "comment_count" },
             plural(thread.comment_count, "comment")));
-        vdoms.push(e("HR"));
+        vdoms.push(Od.HR());
     }
     // XXX Add new thread post box.
     return vdoms;
 };
 
 const viewCommentTree = (comment: IComment): Od.Vdom =>
-    e("DIV", { className: "comment" }, [
+    Od.DIV({ className: "comment" }, [
         Od.fromHtml(comment.text),
-        e("DIV", { className: "reply" }, commentReply(comment.id) ),
-        e("DIV", { className: "children" },
+        Od.DIV({ className: "reply" }, commentReply(comment.id) ),
+        Od.DIV({ className: "children" },
             comment.child_comments().map(viewCommentTree)
         )
     ]);
@@ -133,7 +126,7 @@ const commentReply = (parentID: string): Od.IVdom => {
     return Od.component(() => {
         switch (replyState()) {
             case ReplyState.NotReplying: return (
-                e("A",
+                Od.A(
                     {
                         onclick: () => { replyState(ReplyState.EditingReply); }
                     },
@@ -141,41 +134,36 @@ const commentReply = (parentID: string): Od.IVdom => {
                 )
             );
             case ReplyState.EditingReply: return (
-                e("FORM", null, [
-                    e("TEXTAREA",
-                        {
-                            oninput: (e: any) => { replyText(e.target.value); }
+                Od.FORM([
+                    Od.TEXTAREA({
+                        oninput: (e: any) => { replyText(e.target.value); }
+                    }),
+                    Od.INPUT({
+                        type: "submit",
+                        value: "Reply!",
+                        onclick: () => {
+                            submitReply(parentID, replyText, replyState);
                         }
-                    ),
-                    e("INPUT",
-                        {
-                            type: "submit",
-                            value: "Reply!",
-                            onclick: () => {
-                                submitReply(parentID, replyText, replyState);
-                            }
-                        }
-                    ),
-                    e("DIV", { className: "preview" }, replyText())
+                    }),
+                    Od.DIV({ className: "preview" }, replyText())
                 ])
             );
             case ReplyState.SendingReply: return (
-                e("DIV", null, [
-                    e("A", null, "Sending reply..."),
-                    e("DIV", { className: "preview" }, replyText())
+                Od.DIV([
+                    Od.A("Sending reply..."),
+                    Od.DIV({ className: "preview" }, replyText())
                 ])
             );
             case ReplyState.ReplyFailed: return (
-                e("DIV", null, [
-                    e("A",
-                        {
+                Od.DIV([
+                    Od.A({
                             onclick: () => {
                                 submitReply(parentID, replyText, replyState);
                             }
                         },
                         "Sending reply failed...  Retry"
                     ),
-                    e("DIV", { className: "preview" }, replyText())
+                    Od.DIV({ className: "preview" }, replyText())
                 ])
             );
         }
@@ -191,11 +179,14 @@ const submitReply =
     var body = "text=" + encodeURIComponent(replyText());
     if (parentID) body += "&parent=" + encodeURIComponent(parentID);
     //sendTestReply(parentID, replyText(),
-    POST("http://api.threaditjs.com/comments/create",
-        body,
-        (newComment) => {
+    Xhr.send("http://api.threaditjs.com/comments/create", {
+        method: "POST",
+        requestHeaders: { "Content-type": "application/x-www-form-urlencoded" },
+        data: body
+    }).then(
+        xhr => {
             replyText("");
-            addNewComment(newComment);
+            addNewComment(parseResponseText(xhr));
             replyState(ReplyState.NotReplying);
         },
         (e: any) => {
@@ -211,13 +202,12 @@ const plural = (n: number, singular: string, plural?: string): string =>
 const fetchThreads = (): void => {
     // Testing code for now.
     currentState(State.LoadingThreads);
-    //fetchTestThreads(
-    GET("http://api.threaditjs.com/threads",
-        (newThreads) => {
-            threads = newThreads;
+    Xhr.send("http://api.threaditjs.com/threads").then(
+        xhr => {
+            threads = parseResponseText(xhr);
             currentState(State.ShowingThreads);
         },
-        () => {
+        err => {
             currentState(State.LoadingThreadsFailed);
         }
     );
@@ -227,59 +217,22 @@ const fetchComments = (id: string): void => {
     // Testing code for now.
     currentThreadID = id;
     currentState(State.LoadingComments);
-    //fetchTestComments(id,
-    GET("http://api.threaditjs.com/comments/" + id,
-        (threadComments) => {
+    Xhr.send("http://api.threaditjs.com/comments/" + id).then(
+        xhr => {
             commentDict = {};
-            updateCommentDict(threadComments);
+            updateCommentDict(parseResponseText(xhr));
             currentState(State.ShowingComments);
         },
-        () => {
+        err => {
             currentState(State.LoadingCommentsFailed);
         }
     );
 };
 
-// Basic AJAX.
-
-const GET =
-(   url: string,
-    pass: (data: any) => void,
-    fail: (e: any) => void
-): void => {
-    SEND("GET", url, null, pass, fail);
-};
-
-const POST =
-(   url: string,
-    body: string,
-    pass: (data: any) => void,
-    fail: (e: any) => void
-): void => {
-    SEND("POST", url, body, pass, fail);
-};
-
-const SEND =
-(   method: string,
-    url: string,
-    body: any,
-    pass: (data: any) => void,
-    fail: (e: any) => void
-): void => {
-    var xhr = new XMLHttpRequest();
-    xhr.open(method, url);
-    xhr.onreadystatechange = () => {
-        if (xhr.readyState != XMLHttpRequest.DONE) return;
-        try {
-            var package = JSON.parse(xhr.responseText);
-            if (!("data" in package)) throw (xhr.responseText);
-            pass(package.data);
-        } catch (e) {
-            fail(e);
-        }
-    };
-    if (method === "POST") xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-    xhr.send(body);
+const parseResponseText = (xhr: XMLHttpRequest): any => {
+    var package = JSON.parse(xhr.responseText);
+    if (!("data" in package)) throw (xhr.responseText);
+    return package.data;
 };
 
 // ---- Routing. ----
@@ -308,111 +261,4 @@ const main = (): void => {
 
 window.onload = () => {
     main();
-};
-
-// ---- Testing code. ----
-
-const fetchTestThreads =
-(pass: (comments: IComment[]) => void, fail: (e?: any) => void): void => {
-    setTimeout(() => {
-        if (Math.random() < 0.1) {
-            fail("Disaster!");
-            return;
-        }
-        const threads = genTestThreads(7);
-        pass(threads);
-    }, 200);
-};
-
-const fetchTestComments =
-(   threadID: string,
-    pass: (comments: IComment[]) => void,
-    fail: (e: any) => void
-): void => {
-    setTimeout(() => {
-        if (Math.random() < 0.1) {
-            fail("Calamity!");
-            return;
-        }
-        const thread = {
-            id: threadID,
-            text: "Blah blah blah " + threadID,
-            children: [] as string[],
-            comment_count: 0
-        } as IComment;
-        const threadComments = genTestComments(3, 3, thread.id);
-        const children =
-            threadComments.filter(x => x.parent_id === threadID).map(x => x.id);
-        thread.children = children;
-        thread.comment_count = children.length;
-        threadComments.unshift(thread);
-        pass(threadComments);
-    }, 200);
-};
-
-const sendTestReply =
-(   parentID: string,
-    replyText: string,
-    pass: (comment: IComment) => void,
-    fail: (e: any) => void
-): void => {
-    setTimeout(() => {
-        if (Math.random() < 0.4) {
-            fail("Ragnarok!");
-            return;
-        }
-        const comment = {
-            id: (nextTestCommentID++).toString(),
-            text: replyText,
-            children: [],
-            comment_count: 0,
-            parent_id: parentID
-        } as IComment;
-        pass(comment);
-    }, 200);
-};
-
-var nextTestCommentID = 1;
-
-const genTestThreads =
-(maxThreads = 7): IComment[] => {
-    const threads = [] as IComment[];
-    const numThreads = 1 + Math.floor(maxThreads * Math.random());
-    for (var i = 0; i < numThreads; i++) {
-        const id = (nextTestCommentID++).toString();
-        const thread = {
-            id: id,
-            text: "Blah blah blah " + id,
-            children: [],
-            comment_count: Math.floor(Math.random() * 5)
-        } as IComment;
-        threads.push(thread);
-    }
-    return threads;
-};
-
-const genTestComments =
-(maxChildren = 3, maxDepth = 1, parentID = null as string): IComment[] => {
-
-    const comments = [] as IComment[];
-    const id = (nextTestCommentID++).toString();
-    const subComments = [] as IComment[];
-    if (1 < maxDepth) for (var i = Math.floor(maxChildren * Math.random()); i; i--) {
-        const subSubComments = genTestComments(maxChildren, maxDepth - 1, id);
-        for (var j = 0; j < subSubComments.length; j++)
-            subComments.push(subSubComments[j]);
-    }
-    const children = subComments.filter(x => x.parent_id === id).map(x => x.id);
-    const numChildren = children.length;
-    const comment = {
-        id: id,
-        parent_id: parentID,
-        text: "Blah blah blah " + id,
-        comment_count: numChildren,
-        children: children
-    } as IComment;
-    comments.push(comment);
-    for (var j = 0; j < subComments.length; j++) comments.push(subComments[j]);
-
-    return comments;
 };

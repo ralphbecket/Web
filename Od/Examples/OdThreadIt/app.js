@@ -660,8 +660,8 @@ var Od;
         var newDom = (!dom || dom.nodeName !== "#text"
             ? document.createTextNode(newText)
             : dom);
-        if (newDom.textContent !== newText)
-            newDom.textContent = newText;
+        if (newDom.nodeValue !== newText)
+            newDom.nodeValue = newText;
         replaceNode(newDom, dom, domParent);
         return newDom;
     };
@@ -754,8 +754,9 @@ var Od;
         for (var i = 0; i < numVdomChildren; i++) {
             trace("Patching child", i + 1);
             var vdomChild = vdomChildren[i];
+            var nextChild = eltChild && eltChild.nextSibling;
             Od.patchDom(vdomChild, eltChild, elt);
-            eltChild = eltChild && eltChild.nextSibling;
+            eltChild = nextChild;
             trace("Patched child", i + 1);
         }
         // Remove any extraneous children.
@@ -1022,10 +1023,10 @@ var Od;
     // Some component nodes will have life-cycle hooks to call.
     var lifecycleHooks = function (what, dom) {
         var props = dom && getEltOdProps(dom);
-        var hook = props && props["lifecycle"];
+        var hook = props && props["odlifecycle"];
         if (hook)
             hook(what, dom);
-        console.log([what, dom]);
+        //console.log([what, dom]);
     };
     // Debugging.
     var trace = function () {
@@ -1036,20 +1037,525 @@ var Od;
         console.log.apply(console, arguments);
     };
 })(Od || (Od = {}));
+// Elements.ts
+//
+// This library provides some handy syntactic sugar.  Rather than writing
+// any of
+//
+//  Od.element("HR")
+//  Od.element("DIV", null, [children...])
+//  Od.element("A", { href: "..." }, [children...])
+//  Od.element("INPUT", { type: "text" })
+//
+// you can write the somewhat more perspicuous
+//
+//  Od.HR()
+//  Od.DIV([children...])
+//  Od.A({ href: "..." }, [children...])
+//  Od.INPUT({ type: "text" })
+// 
+/// <reference path="../Od/Od.ts"/>
+var Od;
+(function (Od) {
+    var isVdoms = function (x) {
+        return (x != null) && ((x.isIVdom) ||
+            (x instanceof Array) ||
+            (typeof (x) === "string"));
+    };
+    var elt = function (tag, fst, snd) {
+        var fstIsVdoms = isVdoms(fst);
+        if (fstIsVdoms && snd != null)
+            throw new Error("Od." + tag + ": given two args, but first arg is not props.");
+        return (fstIsVdoms
+            ? Od.element(tag, null, fst)
+            : Od.element(tag, fst, snd));
+    };
+    // This approach is short, but sweet.
+    ["A",
+        "ABBR",
+        "ACRONYM",
+        "ADDRESS",
+        "APPLET",
+        "AREA",
+        "ARTICLE",
+        "ASIDE",
+        "AUDIO",
+        "B",
+        "BASE",
+        "BASEFONT",
+        "BDI",
+        "BDO",
+        "BGSOUND",
+        "BIG",
+        "BLINK",
+        "BLOCKQUOTE",
+        "BODY",
+        "BR",
+        "BUTTON",
+        "CANVAS",
+        "CAPTION",
+        "CENTER",
+        "CITE",
+        "CODE",
+        "COL",
+        "COLGROUP",
+        "COMMAND",
+        "CONTENT",
+        "DATA",
+        "DATALIST",
+        "DD",
+        "DEL",
+        "DETAILS",
+        "DFN",
+        "DIALOG",
+        "DIR",
+        "DIV",
+        "DL",
+        "DT",
+        "ELEMENT",
+        "EM",
+        "EMBED",
+        "FIELDSET",
+        "FIGCAPTION",
+        "FIGURE",
+        "FONT",
+        "FOOTER",
+        "FORM",
+        "FRAME",
+        "FRAMESET",
+        "H1",
+        "H2",
+        "H3",
+        "H4",
+        "H5",
+        "H6",
+        "HEAD",
+        "HEADER",
+        "HGROUP",
+        "HR",
+        "HTML",
+        "I",
+        "IFRAME",
+        "IMAGE",
+        "IMG",
+        "INPUT",
+        "INS",
+        "ISINDEX",
+        "KBD",
+        "KEYGEN",
+        "LABEL",
+        "LEGEND",
+        "LI",
+        "LINK",
+        "LISTING",
+        "MAIN",
+        "MAP",
+        "MARK",
+        "MARQUEE",
+        "MENU",
+        "MENUITEM",
+        "META",
+        "METER",
+        "MULTICOL",
+        "NAV",
+        "NOBR",
+        "NOEMBED",
+        "NOFRAMES",
+        "NOSCRIPT",
+        "OBJECT",
+        "OL",
+        "OPTGROUP",
+        "OPTION",
+        "OUTPUT",
+        "P",
+        "PARAM",
+        "PICTURE",
+        "PLAINTEXT",
+        "PRE",
+        "PROGRESS",
+        "Q",
+        "RP",
+        "RT",
+        "RTC",
+        "RUBY",
+        "S",
+        "SAMP",
+        "SCRIPT",
+        "SECTION",
+        "SELECT",
+        "SHADOW",
+        "SMALL",
+        "SOURCE",
+        "SPACER",
+        "SPAN",
+        "STRIKE",
+        "STRONG",
+        "STYLE",
+        "SUB",
+        "SUMMARY",
+        "SUP",
+        "TABLE",
+        "TBODY",
+        "TD",
+        "TEMPLATE",
+        "TEXTAREA",
+        "TFOOT",
+        "TH",
+        "THEAD",
+        "TIME",
+        "TITLE",
+        "TR",
+        "TRACK",
+        "TT",
+        "U",
+        "UL",
+        "VAR",
+        "VIDEO",
+        "WBR",
+        "XMP"
+    ].forEach(function (tag) {
+        Od[tag] = function (fst, snd) { return elt(tag, fst, snd); };
+    });
+})(Od || (Od = {}));
+// Jigsaw - a simple location-hash router.
+var Jigsaw;
+(function (Jigsaw) {
+    // A route is a possibly-empty set of "parts" separated by '/' slashes.
+    // Each route part is matched against the corresponding part of the
+    // window location hash, stripped of its leading '#' character.
+    //
+    // Parts match as follows:
+    //  xyx     -   Must match the exact string "xyz" (case sensitive);
+    //  :foo    -   Required parameter, matches anything;
+    //  ?bar    -   Optional parameter, matches anything;
+    //  *baz    -   Parameter matching all remaining parts of the hash.
+    //
+    // A successful matching results in the corresponding route handler
+    // being called with a dictionary mapping parameters to argument values.
+    //
+    // Parameter names are exactly as written (i.e., they include the leading
+    // character indicating the parameter kind).  Argument values are all
+    // simple strings (preprocessed via decodeURIComponent), except for
+    // '*' parameters, whose values are arrays of such.
+    //
+    // Two special parameters are added to the dictionary: "#" is the
+    // original location hash and "?" is any query string (which you may
+    // choose to process via parseQuery).
+    //
+    // Routes are tested in the order in which they were added, the first
+    // match taking priority.
+    //
+    Jigsaw.addRoute = function (route, handler) {
+        var compiledRoute = {
+            route: route,
+            matcher: routeMatcher(route),
+            handler: handler
+        };
+        compiledRoutes.push(compiledRoute);
+    };
+    Jigsaw.removeRoute = function (route) {
+        compiledRoutes = compiledRoutes.filter(function (x) { return x.route === route; });
+    };
+    Jigsaw.clearRoutes = function () {
+        compiledRoutes = [];
+    };
+    // If no route matches, the default route handler will be called
+    // if one has been specified.
+    //
+    Jigsaw.defaultRouteHandler = null;
+    Jigsaw.takeRoute = function (hash) {
+        var queryIdx = hash.lastIndexOf("?");
+        var query = "";
+        if (queryIdx !== -1) {
+            query = hash.substr(queryIdx + 1);
+            hash = hash.substr(0, queryIdx);
+        }
+        var parts = (hash || "").split("/").map(decodeURIComponent);
+        for (var i = 0; i < compiledRoutes.length; i++) {
+            var compiledRoute = compiledRoutes[i];
+            var args = compiledRoute.matcher(parts, 0, {});
+            if (args) {
+                // Success!
+                args["#"] = hash;
+                args["?"] = query;
+                if (query != null)
+                    args["?"] = query;
+                compiledRoute.handler(args);
+                return;
+            }
+        }
+        // Nooooo...
+        if (Jigsaw.defaultRouteHandler)
+            Jigsaw.defaultRouteHandler(hash);
+    };
+    Jigsaw.startRouter = function () {
+        window.addEventListener("hashchange", processHash);
+    };
+    Jigsaw.stopRouter = function () {
+        window.removeEventListener("hashchange", processHash);
+    };
+    // A utility function to convert query strings into key/value
+    // dictionaries.
+    Jigsaw.parseQuery = function (query) {
+        var pairs = (query || "").replace(/\+/g, " ").split(/[&;]/);
+        var args = {};
+        pairs.forEach(function (pair) {
+            var i = pair.indexOf("=");
+            if (i === -1)
+                i = pair.length;
+            var key = pair.substr(0, i);
+            var value = decodeURIComponent(pair.substr(i + 1));
+            args[key] = value;
+        });
+        return args;
+    };
+    // ---- Implementation detail. ----
+    var processHash = function () {
+        Jigsaw.takeRoute(location.hash.substr(1));
+    };
+    var matchEnd = function (parts, i, args) { return (parts[i] == null) && args; };
+    // '.../foo/...'
+    var matchExact = function (word, cont) { return function (parts, i, args) {
+        return (parts[i] === word) && cont(parts, i + 1, args);
+    }; };
+    // '.../:bar/...'
+    var matchParam = function (param, cont) { return function (parts, i, args) {
+        var arg = parts[i];
+        if (arg == null)
+            return null;
+        args[param] = arg;
+        return cont(parts, i + 1, args);
+    }; };
+    // '.../?baz/...'
+    var matchOptParam = function (param, cont) { return function (parts, i, args) {
+        var arg = parts[i];
+        args[param] = arg;
+        return cont(parts, i + 1, args);
+    }; };
+    // '.../*quux'
+    var matchRest = function (param, cont) { return function (parts, i, args) {
+        args[param] = parts.slice(i);
+        return cont(parts, parts.length, args);
+    }; };
+    var routeMatcher = function (route) {
+        if (!route)
+            return matchEnd;
+        var params = route.split("/");
+        var matcher = matchEnd;
+        for (var i = params.length - 1; 0 <= i; i--) {
+            var param = params[i];
+            switch (param[0]) {
+                case ":":
+                    matcher = matchParam(param, matcher);
+                    continue;
+                case "?":
+                    matcher = matchOptParam(param, matcher);
+                    continue;
+                case "*":
+                    matcher = matchRest(param, matcher);
+                    continue;
+                default:
+                    matcher = matchExact(param, matcher);
+                    continue;
+            }
+        }
+        return matcher;
+    };
+    var compiledRoutes = [];
+})(Jigsaw || (Jigsaw = {}));
+var Oath;
+(function (Oath) {
+    var nextID = 1;
+    Oath.resolve = function (x) {
+        return Oath.make(function (pass, fail) { return pass(x); });
+    };
+    Oath.reject = function (r) {
+        return Oath.make(function (pass, fail) { return fail(r); });
+    };
+    Oath.all = function (ps) {
+        return Oath.make(function (pass, fail) {
+            var xs = [];
+            var n = ps.length;
+            ps.forEach(function (p, i) {
+                p.then(function (x) { xs[i] = x; if (!--n)
+                    pass(xs); });
+            });
+        });
+    };
+    Oath.race = function (ps) {
+        return Oath.make(function (pass, fail) {
+            ps.forEach(function (p, i) {
+                p.then(function (x) { pass(x); });
+            });
+        });
+    };
+    Oath.delay = function (t, f) {
+        return Oath.make(function (pass, fail) {
+            setTimeout(function () {
+                pass(isFunction(f) ? f() : f);
+            }, t);
+        });
+    };
+    var isFunction = function (x) {
+        return typeof (x) === "function";
+    };
+    var isThenable = function (x) {
+        return x && isFunction(x.then);
+    };
+    Oath.make = function (setup) {
+        var p = {
+            value: null,
+            state: pending,
+            onFulfilled: null,
+            onRejected: null,
+            then: null,
+            id: nextID++
+        };
+        console.log("Oath: created", p.id);
+        var pass = function (x) { return resolveOath(p, x); };
+        var fail = function (r) { return rejectOath(p, r); };
+        setup(pass, fail);
+        p.then =
+            function (passed, failed) {
+                return Oath.make(function (pass, fail) {
+                    p.state(p, passed, failed, pass, fail);
+                });
+            };
+        return p;
+    };
+    var resolveOath = function (p, x) {
+        if (p.state !== pending)
+            return;
+        p.state = fulfilled;
+        p.value = x;
+        if (p.onFulfilled)
+            setTimeout(p.onFulfilled, 0, x);
+        p.onFulfilled = null;
+        console.log("Oath: resolved", p.id);
+    };
+    var rejectOath = function (p, r) {
+        if (p.state !== pending)
+            return;
+        p.state = rejected;
+        p.value = r;
+        if (p.onRejected)
+            setTimeout(p.onRejected, 0, r);
+        p.onRejected = null;
+        console.log("Oath: rejected", p.id);
+    };
+    var pending = function (p, passed, failed, pass, fail) {
+        var onF = p.onFulfilled;
+        if (passed)
+            p.onFulfilled = function (x) {
+                if (onF)
+                    onF(x);
+                handleCallback(p, passed, pass, fail);
+            };
+        var onR = p.onRejected;
+        if (failed)
+            p.onRejected = function (r) {
+                if (onR)
+                    onR(r);
+                handleCallback(p, failed, pass, fail);
+            };
+    };
+    var fulfilled = function (p, passed, failed, pass, fail) {
+        setTimeout(handleCallback, 0, p, passed, pass, fail);
+    };
+    var rejected = function (p, passed, failed, pass, fail) {
+        setTimeout(handleCallback, 0, p, failed, pass, fail);
+    };
+    var handleCallback = function (p, f, pass, fail) {
+        try {
+            if (!isFunction(f))
+                return;
+            console.log("Oath: evaluating callback on", p.id);
+            var x = p.value;
+            var y = f(x);
+            if (y === p)
+                throw new TypeError("Cyclic promise.");
+            if (isThenable(y))
+                y.then(pass, fail);
+            else
+                pass(y);
+        }
+        catch (r) {
+            fail(r);
+        }
+    };
+})(Oath || (Oath = {}));
+/// <reference path="./Oath.ts"/>
+var Xhr;
+(function (Xhr) {
+    // send(url, opts)
+    //
+    // Make an XMLHttpRequest to the given URL with the provided
+    // (optional) options in opts.
+    //
+    // If opts contains key k and value v then the generated XMLHttpRequest
+    // will have property k set to v.  You can use this scheme to set the
+    // timeout value, amongst others.
+    //
+    // If opts contains an entry "requestHeaders" then for each key k and
+    // value v therein the generated XMLHttpRequest will be initialised
+    // with setRequestHeader(k, v).
+    //
+    // The XMLHttpRequest will be opened using the "method" (default "GET"),
+    // "async" (default true), "user", and "password" entries in opts.
+    //
+    // The data sent is taken from the "data" entry of opts.
+    //
+    // All these are, of course, optional.
+    //
+    // The result is a promise which will be fulfilled with the XMLHttpRequest
+    // if the request succeeds (i.e., the status code is in 200..299) or
+    // rejected with the XMLHttpRequest if the request fails (i.e., the status
+    // code is anything else).
+    // 
+    Xhr.send = function (url, opts) {
+        if (opts === void 0) { opts = {}; }
+        var xhr = new XMLHttpRequest();
+        var method = opts["method"] || "GET";
+        var async = (opts["async"] !== false);
+        var user = opts["user"];
+        var password = opts["password"];
+        var data = opts["data"];
+        xhr.open(method, url, async, user, password);
+        for (var key in opts) {
+            var value = opts[key];
+            xhr[key] = value;
+        }
+        var requestHeaders = opts["requestHeaders"];
+        if (requestHeaders)
+            for (var header in requestHeaders) {
+                var value = requestHeaders[header];
+                xhr.setRequestHeader(header, value);
+            }
+        var promise = Oath.make(function (pass, fail) {
+            xhr.onreadystatechange = readyStateChangeHandler(xhr, pass, fail);
+        });
+        xhr.send(data);
+        return promise;
+    };
+    var readyStateChangeHandler = function (xhr, pass, fail) {
+        return function (v) {
+            if (xhr.readyState !== 4 /* DONE */)
+                return;
+            (200 <= xhr.status && xhr.status < 300 ? pass : fail)(xhr);
+        };
+    };
+})(Xhr || (Xhr = {}));
 // Od version of ThreadIt.
 //
 // This is about thirty lines longer than the Mithril implementation, but,
-// unlike the Mithril version (as of 2016-03-15):
-// - this has full asynchronous activity reporting and error handling;
-// - implements its own rudimentary router (~10 LOC);
-// - implements its own AJAX request scheme (~40 LOC).
-// In practice the latter two would certainly be handled by an external
-// library.
+// unlike the Mithril version (as of 2016-03-15) this has full asynchronous
+// activity reporting and error handling.
 //
 // What's interesting about Od is that view components update independently
 // without requiring a complete rebuild of the entire vDOM.
-/// <reference path="../../Od/Od.ts"/>
-var e = Od.element;
+/// <reference path="../../Ends/Elements.ts"/>
+/// <reference path="../../Ends/Jigsaw.ts"/>
+/// <reference path="../../Ends/Xhr.ts"/>
 var threads = [];
 var commentDict = {};
 var currentThreadID = null; // Set if viewing comments for a thread.
@@ -1060,9 +1566,8 @@ var addNewComment = function (newComment) {
     newComment.child_comments = Obs.of([]);
     var parentComment = parentID && commentDict[parentID];
     if (parentComment) {
-        var parentChildComments = parentComment.child_comments();
-        parentChildComments.push(newComment);
-        parentComment.child_comments(parentChildComments);
+        parentComment.child_comments().push(newComment);
+        Obs.updateDependents(parentComment.child_comments);
     }
 };
 var updateCommentDict = function (newComments) {
@@ -1087,7 +1592,7 @@ var view = Od.component(function () {
         case State.LoadingThreadsFailed:
             vdom = [
                 "There was an error loading the top-level threads.",
-                e("P", null, e("A", { onclick: function () { fetchThreads(); } }, "Retry"))
+                Od.P(Od.A({ onclick: function () { fetchThreads(); } }, "Retry"))
             ];
             break;
         case State.ShowingThreads:
@@ -1099,32 +1604,32 @@ var view = Od.component(function () {
         case State.LoadingCommentsFailed:
             vdom = [
                 "There was an error loading the thread comments.",
-                e("P", null, e("A", { onclick: function () { fetchComments(currentThreadID); } }, "Retry"))
+                Od.P(Od.A({ onclick: function () { fetchComments(currentThreadID); } }, "Retry"))
             ];
             break;
         case State.ShowingComments:
             vdom = viewCommentTree(commentDict[currentThreadID]);
             break;
     }
-    return e("DIV", { className: "main" }, vdom);
+    return Od.DIV({ className: "main" }, vdom);
 });
 var viewThreads = function (threads) {
     var vdoms = [];
     var iTop = threads.length;
     for (var i = 0; i < iTop; i++) {
         var thread = threads[i];
-        vdoms.push(e("A", { href: "#thread/" + thread.id }, Od.fromHtml(thread.text)));
-        vdoms.push(e("P", { className: "comment_count" }, plural(thread.comment_count, "comment")));
-        vdoms.push(e("HR"));
+        vdoms.push(Od.A({ href: "#thread/" + thread.id }, Od.fromHtml(thread.text)));
+        vdoms.push(Od.P({ className: "comment_count" }, plural(thread.comment_count, "comment")));
+        vdoms.push(Od.HR());
     }
     // XXX Add new thread post box.
     return vdoms;
 };
 var viewCommentTree = function (comment) {
-    return e("DIV", { className: "comment" }, [
+    return Od.DIV({ className: "comment" }, [
         Od.fromHtml(comment.text),
-        e("DIV", { className: "reply" }, commentReply(comment.id)),
-        e("DIV", { className: "children" }, comment.child_comments().map(viewCommentTree))
+        Od.DIV({ className: "reply" }, commentReply(comment.id)),
+        Od.DIV({ className: "children" }, comment.child_comments().map(viewCommentTree))
     ]);
 };
 var ReplyState;
@@ -1139,33 +1644,33 @@ var commentReply = function (parentID) {
     var replyState = Obs.of(ReplyState.NotReplying);
     return Od.component(function () {
         switch (replyState()) {
-            case ReplyState.NotReplying: return (e("A", {
+            case ReplyState.NotReplying: return (Od.A({
                 onclick: function () { replyState(ReplyState.EditingReply); }
             }, "Reply!"));
-            case ReplyState.EditingReply: return (e("FORM", null, [
-                e("TEXTAREA", {
+            case ReplyState.EditingReply: return (Od.FORM([
+                Od.TEXTAREA({
                     oninput: function (e) { replyText(e.target.value); }
                 }),
-                e("INPUT", {
+                Od.INPUT({
                     type: "submit",
                     value: "Reply!",
                     onclick: function () {
                         submitReply(parentID, replyText, replyState);
                     }
                 }),
-                e("DIV", { className: "preview" }, replyText())
+                Od.DIV({ className: "preview" }, replyText())
             ]));
-            case ReplyState.SendingReply: return (e("DIV", null, [
-                e("A", null, "Sending reply..."),
-                e("DIV", { className: "preview" }, replyText())
+            case ReplyState.SendingReply: return (Od.DIV([
+                Od.A("Sending reply..."),
+                Od.DIV({ className: "preview" }, replyText())
             ]));
-            case ReplyState.ReplyFailed: return (e("DIV", null, [
-                e("A", {
+            case ReplyState.ReplyFailed: return (Od.DIV([
+                Od.A({
                     onclick: function () {
                         submitReply(parentID, replyText, replyState);
                     }
                 }, "Sending reply failed...  Retry"),
-                e("DIV", { className: "preview" }, replyText())
+                Od.DIV({ className: "preview" }, replyText())
             ]));
         }
     });
@@ -1176,9 +1681,13 @@ var submitReply = function (parentID, replyText, replyState) {
     if (parentID)
         body += "&parent=" + encodeURIComponent(parentID);
     //sendTestReply(parentID, replyText(),
-    POST("http://api.threaditjs.com/comments/create", body, function (newComment) {
+    Xhr.send("http://api.threaditjs.com/comments/create", {
+        method: "POST",
+        requestHeaders: { "Content-type": "application/x-www-form-urlencoded" },
+        data: body
+    }).then(function (xhr) {
         replyText("");
-        addNewComment(newComment);
+        addNewComment(parseResponseText(xhr));
         replyState(ReplyState.NotReplying);
     }, function (e) {
         replyState(ReplyState.ReplyFailed);
@@ -1191,11 +1700,10 @@ var plural = function (n, singular, plural) {
 var fetchThreads = function () {
     // Testing code for now.
     currentState(State.LoadingThreads);
-    //fetchTestThreads(
-    GET("http://api.threaditjs.com/threads", function (newThreads) {
-        threads = newThreads;
+    Xhr.send("http://api.threaditjs.com/threads").then(function (xhr) {
+        threads = parseResponseText(xhr);
         currentState(State.ShowingThreads);
-    }, function () {
+    }, function (err) {
         currentState(State.LoadingThreadsFailed);
     });
 };
@@ -1203,41 +1711,19 @@ var fetchComments = function (id) {
     // Testing code for now.
     currentThreadID = id;
     currentState(State.LoadingComments);
-    //fetchTestComments(id,
-    GET("http://api.threaditjs.com/comments/" + id, function (threadComments) {
+    Xhr.send("http://api.threaditjs.com/comments/" + id).then(function (xhr) {
         commentDict = {};
-        updateCommentDict(threadComments);
+        updateCommentDict(parseResponseText(xhr));
         currentState(State.ShowingComments);
-    }, function () {
+    }, function (err) {
         currentState(State.LoadingCommentsFailed);
     });
 };
-// Basic AJAX.
-var GET = function (url, pass, fail) {
-    SEND("GET", url, null, pass, fail);
-};
-var POST = function (url, body, pass, fail) {
-    SEND("POST", url, body, pass, fail);
-};
-var SEND = function (method, url, body, pass, fail) {
-    var xhr = new XMLHttpRequest();
-    xhr.open(method, url);
-    xhr.onreadystatechange = function () {
-        if (xhr.readyState != XMLHttpRequest.DONE)
-            return;
-        try {
-            var package = JSON.parse(xhr.responseText);
-            if (!("data" in package))
-                throw (xhr.responseText);
-            pass(package.data);
-        }
-        catch (e) {
-            fail(e);
-        }
-    };
-    if (method === "POST")
-        xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-    xhr.send(body);
+var parseResponseText = function (xhr) {
+    var package = JSON.parse(xhr.responseText);
+    if (!("data" in package))
+        throw (xhr.responseText);
+    return package.data;
 };
 // ---- Routing. ----
 // This is a *really* simple router!
@@ -1262,95 +1748,3 @@ var main = function () {
 window.onload = function () {
     main();
 };
-// ---- Testing code. ----
-var fetchTestThreads = function (pass, fail) {
-    setTimeout(function () {
-        if (Math.random() < 0.1) {
-            fail("Disaster!");
-            return;
-        }
-        var threads = genTestThreads(7);
-        pass(threads);
-    }, 200);
-};
-var fetchTestComments = function (threadID, pass, fail) {
-    setTimeout(function () {
-        if (Math.random() < 0.1) {
-            fail("Calamity!");
-            return;
-        }
-        var thread = {
-            id: threadID,
-            text: "Blah blah blah " + threadID,
-            children: [],
-            comment_count: 0
-        };
-        var threadComments = genTestComments(3, 3, thread.id);
-        var children = threadComments.filter(function (x) { return x.parent_id === threadID; }).map(function (x) { return x.id; });
-        thread.children = children;
-        thread.comment_count = children.length;
-        threadComments.unshift(thread);
-        pass(threadComments);
-    }, 200);
-};
-var sendTestReply = function (parentID, replyText, pass, fail) {
-    setTimeout(function () {
-        if (Math.random() < 0.4) {
-            fail("Ragnarok!");
-            return;
-        }
-        var comment = {
-            id: (nextTestCommentID++).toString(),
-            text: replyText,
-            children: [],
-            comment_count: 0,
-            parent_id: parentID
-        };
-        pass(comment);
-    }, 200);
-};
-var nextTestCommentID = 1;
-var genTestThreads = function (maxThreads) {
-    if (maxThreads === void 0) { maxThreads = 7; }
-    var threads = [];
-    var numThreads = 1 + Math.floor(maxThreads * Math.random());
-    for (var i = 0; i < numThreads; i++) {
-        var id = (nextTestCommentID++).toString();
-        var thread = {
-            id: id,
-            text: "Blah blah blah " + id,
-            children: [],
-            comment_count: Math.floor(Math.random() * 5)
-        };
-        threads.push(thread);
-    }
-    return threads;
-};
-var genTestComments = function (maxChildren, maxDepth, parentID) {
-    if (maxChildren === void 0) { maxChildren = 3; }
-    if (maxDepth === void 0) { maxDepth = 1; }
-    if (parentID === void 0) { parentID = null; }
-    var comments = [];
-    var id = (nextTestCommentID++).toString();
-    var subComments = [];
-    if (1 < maxDepth)
-        for (var i = Math.floor(maxChildren * Math.random()); i; i--) {
-            var subSubComments = genTestComments(maxChildren, maxDepth - 1, id);
-            for (var j = 0; j < subSubComments.length; j++)
-                subComments.push(subSubComments[j]);
-        }
-    var children = subComments.filter(function (x) { return x.parent_id === id; }).map(function (x) { return x.id; });
-    var numChildren = children.length;
-    var comment = {
-        id: id,
-        parent_id: parentID,
-        text: "Blah blah blah " + id,
-        comment_count: numChildren,
-        children: children
-    };
-    comments.push(comment);
-    for (var j = 0; j < subComments.length; j++)
-        comments.push(subComments[j]);
-    return comments;
-};
-//# sourceMappingURL=app.js.map

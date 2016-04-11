@@ -181,7 +181,7 @@ namespace Od {
         "WBR",
         "XMP"
     ].forEach(tag => {
-        Od[tag] = (fst?: any, snd?: any) => elt(tag, fst, snd);
+        (Od as any)[tag] = (fst?: any, snd?: any) => elt(tag, fst, snd);
     });
 
     export type ElementConstructor =

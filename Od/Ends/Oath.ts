@@ -26,7 +26,7 @@
     export const reject = <T>(r: any): IPromise<T> =>
         make<T>((pass, fail) => fail(r));
 
-    export const all = <T>(ps: IPromise<T>[]): IPromise<T[]> =>
+    export const all = <T>(ps: IThenable<T>[]): IPromise<T[]> =>
         make<T[]>((pass, fail) => {
             var xs = [] as T[];
             var n = ps.length;
@@ -35,7 +35,7 @@
             });
         });
 
-    export const race = <T>(ps: IPromise<T>[]): IPromise<T> =>
+    export const race = <T>(ps: IThenable<T>[]): IPromise<T> =>
         make<T>((pass, fail) => {
             ps.forEach((p, i) => {
                 p.then(x => { pass(x); });
@@ -66,7 +66,7 @@
             then: null,
             id: nextID++
         } as IPromise<T>;
-        console.log("Oath: created", p.id);
+        // console.log("Oath: created", p.id);
         const pass = (x: T): void => resolveOath(p, x);
         const fail = (r: any): void => rejectOath(p, r);
         setup(pass, fail);
@@ -84,7 +84,7 @@
         p.value = x;
         if (p.onFulfilled) setTimeout(p.onFulfilled, 0, x);
         p.onFulfilled = null;
-        console.log("Oath: resolved", p.id);
+        // console.log("Oath: resolved", p.id);
     };
 
     const rejectOath = <T>(p: IPromise<T>, r: any): void => {
@@ -93,7 +93,7 @@
         p.value = r;
         if (p.onRejected) setTimeout(p.onRejected, 0, r);
         p.onRejected = null;
-        console.log("Oath: rejected", p.id);
+        // console.log("Oath: rejected", p.id);
     };
 
     const pending = <T, U>(
@@ -144,7 +144,7 @@
     ): void => {
         try {
             if (!isFunction(f)) return;
-            console.log("Oath: evaluating callback on", p.id);
+            // console.log("Oath: evaluating callback on", p.id);
             const x = p.value;
             const y = f(x);
             if (y as any === p) throw new TypeError("Cyclic promise.");

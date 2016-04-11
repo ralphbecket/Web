@@ -295,7 +295,7 @@ namespace Od {
             ? document.createTextNode(newText)
             : dom
             );
-        if (newDom.textContent !== newText) newDom.textContent = newText;
+        if (newDom.nodeValue !== newText) newDom.nodeValue = newText;
         replaceNode(newDom, dom, domParent);
         return newDom;
     };
@@ -390,8 +390,9 @@ namespace Od {
         for (var i = 0; i < numVdomChildren; i++) {
             trace("Patching child", i + 1);
             const vdomChild = vdomChildren[i];
+            const nextChild = eltChild && eltChild.nextSibling;
             patchDom(vdomChild, eltChild, elt);
-            eltChild = eltChild && eltChild.nextSibling;
+            eltChild = nextChild;
             trace("Patched child", i + 1);
         }
         // Remove any extraneous children.
@@ -670,9 +671,9 @@ namespace Od {
     // Some component nodes will have life-cycle hooks to call.
     const lifecycleHooks = (what: string, dom: Node): void => {
         const props = dom && getEltOdProps(dom);
-        const hook = props && props["lifecycle"];
+        const hook = props && props["odlifecycle"];
         if (hook) hook(what, dom);
-        console.log([what, dom]);
+        //console.log([what, dom]);
     };
 
     // Debugging.

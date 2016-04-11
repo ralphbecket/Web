@@ -33,6 +33,7 @@
     <TypeScriptCompile Include="SelectComponent.ts" />
     <TypeScriptCompile Include="TabComponent.ts" />
     <TypeScriptCompile Include="WithClassName.ts" />
+    <TypeScriptCompile Include="Xhr.ts" />
   </ItemGroup>
   <ItemGroup>
     <None Include="bundleconfig.json" />

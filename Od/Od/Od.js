@@ -234,8 +234,8 @@ var Od;
         var newDom = (!dom || dom.nodeName !== "#text"
             ? document.createTextNode(newText)
             : dom);
-        if (newDom.textContent !== newText)
-            newDom.textContent = newText;
+        if (newDom.nodeValue !== newText)
+            newDom.nodeValue = newText;
         replaceNode(newDom, dom, domParent);
         return newDom;
     };
@@ -328,8 +328,9 @@ var Od;
         for (var i = 0; i < numVdomChildren; i++) {
             trace("Patching child", i + 1);
             var vdomChild = vdomChildren[i];
+            var nextChild = eltChild && eltChild.nextSibling;
             Od.patchDom(vdomChild, eltChild, elt);
-            eltChild = eltChild && eltChild.nextSibling;
+            eltChild = nextChild;
             trace("Patched child", i + 1);
         }
         // Remove any extraneous children.
@@ -596,10 +597,10 @@ var Od;
     // Some component nodes will have life-cycle hooks to call.
     var lifecycleHooks = function (what, dom) {
         var props = dom && getEltOdProps(dom);
-        var hook = props && props["lifecycle"];
+        var hook = props && props["odlifecycle"];
         if (hook)
             hook(what, dom);
-        console.log([what, dom]);
+        //console.log([what, dom]);
     };
     // Debugging.
     var trace = function () {
