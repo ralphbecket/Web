@@ -511,6 +511,7 @@ var Od;
         var existingVdom = existingNamedComponentInstance(name);
         if (existingVdom)
             return existingVdom;
+        console.log("creating new component instance");
         var obs = (Obs.isObservable(fn)
             ? fn
             : Obs.fn(fn));
@@ -701,12 +702,14 @@ var Od;
     };
     var patchProps = function (elt, newProps) {
         var oldProps = getEltOdProps(elt);
-        for (var prop in newProps)
-            if (prop !== "style")
-                setDomProp(elt, prop, newProps[prop]);
-        for (var prop in oldProps)
-            if (!(prop in newProps))
-                removeDomProp(elt, prop);
+        if (newProps)
+            for (var prop in newProps)
+                if (prop !== "style")
+                    setDomProp(elt, prop, newProps[prop]);
+        if (oldProps)
+            for (var prop in oldProps)
+                if (!(prop in newProps))
+                    removeDomProp(elt, prop);
         // Style properties are special.
         var eltStyleProps = oldProps && oldProps["style"];
         var vdomStyleProps = newProps && newProps["style"];
@@ -1411,7 +1414,7 @@ var Oath;
             then: null,
             id: nextID++
         };
-        console.log("Oath: created", p.id);
+        // console.log("Oath: created", p.id);
         var pass = function (x) { return resolveOath(p, x); };
         var fail = function (r) { return rejectOath(p, r); };
         setup(pass, fail);
@@ -1431,7 +1434,7 @@ var Oath;
         if (p.onFulfilled)
             setTimeout(p.onFulfilled, 0, x);
         p.onFulfilled = null;
-        console.log("Oath: resolved", p.id);
+        // console.log("Oath: resolved", p.id);
     };
     var rejectOath = function (p, r) {
         if (p.state !== pending)
@@ -1441,7 +1444,7 @@ var Oath;
         if (p.onRejected)
             setTimeout(p.onRejected, 0, r);
         p.onRejected = null;
-        console.log("Oath: rejected", p.id);
+        // console.log("Oath: rejected", p.id);
     };
     var pending = function (p, passed, failed, pass, fail) {
         var onF = p.onFulfilled;
@@ -1469,7 +1472,7 @@ var Oath;
         try {
             if (!isFunction(f))
                 return;
-            console.log("Oath: evaluating callback on", p.id);
+            // console.log("Oath: evaluating callback on", p.id);
             var x = p.value;
             var y = f(x);
             if (y === p)
@@ -1583,7 +1586,7 @@ var State;
     State[State["ShowingComments"] = 5] = "ShowingComments";
 })(State || (State = {}));
 var currentState = Obs.of(State.LoadingThreads);
-var view = Od.component(function () {
+var view = Od.namedComponent("main", function () {
     var vdom = null;
     switch (currentState()) {
         case State.LoadingThreads:
@@ -1642,7 +1645,11 @@ var ReplyState;
 var commentReply = function (parentID) {
     var replyText = Obs.of("");
     var replyState = Obs.of(ReplyState.NotReplying);
-    return Od.component(function () {
+    // Named components persist across re-evaluations of their parent
+    // components, saving quite a lot of work.  Anonymous components
+    // would be recreated each time their parent components were
+    // re-evaluated.
+    return Od.namedComponent(parentID, function () {
         switch (replyState()) {
             case ReplyState.NotReplying: return (Od.A({
                 onclick: function () { replyState(ReplyState.EditingReply); }
@@ -1725,26 +1732,19 @@ var parseResponseText = function (xhr) {
         throw (xhr.responseText);
     return package.data;
 };
-// ---- Routing. ----
-// This is a *really* simple router!
-var processLocationHash = function () {
-    var hash = window.location.hash.substr(1);
-    var parts = hash.split("/");
-    switch (parts[0]) {
-        case "thread":
-            fetchComments(parts[1]);
-            return;
-        default:
-            fetchThreads();
-            return;
-    }
+// ---- Routing and other initialisation. ----
+var main = function () {
+    Jigsaw.addRoute("thread/:id", function (args) {
+        fetchComments(args[":id"]);
+    });
+    Jigsaw.defaultRouteHandler = function () {
+        fetchThreads();
+    };
+    Jigsaw.startRouter();
+    Jigsaw.takeRoute(window.location.hash.substr(1));
+    Od.appendChild(view, document.body);
 };
 // ---- Get the show on the road. ----
-var main = function () {
-    Od.appendChild(view, document.body);
-    window.onhashchange = processLocationHash;
-    processLocationHash();
-};
 window.onload = function () {
     main();
 };

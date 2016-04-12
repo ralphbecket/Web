@@ -511,6 +511,7 @@ var Od;
         var existingVdom = existingNamedComponentInstance(name);
         if (existingVdom)
             return existingVdom;
+        console.log("creating new component instance");
         var obs = (Obs.isObservable(fn)
             ? fn
             : Obs.fn(fn));
@@ -701,12 +702,14 @@ var Od;
     };
     var patchProps = function (elt, newProps) {
         var oldProps = getEltOdProps(elt);
-        for (var prop in newProps)
-            if (prop !== "style")
-                setDomProp(elt, prop, newProps[prop]);
-        for (var prop in oldProps)
-            if (!(prop in newProps))
-                removeDomProp(elt, prop);
+        if (newProps)
+            for (var prop in newProps)
+                if (prop !== "style")
+                    setDomProp(elt, prop, newProps[prop]);
+        if (oldProps)
+            for (var prop in oldProps)
+                if (!(prop in newProps))
+                    removeDomProp(elt, prop);
         // Style properties are special.
         var eltStyleProps = oldProps && oldProps["style"];
         var vdomStyleProps = newProps && newProps["style"];
@@ -754,8 +757,9 @@ var Od;
         for (var i = 0; i < numVdomChildren; i++) {
             trace("Patching child", i + 1);
             var vdomChild = vdomChildren[i];
+            var nextChild = eltChild && eltChild.nextSibling;
             Od.patchDom(vdomChild, eltChild, elt);
-            eltChild = eltChild && eltChild.nextSibling;
+            eltChild = nextChild;
             trace("Patched child", i + 1);
         }
         // Remove any extraneous children.
@@ -1411,7 +1415,7 @@ var Oath;
             then: null,
             id: nextID++
         };
-        console.log("Oath: created", p.id);
+        // console.log("Oath: created", p.id);
         var pass = function (x) { return resolveOath(p, x); };
         var fail = function (r) { return rejectOath(p, r); };
         setup(pass, fail);
@@ -1431,7 +1435,7 @@ var Oath;
         if (p.onFulfilled)
             setTimeout(p.onFulfilled, 0, x);
         p.onFulfilled = null;
-        console.log("Oath: resolved", p.id);
+        // console.log("Oath: resolved", p.id);
     };
     var rejectOath = function (p, r) {
         if (p.state !== pending)
@@ -1441,7 +1445,7 @@ var Oath;
         if (p.onRejected)
             setTimeout(p.onRejected, 0, r);
         p.onRejected = null;
-        console.log("Oath: rejected", p.id);
+        // console.log("Oath: rejected", p.id);
     };
     var pending = function (p, passed, failed, pass, fail) {
         var onF = p.onFulfilled;
@@ -1469,7 +1473,7 @@ var Oath;
         try {
             if (!isFunction(f))
                 return;
-            console.log("Oath: evaluating callback on", p.id);
+            // console.log("Oath: evaluating callback on", p.id);
             var x = p.value;
             var y = f(x);
             if (y === p)

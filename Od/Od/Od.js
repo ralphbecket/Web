@@ -275,12 +275,14 @@ var Od;
     };
     var patchProps = function (elt, newProps) {
         var oldProps = getEltOdProps(elt);
-        for (var prop in newProps)
-            if (prop !== "style")
-                setDomProp(elt, prop, newProps[prop]);
-        for (var prop in oldProps)
-            if (!(prop in newProps))
-                removeDomProp(elt, prop);
+        if (newProps)
+            for (var prop in newProps)
+                if (prop !== "style")
+                    setDomProp(elt, prop, newProps[prop]);
+        if (oldProps)
+            for (var prop in oldProps)
+                if (!(prop in newProps))
+                    removeDomProp(elt, prop);
         // Style properties are special.
         var eltStyleProps = oldProps && oldProps["style"];
         var vdomStyleProps = newProps && newProps["style"];

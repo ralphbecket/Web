@@ -341,9 +341,9 @@ namespace Od {
     const patchProps =
     (elt: HTMLElement, newProps: IProps): void => {
         const oldProps = getEltOdProps(elt);
-        for (var prop in newProps) if (prop !== "style")
+        if (newProps) for (var prop in newProps) if (prop !== "style")
             setDomProp(elt, prop, newProps[prop]);
-        for (var prop in oldProps) if (!(prop in newProps))
+        if (oldProps) for (var prop in oldProps) if (!(prop in newProps))
             removeDomProp(elt, prop);
         // Style properties are special.
         const eltStyleProps = oldProps && oldProps["style"];

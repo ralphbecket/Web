@@ -53,7 +53,7 @@ enum State {
 
 const currentState = Obs.of(State.LoadingThreads);
 
-const view = Od.component((): Od.Vdom => {
+const view = Od.namedComponent("main", (): Od.Vdom => {
     var vdom = null as Od.Vdom | Od.Vdom[];
     switch (currentState()) {
         case State.LoadingThreads:
@@ -123,7 +123,11 @@ enum ReplyState {
 const commentReply = (parentID: string): Od.IVdom => {
     var replyText = Obs.of("");
     var replyState = Obs.of(ReplyState.NotReplying);
-    return Od.component(() => {
+    // Named components persist across re-evaluations of their parent
+    // components, saving quite a lot of work.  Anonymous components
+    // would be recreated each time their parent components were
+    // re-evaluated.
+    return Od.namedComponent(parentID, () => {
         switch (replyState()) {
             case ReplyState.NotReplying: return (
                 Od.A(
@@ -235,29 +239,21 @@ const parseResponseText = (xhr: XMLHttpRequest): any => {
     return package.data;
 };
 
-// ---- Routing. ----
+// ---- Routing and other initialisation. ----
 
-// This is a *really* simple router!
-const processLocationHash = (): void => {
-    const hash = window.location.hash.substr(1);
-    const parts = hash.split("/");
-    switch (parts[0]) {
-        case "thread":
-            fetchComments(parts[1]);
-            return;
-        default:
-            fetchThreads();
-            return;
-    }
+const main = (): void => {
+    Jigsaw.addRoute("thread/:id", args => {
+        fetchComments(args[":id"] as string);
+    });
+    Jigsaw.defaultRouteHandler = () => {
+        fetchThreads();
+    };
+    Jigsaw.startRouter();
+    Jigsaw.takeRoute(window.location.hash.substr(1));
+    Od.appendChild(view, document.body);
 };
 
 // ---- Get the show on the road. ----
-
-const main = (): void => {
-    Od.appendChild(view, document.body);
-    window.onhashchange = processLocationHash;
-    processLocationHash();
-};
 
 window.onload = () => {
     main();
