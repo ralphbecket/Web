@@ -10,5 +10,11 @@
     "inputFiles": [
       "Obs.js"
     ]
+  },
+  {
+    "outputFileName": "Od.js",
+    "inputFiles": [
+      "Od.js"
+    ]
   }
 ]
