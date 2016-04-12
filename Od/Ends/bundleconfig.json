@@ -4,5 +4,23 @@
     "inputFiles": [
       "OdAndEnds.js"
     ]
+  },
+  {
+    "outputFileName": "Jigsaw.js",
+    "inputFiles": [
+      "Jigsaw.js"
+    ]
+  },
+  {
+    "outputFileName": "Oath.js",
+    "inputFiles": [
+      "Oath.js"
+    ]
+  },
+  {
+    "outputFileName": "Xhr.js",
+    "inputFiles": [
+      "Xhr.js"
+    ]
   }
 ]

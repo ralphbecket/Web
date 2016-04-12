@@ -1,3 +1,4 @@
+/// <reference path="./Elements.ts" />
 /// <reference path="./WithClassName.ts" />
 var Od;
 (function (Od) {
@@ -6,9 +7,9 @@ var Od;
         var selection = args.selection || Obs.of(null);
         var vdom = Od.component(function () {
             var tabs = Obs.value(args.tabs);
-            var vdom = e("DIV", Od.withClassName("OdTabComponent", Obs.value(args.props)), [
-                e("DIV", { className: "OdTabHeadings" }, tabs.map(function (tab) { return tabHeading(selection, tab); })),
-                e("DIV", { className: "OdTabBody" }, tabBody(selection()))
+            var vdom = Od.DIV(Od.withClassName("OdTabComponent", Obs.value(args.props)), [
+                Od.DIV({ className: "OdTabHeadings" }, tabs.map(function (tab) { return tabHeading(selection, tab); })),
+                Od.DIV({ className: "OdTabBody" }, tabBody(selection()))
             ]);
             return vdom;
         });
@@ -21,7 +22,7 @@ var Od;
         var className = (seln === tab
             ? "OdTabHeading OdTabSelection"
             : "OdTabHeading");
-        var vdom = e("DIV", {
+        var vdom = Od.DIV({
             className: className,
             onclick: function () {
                 if (seln !== tab)
@@ -30,7 +31,8 @@ var Od;
         }, heading);
         return vdom;
     };
-    var tabBody = function (selection) {
-        return selection ? selection.body : "";
+    var tabBody = function (tab) {
+        return Obs.value(tab && tab.body) || "";
     };
 })(Od || (Od = {}));
+//# sourceMappingURL=TabComponent.js.map

@@ -22,8 +22,14 @@
     <Service Include="{4A0DDDB5-7A95-4FBF-97CC-616D07737A77}" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Jigsaw.js" />
+    <Content Include="Jigsaw.min.js" />
+    <Content Include="Oath.js" />
+    <Content Include="Oath.min.js" />
     <Content Include="TabComponent.css" />
     <Content Include="web.config" />
+    <Content Include="Xhr.js" />
+    <Content Include="Xhr.min.js" />
   </ItemGroup>
   <ItemGroup>
     <TypeScriptCompile Include="Elements.ts" />
@@ -37,12 +43,15 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="bundleconfig.json" />
+    <Content Include="Jigsaw.js.map" />
+    <Content Include="Oath.js.map" />
     <None Include="web.Debug.config">
       <DependentUpon>web.config</DependentUpon>
     </None>
     <None Include="web.Release.config">
       <DependentUpon>web.config</DependentUpon>
     </None>
+    <Content Include="Xhr.js.map" />
   </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">12.0</VisualStudioVersion>
@@ -78,7 +87,8 @@
     <TypeScriptCompileOnSaveEnabled>True</TypeScriptCompileOnSaveEnabled>
     <TypeScriptNoImplicitAny>False</TypeScriptNoImplicitAny>
     <TypeScriptModuleKind />
-    <TypeScriptOutFile>OdAndEnds.js</TypeScriptOutFile>
+    <TypeScriptOutFile>
+    </TypeScriptOutFile>
     <TypeScriptOutDir />
     <TypeScriptGeneratesDeclarations>False</TypeScriptGeneratesDeclarations>
     <TypeScriptNoEmitOnError>True</TypeScriptNoEmitOnError>

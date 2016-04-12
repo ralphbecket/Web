@@ -1,3 +1,4 @@
+/// <reference path="./Elements.ts" />
 var Od;
 (function (Od) {
     Od.selectComponent = function (args) {
@@ -8,20 +9,20 @@ var Od;
         var optionView = args.optionView || defaultOptionView;
         var e = Od.element;
         var vdom = Od.component(function () {
-            var props = args.props;
+            var props = args.props || {};
             var options = Obs.value(args.options);
             var selection = args.selection();
             var iTop = options.length;
             for (var i = 0; i < iTop; i++)
                 if (options[i] === selection)
                     break;
-            if (i !== iTop) {
+            if (i === iTop) {
                 if (selection !== null)
                     args.selection(null);
                 i = -1;
             }
             props["selectedIndex"] = i;
-            var vdom = e("SELECT", props, options.map(function (x) { return e("OPTION", null, optionView(x)); }));
+            var vdom = Od.SELECT(props, options.map(function (x) { return Od.OPTION(optionView(x)); }));
             return vdom;
         });
         return vdom;

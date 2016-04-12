@@ -1,3 +1,4 @@
+/// <reference path="../Od/Od.ts" />
 var Od;
 (function (Od) {
     Od.withClassName = function (name, props) {
@@ -10,3 +11,4 @@ var Od;
         return props;
     };
 })(Od || (Od = {}));
+//# sourceMappingURL=WithClassName.js.map
