@@ -22,6 +22,8 @@
     <Service Include="{4A0DDDB5-7A95-4FBF-97CC-616D07737A77}" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Elements.js" />
+    <Content Include="Elements.min.js" />
     <Content Include="Jigsaw.js" />
     <Content Include="Jigsaw.min.js" />
     <Content Include="Oath.js" />
@@ -45,6 +47,7 @@
     <None Include="bundleconfig.json" />
     <Content Include="Jigsaw.js.map" />
     <Content Include="Oath.js.map" />
+    <Content Include="Elements.js.map" />
     <None Include="web.Debug.config">
       <DependentUpon>web.config</DependentUpon>
     </None>

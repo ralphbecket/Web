@@ -22,5 +22,11 @@
     "inputFiles": [
       "Xhr.js"
     ]
+  },
+  {
+    "outputFileName": "Elements.js",
+    "inputFiles": [
+      "Elements.js"
+    ]
   }
 ]
