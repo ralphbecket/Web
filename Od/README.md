@@ -11,6 +11,7 @@ A compact virtual-DOM library in the style of Mithril.
 * It's predictable: components render independently; an update in one place has no cost for other places.
 * It's simple: updates happen automatically.
 * It's unopinionated: design your application as you will.
+* It includes optional, but useful, elements such as a router ([Ends/Jigsaw](https://github.com/ralphbecket/Web/blob/master/Od/Ends/Jigsaw.ts)), promises ([Ends/Oath](https://github.com/ralphbecket/Web/blob/master/Od/Ends/Oath.ts)), and a convenient AJAX library ([Ends/Xhr](https://github.com/ralphbecket/Web/blob/master/Od/Ends/Xhr.ts)).
 
 ## Demonstrations to whet the appetite
 
