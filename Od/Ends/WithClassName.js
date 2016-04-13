@@ -11,4 +11,3 @@ var Od;
         return props;
     };
 })(Od || (Od = {}));
-//# sourceMappingURL=WithClassName.js.map

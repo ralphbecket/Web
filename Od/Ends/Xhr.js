@@ -59,4 +59,3 @@ var Xhr;
         };
     };
 })(Xhr || (Xhr = {}));
-//# sourceMappingURL=Xhr.js.map

@@ -424,6 +424,7 @@ var Obs;
         console.log.apply(console, arguments);
     };
 })(Obs || (Obs = {}));
+
 // Od.ts
 // (C) Ralph Becket, 2016
 //
@@ -1039,6 +1040,7 @@ var Od;
         console.log.apply(console, arguments);
     };
 })(Od || (Od = {}));
+
 // Elements.ts
 //
 // This library provides some handy syntactic sugar.  Rather than writing
@@ -1219,374 +1221,334 @@ var Od;
         Od[tag] = function (fst, snd) { return elt(tag, fst, snd); };
     });
 })(Od || (Od = {}));
-/// <reference path="../../Ends/Elements.ts"/>
-var DbMonsterOd;
-(function (DbMonsterOd) {
-    var rows = Obs.of([]);
-    // We might shave off an FPS or two by not using the Ends/Elements
-    // shorthand (Od.TABLE etc.), but who would do that in practice?
-    DbMonsterOd.vdom = Od.component(function () {
-        return Od.TABLE({ className: "table table-striped latest-data" }, Od.TBODY(rows().map(function (row) {
-            return Od.TR([
-                Od.TD({ className: "dbname" }, row.dbname),
-                Od.TD({ className: "query-count" }, Od.SPAN({ className: row.lastSample.countClassName }, row.lastSample.nbQueries.toString()))
-            ].concat(row.lastSample.topFiveQueries.map(function (col) {
-                return Od.TD({ className: col.elapsedClassName }, [
-                    Od.SPAN(col.formatElapsed),
-                    Od.DIV({ className: "popover left" }, [
-                        Od.DIV({ className: "popover-content" }, col.query),
-                        Od.DIV({ className: "arrow" })
-                    ])
-                ]);
-            })));
-        })));
-    });
-    var update = function () {
-        rows(ENV.generateData().toArray());
-    };
-    DbMonsterOd.run = function () {
-        update();
-        Monitoring.renderRate.ping();
-        setTimeout(DbMonsterOd.run, ENV.timeout);
-    };
-})(DbMonsterOd || (DbMonsterOd = {}));
-// Standard DbMonster Env.js file lightly adapted for TypeScript.
-var ENV = ENV || (function () {
-    var first = true;
-    var counter = 0;
-    var data;
-    var _base;
-    (_base = String.prototype).lpad || (_base.lpad = function (padding, toLength) {
-        return padding.repeat((toLength - this.length) / padding.length).concat(this);
-    });
-    function formatElapsed(value) {
-        var str = parseFloat(value).toFixed(2);
-        if (value > 60) {
-            var minutes = Math.floor(value / 60);
-            var comps = (value % 60).toFixed(2).split('.');
-            var seconds = comps[0].lpad('0', 2);
-            var ms = comps[1];
-            str = minutes + ":" + seconds + "." + ms;
-        }
-        return str;
-    }
-    function getElapsedClassName(elapsed) {
-        var className = 'Query elapsed';
-        if (elapsed >= 10.0) {
-            className += ' warn_long';
-        }
-        else if (elapsed >= 1.0) {
-            className += ' warn';
-        }
-        else {
-            className += ' short';
-        }
-        return className;
-    }
-    function countClassName(queries) {
-        var countClassName = "label";
-        if (queries >= 20) {
-            countClassName += " label-important";
-        }
-        else if (queries >= 10) {
-            countClassName += " label-warning";
-        }
-        else {
-            countClassName += " label-success";
-        }
-        return countClassName;
-    }
-    function updateQuery(object) {
-        if (!object) {
-            object = {};
-        }
-        var elapsed = Math.random() * 15;
-        object.elapsed = elapsed;
-        object.formatElapsed = formatElapsed(elapsed);
-        object.elapsedClassName = getElapsedClassName(elapsed);
-        object.query = "SELECT blah FROM something";
-        object.waiting = Math.random() < 0.5;
-        if (Math.random() < 0.2) {
-            object.query = "<IDLE> in transaction";
-        }
-        if (Math.random() < 0.1) {
-            object.query = "vacuum";
-        }
-        return object;
-    }
-    function cleanQuery(value) {
-        if (value) {
-            value.formatElapsed = "";
-            value.elapsedClassName = "";
-            value.query = "";
-            value.elapsed = null;
-            value.waiting = null;
-        }
-        else {
-            return {
-                query: "***",
-                formatElapsed: "",
-                elapsedClassName: ""
-            };
-        }
-    }
-    function generateRow(object, keepIdentity, counter) {
-        var nbQueries = Math.floor((Math.random() * 10) + 1);
-        if (!object) {
-            object = {};
-        }
-        object.lastMutationId = counter;
-        object.nbQueries = nbQueries;
-        if (!object.lastSample) {
-            object.lastSample = {};
-        }
-        if (!object.lastSample.topFiveQueries) {
-            object.lastSample.topFiveQueries = [];
-        }
-        if (keepIdentity) {
-            // for Angular optimization
-            if (!object.lastSample.queries) {
-                object.lastSample.queries = [];
-                for (var l = 0; l < 12; l++) {
-                    object.lastSample.queries[l] = cleanQuery();
-                }
-            }
-            for (var j in object.lastSample.queries) {
-                var value = object.lastSample.queries[j];
-                if (j <= nbQueries) {
-                    updateQuery(value);
-                }
-                else {
-                    cleanQuery(value);
-                }
-            }
-        }
-        else {
-            object.lastSample.queries = [];
-            for (var k = 0; k < 12; k++) {
-                if (k < nbQueries) {
-                    var value = updateQuery(cleanQuery());
-                    object.lastSample.queries.push(value);
-                }
-                else {
-                    object.lastSample.queries.push(cleanQuery());
-                }
-            }
-        }
-        for (var i = 0; i < 5; i++) {
-            var source = object.lastSample.queries[i];
-            object.lastSample.topFiveQueries[i] = source;
-        }
-        object.lastSample.nbQueries = nbQueries;
-        object.lastSample.countClassName = countClassName(nbQueries);
-        return object;
-    }
-    function getData(keepIdentity) {
-        var oldData = data;
-        if (!keepIdentity) {
-            data = [];
-            for (var i = 1; i <= ENV.rows; i++) {
-                data.push({ dbname: 'cluster' + i, query: "", formatElapsed: "", elapsedClassName: "" });
-                data.push({ dbname: 'cluster' + i + ' slave', query: "", formatElapsed: "", elapsedClassName: "" });
-            }
-        }
-        if (!data) {
-            data = [];
-            for (var i = 1; i <= ENV.rows; i++) {
-                data.push({ dbname: 'cluster' + i });
-                data.push({ dbname: 'cluster' + i + ' slave' });
-            }
-            oldData = data;
-        }
-        for (var j in data) {
-            var row = data[j];
-            if (!keepIdentity && oldData && oldData[j]) {
-                row.lastSample = oldData[j].lastSample;
-            }
-            if (!row.lastSample || Math.random() < ENV.mutations()) {
-                counter = counter + 1;
-                if (!keepIdentity) {
-                    row.lastSample = null;
-                }
-                generateRow(row, keepIdentity, counter);
-            }
-            else {
-                data[j] = oldData[j];
-            }
-        }
-        first = false;
-        return {
-            toArray: function () {
-                return data;
-            }
+
+// Jigsaw - a simple location-hash router.
+var Jigsaw;
+(function (Jigsaw) {
+    // A route is a possibly-empty set of "parts" separated by '/' slashes.
+    // Each route part is matched against the corresponding part of the
+    // window location hash, stripped of its leading '#' character.
+    //
+    // Parts match as follows:
+    //  xyx     -   Must match the exact string "xyz" (case sensitive);
+    //  :foo    -   Required parameter, matches anything;
+    //  ?bar    -   Optional parameter, matches anything;
+    //  *baz    -   Parameter matching all remaining parts of the hash.
+    //
+    // A successful matching results in the corresponding route handler
+    // being called with a dictionary mapping parameters to argument values.
+    //
+    // Parameter names are exactly as written (i.e., they include the leading
+    // character indicating the parameter kind).  Argument values are all
+    // simple strings (preprocessed via decodeURIComponent), except for
+    // '*' parameters, whose values are arrays of such.
+    //
+    // Two special parameters are added to the dictionary: "#" is the
+    // original location hash and "?" is any query string (which you may
+    // choose to process via parseQuery).
+    //
+    // Routes are tested in the order in which they were added, the first
+    // match taking priority.
+    //
+    Jigsaw.addRoute = function (route, handler) {
+        var compiledRoute = {
+            route: route,
+            matcher: routeMatcher(route),
+            handler: handler
         };
-    }
-    var mutationsValue = 0.5;
-    function mutations(value) {
-        if (value) {
-            mutationsValue = value;
-            return mutationsValue;
-        }
-        else {
-            return mutationsValue;
-        }
-    }
-    var body = document.querySelector('body');
-    var theFirstChild = body.firstChild;
-    var sliderContainer = document.createElement('div');
-    sliderContainer.style.cssText = "display: flex";
-    var slider = document.createElement('input');
-    var text = document.createElement('label');
-    text.innerHTML = 'mutations : ' + (mutationsValue * 100).toFixed(0) + '%';
-    text.id = "ratioval";
-    slider.setAttribute("type", "range");
-    slider.style.cssText = 'margin-bottom: 10px; margin-top: 5px';
-    slider.addEventListener('change', function (e) {
-        ENV.mutations(e.target.value / 100);
-        document.querySelector('#ratioval').innerHTML = 'mutations : ' + (ENV.mutations() * 100).toFixed(0) + '%';
-    });
-    sliderContainer.appendChild(text);
-    sliderContainer.appendChild(slider);
-    body.insertBefore(sliderContainer, theFirstChild);
-    return {
-        generateData: getData,
-        rows: 50,
-        timeout: 0,
-        mutations: mutations
+        compiledRoutes.push(compiledRoute);
     };
-})();
-/**
-* @author mrdoob / http://mrdoob.com/
-* @author jetienne / http://jetienne.com/
-* @author paulirish / http://paulirish.com/
-*/
-var MemoryStats = function () {
-    var msMin = 100;
-    var msMax = 0;
-    var container = document.createElement('div');
-    container.id = 'stats';
-    container.style.cssText = 'width:80px;opacity:0.9;cursor:pointer';
-    var msDiv = document.createElement('div');
-    msDiv.id = 'ms';
-    msDiv.style.cssText = 'padding:0 0 3px 3px;text-align:left;background-color:#020;';
-    container.appendChild(msDiv);
-    var msText = document.createElement('div');
-    msText.id = 'msText';
-    msText.style.cssText = 'color:#0f0;font-family:Helvetica,Arial,sans-serif;font-size:9px;font-weight:bold;line-height:15px';
-    msText.innerHTML = 'Memory';
-    msDiv.appendChild(msText);
-    var msGraph = document.createElement('div');
-    msGraph.id = 'msGraph';
-    msGraph.style.cssText = 'position:relative;width:74px;height:30px;background-color:#0f0';
-    msDiv.appendChild(msGraph);
-    while (msGraph.children.length < 74) {
-        var bar = document.createElement('span');
-        bar.style.cssText = 'width:1px;height:30px;float:left;background-color:#131';
-        msGraph.appendChild(bar);
-    }
-    var updateGraph = function (dom, height, color) {
-        var child = dom.appendChild(dom.firstChild);
-        child.style.height = height + 'px';
-        if (color)
-            child.style.backgroundColor = color;
+    Jigsaw.removeRoute = function (route) {
+        compiledRoutes = compiledRoutes.filter(function (x) { return x.route === route; });
     };
-    var perf = (window.performance || {});
-    // polyfill usedJSHeapSize
-    if (!perf && !perf.memory) {
-        perf.memory = { usedJSHeapSize: 0 };
-    }
-    if (perf && !perf.memory) {
-        perf.memory = { usedJSHeapSize: 0 };
-    }
-    // support of the API?
-    if (perf.memory.totalJSHeapSize === 0) {
-        console.warn('totalJSHeapSize === 0... performance.memory is only available in Chrome .');
-    }
-    // TODO, add a sanity check to see if values are bucketed.
-    // If so, reminde user to adopt the --enable-precise-memory-info flag.
-    // open -a "/Applications/Google Chrome.app" --args --enable-precise-memory-info
-    var lastTime = Date.now();
-    var lastUsedHeap = perf.memory.usedJSHeapSize;
-    return {
-        domElement: container,
-        update: function () {
-            // refresh only 30time per second
-            if (Date.now() - lastTime < 1000 / 30)
+    Jigsaw.clearRoutes = function () {
+        compiledRoutes = [];
+    };
+    // If no route matches, the default route handler will be called
+    // if one has been specified.
+    //
+    Jigsaw.defaultRouteHandler = null;
+    Jigsaw.takeRoute = function (hash) {
+        var queryIdx = hash.lastIndexOf("?");
+        var query = "";
+        if (queryIdx !== -1) {
+            query = hash.substr(queryIdx + 1);
+            hash = hash.substr(0, queryIdx);
+        }
+        var parts = (hash || "").split("/").map(decodeURIComponent);
+        for (var i = 0; i < compiledRoutes.length; i++) {
+            var compiledRoute = compiledRoutes[i];
+            var args = compiledRoute.matcher(parts, 0, {});
+            if (args) {
+                // Success!
+                args["#"] = hash;
+                args["?"] = query;
+                if (query != null)
+                    args["?"] = query;
+                compiledRoute.handler(args);
                 return;
-            lastTime = Date.now();
-            var delta = perf.memory.usedJSHeapSize - lastUsedHeap;
-            lastUsedHeap = perf.memory.usedJSHeapSize;
-            var color = delta < 0 ? '#830' : '#131';
-            var ms = perf.memory.usedJSHeapSize;
-            msMin = Math.min(msMin, ms);
-            msMax = Math.max(msMax, ms);
-            msText.textContent = "Mem: " + bytesToSize(ms, 2);
-            var normValue = ms / (30 * 1024 * 1024);
-            var height = Math.min(30, 30 - normValue * 30);
-            updateGraph(msGraph, height, color);
-            function bytesToSize(bytes, nFractDigit) {
-                var sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-                if (bytes == 0)
-                    return 'n/a';
-                nFractDigit = nFractDigit !== undefined ? nFractDigit : 0;
-                var precision = Math.pow(10, nFractDigit);
-                var i = Math.floor(Math.log(bytes) / Math.log(1024));
-                return Math.round(bytes * precision / Math.pow(1024, i)) / precision + ' ' + sizes[i];
             }
-            ;
+        }
+        // Nooooo...
+        if (Jigsaw.defaultRouteHandler)
+            Jigsaw.defaultRouteHandler(hash);
+    };
+    Jigsaw.startRouter = function () {
+        window.addEventListener("hashchange", processHash);
+    };
+    Jigsaw.stopRouter = function () {
+        window.removeEventListener("hashchange", processHash);
+    };
+    // A utility function to convert query strings into key/value
+    // dictionaries.
+    Jigsaw.parseQuery = function (query) {
+        var pairs = (query || "").replace(/\+/g, " ").split(/[&;]/);
+        var args = {};
+        pairs.forEach(function (pair) {
+            var i = pair.indexOf("=");
+            if (i === -1)
+                i = pair.length;
+            var key = pair.substr(0, i);
+            var value = decodeURIComponent(pair.substr(i + 1));
+            args[key] = value;
+        });
+        return args;
+    };
+    // ---- Implementation detail. ----
+    var processHash = function () {
+        Jigsaw.takeRoute(location.hash.substr(1));
+    };
+    var matchEnd = function (parts, i, args) { return (parts[i] == null) && args; };
+    // '.../foo/...'
+    var matchExact = function (word, cont) { return function (parts, i, args) {
+        return (parts[i] === word) && cont(parts, i + 1, args);
+    }; };
+    // '.../:bar/...'
+    var matchParam = function (param, cont) { return function (parts, i, args) {
+        var arg = parts[i];
+        if (arg == null)
+            return null;
+        args[param] = arg;
+        return cont(parts, i + 1, args);
+    }; };
+    // '.../?baz/...'
+    var matchOptParam = function (param, cont) { return function (parts, i, args) {
+        var arg = parts[i];
+        args[param] = arg;
+        return cont(parts, i + 1, args);
+    }; };
+    // '.../*quux'
+    var matchRest = function (param, cont) { return function (parts, i, args) {
+        args[param] = parts.slice(i);
+        return cont(parts, parts.length, args);
+    }; };
+    var routeMatcher = function (route) {
+        if (!route)
+            return matchEnd;
+        var params = route.split("/");
+        var matcher = matchEnd;
+        for (var i = params.length - 1; 0 <= i; i--) {
+            var param = params[i];
+            switch (param[0]) {
+                case ":":
+                    matcher = matchParam(param, matcher);
+                    continue;
+                case "?":
+                    matcher = matchOptParam(param, matcher);
+                    continue;
+                case "*":
+                    matcher = matchRest(param, matcher);
+                    continue;
+                default:
+                    matcher = matchExact(param, matcher);
+                    continue;
+            }
+        }
+        return matcher;
+    };
+    var compiledRoutes = [];
+})(Jigsaw || (Jigsaw = {}));
+
+var Oath;
+(function (Oath) {
+    var nextID = 1;
+    Oath.resolve = function (x) {
+        return Oath.make(function (pass, fail) { return pass(x); });
+    };
+    Oath.reject = function (r) {
+        return Oath.make(function (pass, fail) { return fail(r); });
+    };
+    Oath.all = function (ps) {
+        return Oath.make(function (pass, fail) {
+            var xs = [];
+            var n = ps.length;
+            ps.forEach(function (p, i) {
+                p.then(function (x) { xs[i] = x; if (!--n)
+                    pass(xs); });
+            });
+        });
+    };
+    Oath.race = function (ps) {
+        return Oath.make(function (pass, fail) {
+            ps.forEach(function (p, i) {
+                p.then(function (x) { pass(x); });
+            });
+        });
+    };
+    Oath.delay = function (t, f) {
+        return Oath.make(function (pass, fail) {
+            setTimeout(function () {
+                pass(isFunction(f) ? f() : f);
+            }, t);
+        });
+    };
+    var isFunction = function (x) {
+        return typeof (x) === "function";
+    };
+    var isThenable = function (x) {
+        return x && isFunction(x.then);
+    };
+    Oath.make = function (setup) {
+        var p = {
+            value: null,
+            state: pending,
+            onFulfilled: null,
+            onRejected: null,
+            then: null,
+            id: nextID++
+        };
+        // console.log("Oath: created", p.id);
+        var pass = function (x) { return resolveOath(p, x); };
+        var fail = function (r) { return rejectOath(p, r); };
+        setup(pass, fail);
+        p.then =
+            function (passed, failed) {
+                return Oath.make(function (pass, fail) {
+                    p.state(p, passed, failed, pass, fail);
+                });
+            };
+        return p;
+    };
+    var resolveOath = function (p, x) {
+        if (p.state !== pending)
+            return;
+        p.state = fulfilled;
+        p.value = x;
+        if (p.onFulfilled)
+            setTimeout(p.onFulfilled, 0, x);
+        p.onFulfilled = null;
+        // console.log("Oath: resolved", p.id);
+    };
+    var rejectOath = function (p, r) {
+        if (p.state !== pending)
+            return;
+        p.state = rejected;
+        p.value = r;
+        if (p.onRejected)
+            setTimeout(p.onRejected, 0, r);
+        p.onRejected = null;
+        // console.log("Oath: rejected", p.id);
+    };
+    var pending = function (p, passed, failed, pass, fail) {
+        var onF = p.onFulfilled;
+        if (passed)
+            p.onFulfilled = function (x) {
+                if (onF)
+                    onF(x);
+                handleCallback(p, passed, pass, fail);
+            };
+        var onR = p.onRejected;
+        if (failed)
+            p.onRejected = function (r) {
+                if (onR)
+                    onR(r);
+                handleCallback(p, failed, pass, fail);
+            };
+    };
+    var fulfilled = function (p, passed, failed, pass, fail) {
+        setTimeout(handleCallback, 0, p, passed, pass, fail);
+    };
+    var rejected = function (p, passed, failed, pass, fail) {
+        setTimeout(handleCallback, 0, p, failed, pass, fail);
+    };
+    var handleCallback = function (p, f, pass, fail) {
+        try {
+            if (!isFunction(f))
+                return;
+            // console.log("Oath: evaluating callback on", p.id);
+            var x = p.value;
+            var y = f(x);
+            if (y === p)
+                throw new TypeError("Cyclic promise.");
+            if (isThenable(y))
+                y.then(pass, fail);
+            else
+                pass(y);
+        }
+        catch (r) {
+            fail(r);
         }
     };
-};
-var Monitoring = Monitoring || (function () {
-    var stats = MemoryStats();
-    stats.domElement.style.position = 'fixed';
-    stats.domElement.style.right = '0px';
-    stats.domElement.style.bottom = '0px';
-    document.body.appendChild(stats.domElement);
-    requestAnimationFrame(function rAFloop() {
-        stats.update();
-        requestAnimationFrame(rAFloop);
-    });
-    var RenderRate = function () {
-        var container = document.createElement('div');
-        container.id = 'stats';
-        container.style.cssText = 'width:150px;opacity:0.9;cursor:pointer;position:fixed;right:80px;bottom:0px;';
-        var msDiv = document.createElement('div');
-        msDiv.id = 'ms';
-        msDiv.style.cssText = 'padding:0 0 3px 3px;text-align:left;background-color:#020;';
-        container.appendChild(msDiv);
-        var msText = document.createElement('div');
-        msText.id = 'msText';
-        msText.style.cssText = 'color:#0f0;font-family:Helvetica,Arial,sans-serif;font-size:9px;font-weight:bold;line-height:15px';
-        msText.innerHTML = 'Repaint rate: 0/sec';
-        msDiv.appendChild(msText);
-        var bucketSize = 20;
-        var bucket = [];
-        var lastTime = Date.now();
-        return {
-            domElement: container,
-            ping: function () {
-                var start = lastTime;
-                var stop = Date.now();
-                var rate = 1000 / (stop - start);
-                bucket.push(rate);
-                if (bucket.length > bucketSize) {
-                    bucket.shift();
-                }
-                var sum = 0;
-                for (var i = 0; i < bucket.length; i++) {
-                    sum = sum + bucket[i];
-                }
-                msText.textContent = "Repaint rate: " + (sum / bucket.length).toFixed(2) + "/sec";
-                lastTime = stop;
+})(Oath || (Oath = {}));
+
+/// <reference path="./Oath.ts"/>
+var Xhr;
+(function (Xhr) {
+    // send(url, opts)
+    //
+    // Make an XMLHttpRequest to the given URL with the provided
+    // (optional) options in opts.
+    //
+    // If opts contains key k and value v then the generated XMLHttpRequest
+    // will have property k set to v.  You can use this scheme to set the
+    // timeout value, amongst others.
+    //
+    // If opts contains an entry "requestHeaders" then for each key k and
+    // value v therein the generated XMLHttpRequest will be initialised
+    // with setRequestHeader(k, v).
+    //
+    // The XMLHttpRequest will be opened using the "method" (default "GET"),
+    // "async" (default true), "user", and "password" entries in opts.
+    //
+    // The data sent is taken from the "data" entry of opts.
+    //
+    // All these are, of course, optional.
+    //
+    // The result is a promise which will be fulfilled with the XMLHttpRequest
+    // if the request succeeds (i.e., the status code is in 200..299) or
+    // rejected with the XMLHttpRequest if the request fails (i.e., the status
+    // code is anything else).
+    // 
+    Xhr.send = function (url, opts) {
+        if (opts === void 0) { opts = {}; }
+        var xhr = new XMLHttpRequest();
+        var method = opts["method"] || "GET";
+        var async = (opts["async"] !== false);
+        var user = opts["user"];
+        var password = opts["password"];
+        var data = opts["data"];
+        xhr.open(method, url, async, user, password);
+        for (var key in opts) {
+            var value = opts[key];
+            xhr[key] = value;
+        }
+        var requestHeaders = opts["requestHeaders"];
+        if (requestHeaders)
+            for (var header in requestHeaders) {
+                var value = requestHeaders[header];
+                xhr.setRequestHeader(header, value);
             }
+        var promise = Oath.make(function (pass, fail) {
+            xhr.onreadystatechange = readyStateChangeHandler(xhr, pass, fail);
+        });
+        xhr.send(data);
+        return promise;
+    };
+    var readyStateChangeHandler = function (xhr, pass, fail) {
+        return function (v) {
+            if (xhr.readyState !== 4 /* DONE */)
+                return;
+            (200 <= xhr.status && xhr.status < 300 ? pass : fail)(xhr);
         };
     };
-    var renderRate = RenderRate();
-    document.body.appendChild(renderRate.domElement);
-    return {
-        memoryStats: stats,
-        renderRate: renderRate
-    };
-})();
-//# sourceMappingURL=app.js.map
+})(Xhr || (Xhr = {}));

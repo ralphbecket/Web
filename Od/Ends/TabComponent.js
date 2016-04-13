@@ -35,4 +35,3 @@ var Od;
         return Obs.value(tab && tab.body) || "";
     };
 })(Od || (Od = {}));
-//# sourceMappingURL=TabComponent.js.map

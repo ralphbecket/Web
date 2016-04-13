@@ -20,31 +20,10 @@
     </NuGetPackageImportStamp>
   </PropertyGroup>
   <ItemGroup>
-    <TypeScriptCompile Include="Obs.d.ts" />
-    <TypeScriptCompile Include="Od.d.ts" />
     <TypeScriptCompile Include="Od.ts" />
     <TypeScriptCompile Include="Obs.ts" />
     <Content Include="Obs.js" />
-    <Content Include="Obs.min.js" />
-    <Content Include="ObsAndOd.js" />
-    <Content Include="ObsAndOd.min.js">
-      <DependentUpon>ObsAndOd.js</DependentUpon>
-    </Content>
     <Content Include="Od.js" />
-    <Content Include="Od.min.js" />
-    <Content Include="web.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="packages.config" />
-    <None Include="bundleconfig.json" />
-    <Content Include="Obs.js.map" />
-    <Content Include="Od.js.map" />
-    <None Include="web.Debug.config">
-      <DependentUpon>web.config</DependentUpon>
-    </None>
-    <None Include="web.Release.config">
-      <DependentUpon>web.config</DependentUpon>
-    </None>
   </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>
@@ -97,11 +76,9 @@
     <TypeScriptModuleKind>AMD</TypeScriptModuleKind>
   </PropertyGroup>
   <Import Project="$(VSToolsPath)\TypeScript\Microsoft.TypeScript.targets" Condition="Exists('$(VSToolsPath)\TypeScript\Microsoft.TypeScript.targets')" />
-  <Import Project="..\packages\BuildBundlerMinifier.1.8.147\build\BuildBundlerMinifier.targets" Condition="Exists('..\packages\BuildBundlerMinifier.1.8.147\build\BuildBundlerMinifier.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
-    <Error Condition="!Exists('..\packages\BuildBundlerMinifier.1.8.147\build\BuildBundlerMinifier.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\BuildBundlerMinifier.1.8.147\build\BuildBundlerMinifier.targets'))" />
   </Target>
 </Project>

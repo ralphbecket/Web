@@ -1,22 +1,25 @@
-var Greeter = (function () {
-    function Greeter(element) {
-        this.element = element;
-        this.element.innerHTML += "The time is: ";
-        this.span = document.createElement('span');
-        this.element.appendChild(this.span);
-        this.span.innerText = new Date().toUTCString();
-    }
-    Greeter.prototype.start = function () {
-        var _this = this;
-        this.timerToken = setInterval(function () { return _this.span.innerHTML = new Date().toUTCString(); }, 500);
-    };
-    Greeter.prototype.stop = function () {
-        clearTimeout(this.timerToken);
-    };
-    return Greeter;
-}());
+/// <reference path="./Test.ts"/>
 window.onload = function () {
-    var el = document.getElementById('content');
-    var greeter = new Greeter(el);
-    greeter.start();
+    Test.run("This should pass", function () {
+        Test.expect("identity", 1 === 1);
+    });
+    Test.run("This should fail", function () {
+        Test.expect("disaster", 1 === 0);
+    });
+    Test.runDeferred(500, "This should eventually pass", function (pass, fail) {
+        setTimeout(function () {
+            if ("foo" === "foo")
+                pass();
+        }, 100);
+    });
+    Test.runDeferred(500, "This should eventually fail", function (pass, expect) {
+        setTimeout(function () {
+            expect("consistency", true === false);
+        }, 100);
+    });
+    Test.runDeferred(500, "This should eventually timeout", function (pass, fail) {
+        setTimeout(function () {
+            pass();
+        }, 600);
+    });
 };

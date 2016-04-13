@@ -28,7 +28,8 @@ var Test;
             Test.addPassReport(name);
         }
         catch (e) {
-            Test.addFailureReport(name, JSON.stringify(e));
+            var what = (typeof (e) === "string" ? e : JSON.stringify(e));
+            Test.addFailureReport(name, what);
         }
     };
     Test.runDeferred = function (timeoutInMS, name, action) {
@@ -39,23 +40,24 @@ var Test;
             Test.addPassReport(name);
             completed = true;
         };
-        var fail = function (e) {
+        var expect = function (what, cond) {
             if (completed)
                 return;
-            Test.addFailureReport(name, e);
+            if (cond)
+                return;
+            Test.addFailureReport(name, what);
             completed = true;
         };
         setTimeout(function () {
             if (completed)
                 return;
-            fail("timed out");
-            completed = true;
+            expect("timed out", false);
         }, timeoutInMS);
         try {
-            action(pass, fail);
+            action(pass, expect);
         }
         catch (e) {
-            fail(e);
+            expect(e.message, false);
         }
     };
 })(Test || (Test = {}));

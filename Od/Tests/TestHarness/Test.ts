@@ -31,14 +31,18 @@
             action();
             addPassReport(name);
         } catch (e) {
-            addFailureReport(name, JSON.stringify(e));
+            const what = (typeof (e) === "string" ? e as string : JSON.stringify(e));
+            addFailureReport(name, what);
         }
     };
 
     export const runDeferred = (
         timeoutInMS: number,
         name: string,
-        action: (pass: () => void, fail: (e: any) => void) => void
+        action: (
+            pass: () => void,
+            expect: (what: string, cond: boolean) => void
+        ) => void
     ): void => {
         var completed = false;
         const pass = () => {
@@ -46,20 +50,20 @@
             addPassReport(name);
             completed = true;
         };
-        const fail = (e: any) => {
+        const expect = (what: string, cond: boolean) => {
             if (completed) return;
-            addFailureReport(name, e);
+            if (cond) return;
+            addFailureReport(name, what);
             completed = true;
         };
         setTimeout(() => {
             if (completed) return;
-            fail("timed out");
-            completed = true;
+            expect("timed out", false);
         }, timeoutInMS);
         try {
-            action(pass, fail);
+            action(pass, expect);
         } catch (e) {
-            fail(e);
+            expect(e.message, false);
         }
     };
 }

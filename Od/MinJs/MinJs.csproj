@@ -3,7 +3,7 @@
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\TypeScript\Microsoft.TypeScript.Default.props" Condition="Exists('$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\TypeScript\Microsoft.TypeScript.Default.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <ProjectGuid>{2B504CDD-228E-481B-8E12-A149CC2DF8A3}</ProjectGuid>
+    <ProjectGuid>{E0DFBC82-816E-4809-8783-46CAB34BD279}</ProjectGuid>
     <ProjectTypeGuids>{349c5851-65df-11da-9384-00065b846f21};{fae04ec0-301f-11d3-bf4b-00c04f79efbc}</ProjectTypeGuids>
     <OutputType>Library</OutputType>
     <OutputPath>bin</OutputPath>
@@ -17,23 +17,59 @@
     <IISExpressWindowsAuthentication />
     <IISExpressUseClassicPipelineMode />
     <UseGlobalApplicationHostFile />
+    <NuGetPackageImportStamp>
+    </NuGetPackageImportStamp>
   </PropertyGroup>
   <ItemGroup>
     <Service Include="{4A0DDDB5-7A95-4FBF-97CC-616D07737A77}" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="app.css" />
-    <Content Include="index.html" />
-    <Content Include="test.css" />
+    <Content Include="Jigsaw.js" />
+    <Content Include="Jigsaw.min.js">
+      <DependentUpon>Jigsaw.js</DependentUpon>
+    </Content>
+    <Content Include="Oath.js" />
+    <Content Include="Oath.min.js">
+      <DependentUpon>Oath.js</DependentUpon>
+    </Content>
+    <Content Include="Obs.js" />
+    <Content Include="Obs.min.js">
+      <DependentUpon>Obs.js</DependentUpon>
+    </Content>
+    <Content Include="ObsAndOd.js" />
+    <Content Include="ObsAndOd.min.js">
+      <DependentUpon>ObsAndOd.js</DependentUpon>
+    </Content>
+    <Content Include="ObsAndOdAndElements.js" />
+    <Content Include="ObsAndOdAndElements.min.js">
+      <DependentUpon>ObsAndOdAndElements.js</DependentUpon>
+    </Content>
+    <Content Include="Od.js" />
+    <Content Include="Od.min.js">
+      <DependentUpon>Od.js</DependentUpon>
+    </Content>
+    <Content Include="OdAndEnds.js" />
+    <Content Include="OdAndEnds.min.js">
+      <DependentUpon>OdAndEnds.js</DependentUpon>
+    </Content>
+    <Content Include="Xhr.js" />
+    <Content Include="Xhr.min.js">
+      <DependentUpon>Xhr.js</DependentUpon>
+    </Content>
+    <Content Include="XhrAndOath.js" />
+    <Content Include="XhrAndOath.min.js">
+      <DependentUpon>XhrAndOath.js</DependentUpon>
+    </Content>
   </ItemGroup>
   <ItemGroup>
-    <TypeScriptCompile Include="TestObs.ts" />
+    <None Include="bundleconfig.json" />
+    <Content Include="packages.config" />
   </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">12.0</VisualStudioVersion>
   </PropertyGroup>
   <PropertyGroup>
-    <RootNamespace>TestObs</RootNamespace>
+    <RootNamespace>MinJs</RootNamespace>
   </PropertyGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\WebApplications\Microsoft.WebApplication.targets" Condition="Exists('$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\WebApplications\Microsoft.WebApplication.targets')" />
@@ -43,9 +79,9 @@
         <WebProjectProperties>
           <UseIIS>True</UseIIS>
           <AutoAssignPort>True</AutoAssignPort>
-          <DevelopmentServerPort>20297</DevelopmentServerPort>
+          <DevelopmentServerPort>51237</DevelopmentServerPort>
           <DevelopmentServerVPath>/</DevelopmentServerVPath>
-          <IISUrl>http://localhost:20297/</IISUrl>
+          <IISUrl>http://localhost:51237/</IISUrl>
           <NTLMAuthentication>False</NTLMAuthentication>
           <UseCustomServer>False</UseCustomServer>
           <CustomServerUrl>
@@ -57,24 +93,18 @@
   </ProjectExtensions>
   <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
     <TypeScriptRemoveComments>false</TypeScriptRemoveComments>
-    <TypeScriptSourceMap>False</TypeScriptSourceMap>
-    <TypeScriptTarget>ES5</TypeScriptTarget>
-    <TypeScriptJSXEmit>None</TypeScriptJSXEmit>
-    <TypeScriptCompileOnSaveEnabled>True</TypeScriptCompileOnSaveEnabled>
-    <TypeScriptNoImplicitAny>True</TypeScriptNoImplicitAny>
-    <TypeScriptModuleKind>
-    </TypeScriptModuleKind>
-    <TypeScriptOutFile>app.js</TypeScriptOutFile>
-    <TypeScriptOutDir />
-    <TypeScriptGeneratesDeclarations>False</TypeScriptGeneratesDeclarations>
-    <TypeScriptNoEmitOnError>True</TypeScriptNoEmitOnError>
-    <TypeScriptMapRoot />
-    <TypeScriptSourceRoot />
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <TypeScriptSourceMap>true</TypeScriptSourceMap>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <TypeScriptRemoveComments>true</TypeScriptRemoveComments>
     <TypeScriptSourceMap>false</TypeScriptSourceMap>
   </PropertyGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\TypeScript\Microsoft.TypeScript.targets" Condition="Exists('$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\TypeScript\Microsoft.TypeScript.targets')" />
+  <Import Project="..\..\packages\BuildBundlerMinifier.1.8.148\build\BuildBundlerMinifier.targets" Condition="Exists('..\..\packages\BuildBundlerMinifier.1.8.148\build\BuildBundlerMinifier.targets')" />
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('..\..\packages\BuildBundlerMinifier.1.8.148\build\BuildBundlerMinifier.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\BuildBundlerMinifier.1.8.148\build\BuildBundlerMinifier.targets'))" />
+  </Target>
 </Project>

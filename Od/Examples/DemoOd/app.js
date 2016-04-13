@@ -511,7 +511,6 @@ var Od;
         var existingVdom = existingNamedComponentInstance(name);
         if (existingVdom)
             return existingVdom;
-        console.log("creating new component instance");
         var obs = (Obs.isObservable(fn)
             ? fn
             : Obs.fn(fn));
