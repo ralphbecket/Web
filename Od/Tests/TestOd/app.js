@@ -756,8 +756,7 @@ var Od;
         for (var i = 0; i < numVdomChildren; i++) {
             trace("Patching child", i + 1);
             var vdomChild = vdomChildren[i];
-            var nextChild = eltChild && eltChild.nextSibling;
-            Od.patchDom(vdomChild, eltChild, elt);
+            var nextChild = Od.patchDom(vdomChild, eltChild, elt).nextSibling;
             eltChild = nextChild;
             trace("Patched child", i + 1);
         }
@@ -1114,8 +1113,7 @@ window.onload = function () {
         for (var i = 0; i < iTop; i++) {
             dom = dom.childNodes[path[i]];
             if (!dom)
-                throw new Error("Node does not match path " +
-                    JSON.stringify(path));
+                throw "Node does not match path " + JSON.stringify(path);
         }
         return dom;
     };
@@ -1126,9 +1124,9 @@ window.onload = function () {
             (dom.textContent === tag.substr(1));
         var tagMatches = (dom.tagName === tag);
         if (!textMatches && !tagMatches)
-            throw new Error("Node tag is not " + tag);
+            throw "Node tag is not " + tag;
         if (numChildren != undefined && dom.childNodes.length != numChildren)
-            throw new Error("Node does not have " + numChildren + " children.");
+            throw "Node does not have " + numChildren + " children.";
         return chkProps(dom, props);
     };
     var chkProps = function (dom, props) {
@@ -1137,11 +1135,9 @@ window.onload = function () {
         for (var key in props) {
             var value = props[key];
             if ((value && dom[key] !== value))
-                throw new Error("Node does not have expected value for " +
-                    key);
+                throw "Node does not have expected value for " + key;
             if ((!value && dom[key]))
-                throw new Error("Node has unexpected value for " +
-                    key);
+                throw "Node has unexpected value for " + key;
         }
         return true;
     };

@@ -13,9 +13,7 @@ window.onload = () => {
         var iTop = path.length;
         for (var i = 0; i < iTop; i++) {
             dom = dom.childNodes[path[i]];
-            if (!dom) throw new Error("Node does not match path " +
-                JSON.stringify(path)
-            );
+            if (!dom) throw "Node does not match path " + JSON.stringify(path);
         }
         return dom;
     };
@@ -35,9 +33,9 @@ window.onload = () => {
         var tagMatches =
             ((dom as HTMLElement).tagName === tag);
         if (!textMatches && !tagMatches)
-            throw new Error("Node tag is not " + tag);
+            throw "Node tag is not " + tag;
         if (numChildren != undefined && dom.childNodes.length != numChildren)
-            throw new Error("Node does not have " + numChildren + " children.");
+            throw "Node does not have " + numChildren + " children.";
         return chkProps(dom, props);
     };
 
@@ -46,11 +44,9 @@ window.onload = () => {
         for (var key in props) {
             const value = props[key];
             if ((value && dom[key] !== value))
-                throw new Error("Node does not have expected value for " +
-                    key);
+                throw "Node does not have expected value for " + key;
             if ((!value && dom[key]))
-                throw new Error("Node has unexpected value for " +
-                    key);
+                throw "Node has unexpected value for " + key;
         }
         return true;
     };

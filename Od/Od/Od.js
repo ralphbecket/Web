@@ -330,8 +330,7 @@ var Od;
         for (var i = 0; i < numVdomChildren; i++) {
             trace("Patching child", i + 1);
             var vdomChild = vdomChildren[i];
-            var nextChild = eltChild && eltChild.nextSibling;
-            Od.patchDom(vdomChild, eltChild, elt);
+            var nextChild = Od.patchDom(vdomChild, eltChild, elt).nextSibling;
             eltChild = nextChild;
             trace("Patched child", i + 1);
         }

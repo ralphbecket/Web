@@ -390,8 +390,7 @@ namespace Od {
         for (var i = 0; i < numVdomChildren; i++) {
             trace("Patching child", i + 1);
             const vdomChild = vdomChildren[i];
-            const nextChild = eltChild && eltChild.nextSibling;
-            patchDom(vdomChild, eltChild, elt);
+            const nextChild = patchDom(vdomChild, eltChild, elt).nextSibling;
             eltChild = nextChild;
             trace("Patched child", i + 1);
         }
