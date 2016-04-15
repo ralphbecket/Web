@@ -27,9 +27,6 @@
     <Content Include="web.config" />
   </ItemGroup>
   <ItemGroup>
-    <TypeScriptCompile Include="..\..\Ends\SelectComponent.ts">
-      <Link>SelectComponent.ts</Link>
-    </TypeScriptCompile>
     <TypeScriptCompile Include="DemoEndsSelectComponent.ts" />
   </ItemGroup>
   <ItemGroup>

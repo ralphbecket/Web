@@ -117,14 +117,13 @@ var Obs;
     };
     // The "equality test" for observables that always indicates a change.
     Obs.alwaysUpdate = function (x, y) { return false; };
-    // Create a mutable observable.  The default equality test for 
-    // numbers, strings, and booleans is ===, otherwise any update is
-    // assumed to provide a different value, hence triggering any
-    // dependents.
+    // Create a mutable observable.  The default equality test is ===.
+    // This, of course, cannot spot changes to the contents of objects
+    // and arrays.  In those cases, you may need Obs.updateDependents.
     Obs.of = function (x, eq) {
         if (eq === void 0) { eq = null; }
-        eq = (eq ? eq : hasSimpleType(x) ? Obs.defaultEq : Obs.alwaysUpdate);
-        var obs = undefined;
+        eq = eq || Obs.defaultEq;
+        var obs = null;
         // We need 'function' so we can use 'arguments'.  Sorry.
         obs = (function (newX) {
             return readOrWriteObs(obs, eq, newX, arguments.length);
@@ -134,16 +133,10 @@ var Obs;
         obs.toString = obsToString;
         return obs;
     };
-    var hasSimpleType = function (x) {
-        var typeofX = typeof (x);
-        return typeofX === "number" ||
-            typeofX === "string" ||
-            typeofX === "boolean";
-    };
     // Create a computed observable.
     Obs.fn = function (f, eq) {
         if (eq === void 0) { eq = Obs.defaultEq; }
-        var obs = undefined;
+        var obs = null;
         // We need 'function' so we can use 'arguments'.  Sorry.
         obs = (function (newX) {
             return readOrWriteObs(obs, eq, newX, arguments.length);
@@ -160,7 +153,7 @@ var Obs;
     // Decide if an object is observable or not.
     // This just tests whether the object is a function with an 'obsid' property.
     Obs.isObservable = function (obs) {
-        return obs.obsid && (typeof (obs) === "function");
+        return obs && obs.obsid && (typeof (obs) === "function");
     };
     // Decide if an observable is computed or not.
     // This just tests whether the object has a 'fn' property.
@@ -173,7 +166,7 @@ var Obs;
     Obs.subscribe = function (obss, action) {
         var subsAction = function () {
             var tmp = currentDependencies;
-            currentDependencies = undefined; // Suspend dependency tracking.
+            currentDependencies = null; // Suspend dependency tracking.
             action();
             currentDependencies = tmp;
         };
@@ -212,9 +205,9 @@ var Obs;
     // Break the connection between an observable and its dependencies.
     Obs.dispose = function (obs) {
         var obsAny = obs;
-        obsAny.value = undefined;
+        obsAny.value = null;
         breakDependencies(obsAny);
-        obsAny.dependents = undefined;
+        obsAny.dependents = null;
         // Break any dependencies if this is a subscription.
         var id = obsAny.obsid;
         var subscriptions = obsAny.subscriptions;
@@ -225,9 +218,9 @@ var Obs;
             var subscriptionDependents = subscription.dependents;
             if (!subscriptionDependents)
                 continue;
-            subscriptionDependents[id] = undefined;
+            subscriptionDependents[id] = null;
         }
-        obsAny.subscriptions = undefined;
+        obsAny.subscriptions = null;
     };
     var readOrWriteObs = function (obs, eq, newX, argc) {
         if (argc) {
@@ -340,7 +333,7 @@ var Obs;
     };
     // The dependencies identified while performing an update.
     // If this is undefined then no dependencies will be recorded.
-    var currentDependencies = undefined;
+    var currentDependencies = null;
     var reevaluateComputedObs = function (obs) {
         trace("Reevaluating obs", obs.obsid, "...");
         var oldCurrentDependencies = currentDependencies;
@@ -365,8 +358,8 @@ var Obs;
             var obsDepcy = dependencies[id];
             if (!obsDepcy)
                 continue;
-            dependencies[id] = undefined;
-            obsDepcy.dependents[obsID] = undefined;
+            dependencies[id] = null;
+            obsDepcy.dependents[obsID] = null;
         }
     };
     // Establish a connection with observables used while reevaluating a
@@ -461,13 +454,24 @@ var Obs;
 // behind observables is that one can attach functions to them (subscriptions)
 // to be executed whenever the value of the observable changes.
 //
-// Every "active" DOM subtree (i.e., something that can change as the
+// Every "dynamic" DOM subtree (i.e., something that can change as the
 // application runs) is managed via an observable whose value is a vDOM
 // subtree.  When the observable changes, the patching algorithm is only
-// applied to the affected DOM subtree.
+// applied to the affected DOM subtree.  In Od terms, such a structure is
+// a 'component'.  A DOM subtree managed by a component is handled entirely
+// and only by that component: parent components and subcomponents 
+// operate entirely independently.
 //
 // This mechanism is general: "components" are just observables, like any
 // other managed part of the DOM/vDOM relationship.
+//
+// Any DOM nodes that are removed are queued for "stripping" where any
+// dangling event handlers are removed (this is important to avoid garbage
+// retention).  Stripping happens in the background so it doesn't interfere
+// with rendering.
+//
+// Unless explicitly told otherwise, Od normally batches DOM updates to be
+// applied via requestAnimationFrame or some equivalent fallback mechanism.
 //
 //
 //
@@ -476,34 +480,74 @@ var Obs;
 // and React.  I'd also like to mention the reactive school, but in the end
 // I find the observables-based approach more natural.  For today, at least.
 //
+/// <reference path="./Obs.ts"/>
 var Od;
 (function (Od) {
     var debug = false;
     ;
     Od.text = function (text) {
-        return ({ text: isNully(text) ? "" : text.toString() });
+        return ({ isIVdom: true, text: isNully(text) ? "" : text.toString() });
     };
     // Construct a vDOM node.
     Od.element = function (tag, props, childOrChildren) {
         tag = tag.toUpperCase();
-        var propAssocList = propsToPropAssocList(props);
         var children = (!childOrChildren
             ? null
             : isArray(childOrChildren)
                 ? childOrChildren
                 : [childOrChildren]);
-        return { tag: tag, props: propAssocList, children: children };
+        return { isIVdom: true, tag: tag, props: props, children: children };
     };
-    // Construct a component node from a function computing a vDOM node.
-    Od.component = function (fn) {
+    function component(name, fn, x) {
+        var existingVdom = existingNamedComponentInstance(name);
+        if (existingVdom)
+            return existingVdom;
         var obs = (Obs.isObservable(fn)
             ? fn
-            : Obs.fn(fn));
-        var vdom = { obs: obs, subs: null, dom: null };
+            : Obs.fn(function () { return fn(x); }));
+        var vdom = {
+            isIVdom: true,
+            obs: obs,
+            subscription: null,
+            subcomponents: null,
+            dom: null
+        };
         var subs = Obs.subscribe([obs], updateComponent.bind(vdom));
-        vdom.subs = subs;
-        subs(); // Initialise the dom component.
+        vdom.subscription = subs;
+        // Attach this component as a subcomponent of the parent context.
+        addAsParentSubcomponent(name, vdom);
+        // Set the component context for the component body.
+        var tmp = parentSubcomponents;
+        parentSubcomponents = null;
+        // Initialise the dom component.
+        subs();
+        // Record any subcomponents we have.
+        vdom.subcomponents = parentSubcomponents;
+        // Restore the parent subcomponent context.
+        parentSubcomponents = tmp;
         return vdom;
+    }
+    Od.component = component;
+    ;
+    // Any subcomponents of the component currently being defined.
+    var parentSubcomponents = null;
+    var existingNamedComponentInstance = function (name) {
+        return name &&
+            parentSubcomponents &&
+            parentSubcomponents[name];
+    };
+    var addAsParentSubcomponent = function (name, child) {
+        if (!parentSubcomponents)
+            parentSubcomponents = {};
+        if (name) {
+            parentSubcomponents[name] = child;
+            return;
+        }
+        // Otherwise, this child has no name.  Aww.  In this case we
+        // store a list of these nameless children under the special name "".
+        if (!("" in parentSubcomponents))
+            parentSubcomponents[""] = [];
+        parentSubcomponents[""].push(child);
     };
     // Construct a static DOM subtree from an HTML string.
     // Note: this vDOM node can, like DOM nodes, only appear
@@ -516,7 +560,12 @@ var Od;
         // If this is a bunch of nodes, return the whole DIV.
         var dom = (tmp.childNodes.length === 1 ? tmp.firstChild : tmp);
         // We create a pretend component to host the HTML.
-        var vdom = { obs: staticHtmlObs, subs: staticHtmlSubs, dom: dom };
+        var vdom = {
+            isIVdom: true,
+            obs: staticHtmlObs,
+            subscription: staticHtmlSubs,
+            dom: dom
+        };
         return vdom;
     };
     // Take a DOM subtree directly.
@@ -525,7 +574,12 @@ var Od;
     // you need duplicate fromDom instances.
     Od.fromDom = function (dom) {
         // We create a pretend component to host the HTML.
-        var vdom = { obs: staticHtmlObs, subs: staticHtmlSubs, dom: dom };
+        var vdom = {
+            isIVdom: true,
+            obs: staticHtmlObs,
+            subscription: staticHtmlSubs,
+            dom: dom
+        };
         return vdom;
     };
     // Bind a vDOM node to a DOM node.  For example,
@@ -548,15 +602,32 @@ var Od;
             return;
         if (vdom.obs) {
             Obs.dispose(vdom.obs);
-            vdom.obs = undefined;
+            vdom.obs = null;
         }
-        if (vdom.subs) {
-            Obs.dispose(vdom.subs);
-            vdom.subs = undefined;
+        if (vdom.subscription) {
+            Obs.dispose(vdom.subscription);
+            vdom.subscription = null;
         }
         if (vdom.dom) {
+            lifecycleHooks("destroyed", vdom.dom);
             enqueueNodeForStripping(vdom.dom);
-            vdom.dom = undefined;
+            vdom.dom = null;
+        }
+        if (vdom.subcomponents) {
+            disposeSubcomponents(vdom.subcomponents);
+            vdom.subcomponents = null;
+        }
+    };
+    var disposeSubcomponents = function (subcomponents) {
+        for (var name in subcomponents) {
+            var subcomponent = subcomponents[name];
+            if (name === "") {
+                // These are anonymous subcomponents, kept in an list.
+                subcomponent.forEach(Od.dispose);
+            }
+            else {
+                Od.dispose(subcomponent);
+            }
         }
     };
     // Normally, component updates will be batched via requestAnimationFrame
@@ -566,8 +637,7 @@ var Od;
     Od.deferComponentUpdates = true;
     // ---- Implementation detail. ----
     var isArray = function (x) { return x instanceof Array; };
-    var isNully = function (x) { return x === null || x === undefined; };
-    ;
+    var isNully = function (x) { return x == null; };
     Od.patchDom = function (vdomOrString, dom, domParent) {
         var vdom = (typeof (vdomOrString) === "string"
             ? Od.text(vdomOrString)
@@ -583,8 +653,8 @@ var Od;
         var newDom = (!dom || dom.nodeName !== "#text"
             ? document.createTextNode(newText)
             : dom);
-        if (newDom.textContent !== newText)
-            newDom.textContent = newText;
+        if (newDom.nodeValue !== newText)
+            newDom.nodeValue = newText;
         replaceNode(newDom, dom, domParent);
         return newDom;
     };
@@ -609,7 +679,7 @@ var Od;
     };
     var patchElement = function (vdom, dom, domParent) {
         var tag = vdom.tag;
-        var vdomPropDict = vdom.props;
+        var vdomProps = vdom.props;
         var vdomChildren = vdom.children;
         var elt = dom;
         var newElt = (!elt || elt.tagName !== tag || domBelongsToComponent(elt)
@@ -617,94 +687,78 @@ var Od;
             : elt);
         if (newElt !== elt)
             trace("  Created", tag);
-        patchProps(newElt, vdomPropDict);
+        patchProps(newElt, vdomProps);
         patchChildren(newElt, vdomChildren);
         replaceNode(newElt, dom, domParent);
         return newElt;
     };
-    // We perform an ordered traversal of the old properties of the element
-    // (if any) and the new properties, deleting, updating, and adding as
-    // required.
-    var patchProps = function (elt, vdomPropDict) {
-        var eltPropList = getEltPropList(elt);
-        if (!vdomPropDict && !eltPropList)
-            return;
-        if (!eltPropList)
-            eltPropList = emptyPropList;
-        if (!vdomPropDict)
-            vdomPropDict = emptyPropDict;
-        var iElt = 0;
-        var iVdom = 0;
-        var iEltTop = eltPropList.length;
-        var iVdomTop = vdomPropDict.length;
-        var newEltPropList = [];
-        // Clear out any old properties that aren't replaced.
-        // Update any changed properties.
-        // Add any new properties.
-        while (iElt < iEltTop && iVdom < iVdomTop) {
-            var eltProp = eltPropList[iElt];
-            var vdomProp = vdomPropDict[iVdom];
-            if (eltProp < vdomProp) {
-                removeDomProp(elt, eltProp);
-                iElt += 1;
-            }
-            else {
-                var vdomPropValue = vdomPropDict[iVdom + 1];
-                setDomProp(elt, vdomProp, vdomPropValue, newEltPropList);
-                iVdom += 2;
-                iElt += (eltProp === vdomProp ? 1 : 0);
-            }
-        }
-        while (iElt < iEltTop) {
-            var eltProp = eltPropList[iElt];
-            removeDomProp(elt, eltProp);
-            iElt += 1;
-        }
-        while (iVdom < iVdomTop) {
-            var vdomProp = vdomPropDict[iVdom];
-            var vdomPropValue = vdomPropDict[iVdom + 1];
-            setDomProp(elt, vdomProp, vdomPropValue, newEltPropList);
-            iVdom += 2;
-        }
-        // Update the property list for the element so we can update it
-        // correctly next time we visit it.
-        setEltPropList(elt, newEltPropList);
+    var patchProps = function (elt, newProps) {
+        var oldProps = getEltOdProps(elt);
+        if (newProps)
+            for (var prop in newProps)
+                if (prop !== "style")
+                    setDomProp(elt, prop, newProps[prop]);
+        if (oldProps)
+            for (var prop in oldProps)
+                if (!(prop in newProps))
+                    removeDomProp(elt, prop);
+        // Style properties are special.
+        var eltStyleProps = oldProps && oldProps["style"];
+        var vdomStyleProps = newProps && newProps["style"];
+        patchStyleProps(elt, eltStyleProps, vdomStyleProps);
+        setEltOdProps(elt, newProps);
     };
-    // XXX We can put special property handling here (e.g., 'className' vs
-    // 'class', and 'style' etc.)
+    var patchStyleProps = function (elt, oldStyleProps, newStyleProps) {
+        if (typeof (newStyleProps) === "string") {
+            elt.style = newStyleProps;
+            return;
+        }
+        if (!newStyleProps) {
+            // Don't reset all style properties unless there were some before.
+            if (oldStyleProps)
+                elt.style = null;
+            return;
+        }
+        var eltStyle = elt.style;
+        for (var prop in newStyleProps)
+            eltStyle[prop] = newStyleProps[prop];
+        if (!oldStyleProps)
+            return;
+        for (var prop in oldStyleProps)
+            if (!(prop in newStyleProps))
+                eltStyle[prop] = null;
+    };
     var removeDomProp = function (dom, prop) {
-        dom[prop] = undefined;
+        dom[prop] = null;
         if (dom instanceof HTMLElement)
             dom.removeAttribute(prop);
     };
-    var setDomProp = function (dom, prop, value, propList) {
+    var setDomProp = function (dom, prop, value) {
+        if (prop === "class")
+            prop = "className"; // This is convenient.
         dom[prop] = value;
-        propList.push(prop);
     };
-    var emptyIVdomList = [];
     var patchChildren = function (elt, vdomChildren) {
         if (!vdomChildren)
-            vdomChildren = emptyIVdomList;
+            vdomChildren = [];
         if (elt.keyed)
             reorderKeyedChildren(vdomChildren, elt);
-        var eltChildren = elt.childNodes;
-        var numEltChildren = eltChildren.length;
+        var eltChild = elt.firstChild;
         var numVdomChildren = vdomChildren.length;
-        // Remove any extraneous existing children.
-        // We do this first, and backwards, because removing a child node
-        // changes the indices of any succeeding children.
-        for (var i = numEltChildren - 1; numVdomChildren <= i; i--) {
-            var eltChild = eltChildren[i];
-            replaceNode(null, eltChild, elt);
-            trace("Removed child", i + 1);
-        }
         // Patch or add the number of required children.
         for (var i = 0; i < numVdomChildren; i++) {
             trace("Patching child", i + 1);
             var vdomChild = vdomChildren[i];
-            var eltChild = eltChildren[i];
-            Od.patchDom(vdomChild, eltChild, elt);
+            var nextChild = Od.patchDom(vdomChild, eltChild, elt).nextSibling;
+            eltChild = nextChild;
             trace("Patched child", i + 1);
+        }
+        // Remove any extraneous children.
+        while (eltChild) {
+            var nextSibling = eltChild.nextSibling;
+            replaceNode(null, eltChild, elt);
+            eltChild = nextSibling;
+            trace("Removed child", ++i);
         }
     };
     // A common vDOM optimisation for supporting lists is to associate
@@ -766,7 +820,6 @@ var Od;
     // derived from observables.
     var staticHtmlObs = Obs.of(null);
     var staticHtmlSubs = null;
-    var emptyPropDict = [];
     var propsToPropAssocList = function (props) {
         if (!props)
             return null;
@@ -782,24 +835,14 @@ var Od;
     var emptyPropList = [];
     // We attach lists of (ordered) property names to elements so we can
     // perform property updates in O(n) time.
-    var getEltPropList = function (elt) {
+    var getEltOdProps = function (elt) {
         return elt.__Od__props;
     };
-    var setEltPropList = function (elt, propList) {
-        elt.__Od__props = propList;
-    };
-    var lookupPropsAssocList = function (props, key) {
-        if (!props)
-            return null;
-        var iTop = props.length;
-        for (var i = 0; i < iTop; i += 2) {
-            if (props[i] === key)
-                return props[i + 1];
-        }
-        return null;
+    var setEltOdProps = function (elt, props) {
+        elt.__Od__props = props;
     };
     var vdomPropsKey = function (props) {
-        return lookupPropsAssocList(props, "key");
+        return props && props["key"];
     };
     var getDomComponent = function (dom) {
         return dom.__Od__component;
@@ -813,6 +856,10 @@ var Od;
     };
     function updateComponent() {
         var component = this;
+        // If the component has anonymous subcomponents, we should dispose
+        // of them now -- they will be recreated if needed.  Named
+        // subcomponents will persist.
+        disposeAnonymousSubcomponents(component);
         var dom = component.dom;
         // If a DOM node is already associated with the component, we
         // can defer the patching operation (which is nicer for the
@@ -828,7 +875,15 @@ var Od;
         var newDom = Od.patchDom(vdom, dom, domParent);
         setDomComponent(newDom, component);
         component.dom = newDom;
+        lifecycleHooks("created", newDom);
     }
+    var disposeAnonymousSubcomponents = function (vdom) {
+        var anonymousSubcomponents = vdom.subcomponents && vdom.subcomponents[""];
+        if (!anonymousSubcomponents)
+            return;
+        anonymousSubcomponents.forEach(Od.dispose);
+        vdom.subcomponents[""] = null;
+    };
     // We defer DOM updates using requestAnimationFrame.  It's better to
     // batch DOM updates where possible.
     var requestAnimationFrameSubstitute = function (callback) {
@@ -882,6 +937,7 @@ var Od;
         }
         var newDom = Od.patchDom(vdom, dom, domParent);
         setDomComponent(newDom, component);
+        lifecycleHooks("updated", newDom);
         component.dom = newDom;
     };
     // A DOM node will be replaced by a new DOM structure if it
@@ -922,10 +978,9 @@ var Od;
         if (domBelongsToComponent(dom))
             return; // Can't touch this!
         // Strip any properties...
-        var props = getEltPropList(dom) || [];
-        var numProps = props.length;
-        for (var i = 0; i < numProps; i++)
-            dom[props[i]] = undefined;
+        var props = getEltOdProps(dom);
+        for (var prop in props)
+            dom[prop] = null;
         // Recursively strip any child nodes.
         var children = dom.childNodes;
         var numChildren = children.length;
@@ -959,6 +1014,14 @@ var Od;
             }
         }
     };
+    // Some component nodes will have life-cycle hooks to call.
+    var lifecycleHooks = function (what, dom) {
+        var props = dom && getEltOdProps(dom);
+        var hook = props && props["odlifecycle"];
+        if (hook)
+            hook(what, dom);
+        //console.log([what, dom]);
+    };
     // Debugging.
     var trace = function () {
         if (!debug)
@@ -968,9 +1031,189 @@ var Od;
         console.log.apply(console, arguments);
     };
 })(Od || (Od = {}));
+// Elements.ts
+//
+// This library provides some handy syntactic sugar.  Rather than writing
+// any of
+//
+//  Od.element("HR")
+//  Od.element("DIV", null, [children...])
+//  Od.element("A", { href: "..." }, [children...])
+//  Od.element("INPUT", { type: "text" })
+//
+// you can write the somewhat more perspicuous
+//
+//  Od.HR()
+//  Od.DIV([children...])
+//  Od.A({ href: "..." }, [children...])
+//  Od.INPUT({ type: "text" })
+// 
+/// <reference path="../Od/Od.ts"/>
 var Od;
 (function (Od) {
-    var e = Od.element;
+    var isVdoms = function (x) {
+        return (x != null) && ((x.isIVdom) ||
+            (x instanceof Array) ||
+            (typeof (x) === "string"));
+    };
+    var elt = function (tag, fst, snd) {
+        var fstIsVdoms = isVdoms(fst);
+        if (fstIsVdoms && snd != null)
+            throw new Error("Od." + tag + ": given two args, but first arg is not props.");
+        return (fstIsVdoms
+            ? Od.element(tag, null, fst)
+            : Od.element(tag, fst, snd));
+    };
+    // This approach is short, but sweet.
+    ["A",
+        "ABBR",
+        "ACRONYM",
+        "ADDRESS",
+        "APPLET",
+        "AREA",
+        "ARTICLE",
+        "ASIDE",
+        "AUDIO",
+        "B",
+        "BASE",
+        "BASEFONT",
+        "BDI",
+        "BDO",
+        "BGSOUND",
+        "BIG",
+        "BLINK",
+        "BLOCKQUOTE",
+        "BODY",
+        "BR",
+        "BUTTON",
+        "CANVAS",
+        "CAPTION",
+        "CENTER",
+        "CITE",
+        "CODE",
+        "COL",
+        "COLGROUP",
+        "COMMAND",
+        "CONTENT",
+        "DATA",
+        "DATALIST",
+        "DD",
+        "DEL",
+        "DETAILS",
+        "DFN",
+        "DIALOG",
+        "DIR",
+        "DIV",
+        "DL",
+        "DT",
+        "ELEMENT",
+        "EM",
+        "EMBED",
+        "FIELDSET",
+        "FIGCAPTION",
+        "FIGURE",
+        "FONT",
+        "FOOTER",
+        "FORM",
+        "FRAME",
+        "FRAMESET",
+        "H1",
+        "H2",
+        "H3",
+        "H4",
+        "H5",
+        "H6",
+        "HEAD",
+        "HEADER",
+        "HGROUP",
+        "HR",
+        "HTML",
+        "I",
+        "IFRAME",
+        "IMAGE",
+        "IMG",
+        "INPUT",
+        "INS",
+        "ISINDEX",
+        "KBD",
+        "KEYGEN",
+        "LABEL",
+        "LEGEND",
+        "LI",
+        "LINK",
+        "LISTING",
+        "MAIN",
+        "MAP",
+        "MARK",
+        "MARQUEE",
+        "MENU",
+        "MENUITEM",
+        "META",
+        "METER",
+        "MULTICOL",
+        "NAV",
+        "NOBR",
+        "NOEMBED",
+        "NOFRAMES",
+        "NOSCRIPT",
+        "OBJECT",
+        "OL",
+        "OPTGROUP",
+        "OPTION",
+        "OUTPUT",
+        "P",
+        "PARAM",
+        "PICTURE",
+        "PLAINTEXT",
+        "PRE",
+        "PROGRESS",
+        "Q",
+        "RP",
+        "RT",
+        "RTC",
+        "RUBY",
+        "S",
+        "SAMP",
+        "SCRIPT",
+        "SECTION",
+        "SELECT",
+        "SHADOW",
+        "SMALL",
+        "SOURCE",
+        "SPACER",
+        "SPAN",
+        "STRIKE",
+        "STRONG",
+        "STYLE",
+        "SUB",
+        "SUMMARY",
+        "SUP",
+        "TABLE",
+        "TBODY",
+        "TD",
+        "TEMPLATE",
+        "TEXTAREA",
+        "TFOOT",
+        "TH",
+        "THEAD",
+        "TIME",
+        "TITLE",
+        "TR",
+        "TRACK",
+        "TT",
+        "U",
+        "UL",
+        "VAR",
+        "VIDEO",
+        "WBR",
+        "XMP"
+    ].forEach(function (tag) {
+        Od[tag] = function (fst, snd) { return elt(tag, fst, snd); };
+    });
+})(Od || (Od = {}));
+/// <reference path="../Od/Od.ts" />
+var Od;
+(function (Od) {
     Od.withClassName = function (name, props) {
         props = props || {};
         var className = props["className"] || "";
@@ -980,13 +1223,32 @@ var Od;
             props["className"] = name + className;
         return props;
     };
+})(Od || (Od = {}));
+/// <reference path="./Elements.ts" />
+/// <reference path="./WithClassName.ts" />
+var Od;
+(function (Od) {
+    Od.tabComponent = function (args) {
+        var e = Od.element;
+        var selection = args.selection || Obs.of(null);
+        var vdom = Od.component("TabDemo", function () {
+            var tabs = Obs.value(args.tabs);
+            var vdom = Od.DIV(Od.withClassName("OdTabComponent", Obs.value(args.props)), [
+                Od.DIV({ className: "OdTabHeadings" }, tabs.map(function (tab) { return tabHeading(selection, tab); })),
+                Od.DIV({ className: "OdTabBody" }, tabBody(selection()))
+            ]);
+            return vdom;
+        });
+        return vdom;
+    };
     var tabHeading = function (selection, tab) {
+        var e = Od.element;
         var heading = Obs.value(tab.heading);
         var seln = Obs.value(selection);
         var className = (seln === tab
             ? "OdTabHeading OdTabSelection"
             : "OdTabHeading");
-        var vdom = e("DIV", {
+        var vdom = Od.DIV({
             className: className,
             onclick: function () {
                 if (seln !== tab)
@@ -995,20 +1257,49 @@ var Od;
         }, heading);
         return vdom;
     };
-    var tabBody = function (selection) {
-        return selection ? selection.body : "";
-    };
-    Od.tabComponent = function (args) {
-        var selection = args.selection || Obs.of(null);
-        var vdom = Od.component(function () {
-            var tabs = Obs.value(args.tabs);
-            var vdom = e("DIV", Od.withClassName("OdTabComponent", Obs.value(args.props)), [
-                e("DIV", { className: "OdTabHeadings" }, tabs.map(function (tab) { return tabHeading(selection, tab); })),
-                e("DIV", { className: "OdTabBody" }, tabBody(selection()))
-            ]);
-            return vdom;
-        });
-        return vdom;
+    var tabBody = function (tab) {
+        return Obs.value(tab && tab.body) || "";
     };
 })(Od || (Od = {}));
-//# sourceMappingURL=app.js.map
+/// <reference path="../../Ends/TabComponent.ts"/>
+var DemoEndsTabComponent;
+(function (DemoEndsTabComponent) {
+    DemoEndsTabComponent.vdom = function () {
+        var e = Od.element;
+        var tabs = Obs.of([
+            { heading: "One", body: Od.B("First tab.") },
+            { heading: "Two", body: Od.I("Second tab.") },
+            {
+                heading: "Three", body: Od.UL([
+                    Od.LI("Third"),
+                    Od.LI("tab.")
+                ])
+            }
+        ]);
+        var selection = Obs.of(null);
+        var rotateTabs = function () {
+            var xs = tabs();
+            var x = xs.pop();
+            xs.unshift(x);
+            tabs(xs);
+            Obs.updateDependents(tabs);
+        };
+        var jumpTab = function () {
+            var curr = selection();
+            while (selection() === curr) {
+                var xs = tabs();
+                var n = xs.length;
+                var i = (n * Math.random()) | 0;
+                var x = xs[i];
+                selection(x);
+            }
+        };
+        var vdom = e("DIV", null, [
+            Od.BUTTON({ onclick: rotateTabs }, "Rotate"),
+            Od.BUTTON({ onclick: jumpTab }, "Jump"),
+            Od.HR(),
+            Od.tabComponent({ tabs: tabs, selection: selection })
+        ]);
+        return vdom;
+    };
+})(DemoEndsTabComponent || (DemoEndsTabComponent = {}));

@@ -9,8 +9,9 @@ declare namespace Od {
     }
     const text: (text: string) => IVdom;
     const element: (tag: string, props?: IProps, childOrChildren?: string | IVdom | (string | IVdom)[]) => IVdom;
-    const component: (fn: () => string | IVdom) => IVdom;
-    const namedComponent: (name: string, fn: () => string | IVdom) => IVdom;
+    type ComponentName = string | number;
+    function component<T>(name: ComponentName, fn: (x?: T) => Vdom, x?: T): IVdom;
+    function component<T>(name: ComponentName, obs: Obs.IObservable<Vdom>): IVdom;
     const fromHtml: (html: string) => IVdom;
     const fromDom: (dom: Node) => IVdom;
     const bind: (vdom: string | IVdom, dom: Node) => void;

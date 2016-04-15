@@ -5,7 +5,7 @@ var Od;
     Od.tabComponent = function (args) {
         var e = Od.element;
         var selection = args.selection || Obs.of(null);
-        var vdom = Od.component(function () {
+        var vdom = Od.component("TabDemo", function () {
             var tabs = Obs.value(args.tabs);
             var vdom = Od.DIV(Od.withClassName("OdTabComponent", Obs.value(args.props)), [
                 Od.DIV({ className: "OdTabHeadings" }, tabs.map(function (tab) { return tabHeading(selection, tab); })),

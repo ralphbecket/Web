@@ -156,7 +156,7 @@ window.onload = () => {
 
     Test.run("Patch Cmpt(DIV(xyz) -> DIV(wxy)) vs null", () => {
         const text = Obs.of("xyz");
-        const cmpt = Od.component(() => e("DIV", null, text()));
+        const cmpt = Od.component(null, () => e("DIV", null, text()));
         const A = cmpt;
         const B = null;
         var C = Od.patchDom(A, B, null);
@@ -169,8 +169,8 @@ window.onload = () => {
 
     Test.run("Patch DIV(Cmpt(DIV), Cmpt(P)) -> DIV(Cmpt(P), Cmpt(DIV)) vs null",
     () => {
-        const X = Od.component(() => e("DIV"));
-        const Y = Od.component(() => e("P"));
+        const X = Od.component(null, () => e("DIV"));
+        const Y = Od.component(null, () => e("P"));
         const A1 = e("DIV", null, [X, Y]);
         const B = null;
         const C1 = Od.patchDom(A1, B, null);
@@ -193,7 +193,7 @@ window.onload = () => {
     Test.run("Patch Cmpt(DIV(P(xyz) -> pqr)) vs null", () => {
         const X = e("P", null, "xyz");
         const T = Obs.of(true);
-        const A = Od.component(() => e("DIV", null, T() ? X : "pqr"));
+        const A = Od.component(null, () => e("DIV", null, T() ? X : "pqr"));
         const B = null;
         const C = Od.patchDom(A, B, null);
         chk(C, [], "DIV", 1);
@@ -206,7 +206,7 @@ window.onload = () => {
 
     Test.run("Deleting the DOM of a live component.", () => {
         const X = Obs.of("Hi!");
-        const A = Od.component(() => e("DIV", null, X()));
+        const A = Od.component(null, () => e("DIV", null, X()));
         const B = null;
         const C = Od.patchDom(A, B, null);
         chk(C, [], "DIV", 1);

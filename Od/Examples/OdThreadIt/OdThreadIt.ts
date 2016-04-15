@@ -53,7 +53,7 @@ enum State {
 
 const currentState = Obs.of(State.LoadingThreads);
 
-const view = Od.namedComponent("main", (): Od.Vdom => {
+const view = Od.component("main", (): Od.Vdom => {
     var vdom = null as Od.Vdom | Od.Vdom[];
     switch (currentState()) {
         case State.LoadingThreads:
@@ -127,7 +127,7 @@ const commentReply = (parentID: string): Od.IVdom => {
     // components, saving quite a lot of work.  Anonymous components
     // would be recreated each time their parent components were
     // re-evaluated.
-    return Od.namedComponent(parentID, () => {
+    return Od.component(parentID, () => {
         switch (replyState()) {
             case ReplyState.NotReplying: return (
                 Od.A(

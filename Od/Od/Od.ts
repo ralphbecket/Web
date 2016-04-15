@@ -91,22 +91,38 @@ namespace Od {
         return { isIVdom: true, tag: tag, props: props, children: children };
     };
 
-    // Construct a component node from a function computing a vDOM node.
-    export const component = (fn: () => Vdom): IVdom =>
-        namedComponent(null, fn);
-
     // A named component persists within the scope of the component within
-    // which it is defined.  That is, the parent component can be re-evaluated,
-    // but any named child components will persist from the original
-    // construction of the parent, rather than being recreated.  Passing a
-    // falsy name is equivalent to calling the plain 'component' function.
-    export const namedComponent = (name: string, fn: () => Vdom): IVdom => {
+    // which it is defined.  That is, the immediate parent component can
+    // be re- evaluated, but any named child components will persist from
+    // the original construction of the parent, rather than being
+    // recreated.  Names need only be unique within the scope of the
+    // immediate parent component.
+    //
+    // Passing a falsy name creates an anonymous 'component', which is
+    // ephemeral (i.e., it will be re-created every time the parent component
+    // updates).  Typically you do not want this!
+    //
+    // Component vDOM functions may optionally take an argument.  This is
+    // convenient when constructing components that depend on external state. 
+    //
+    export type ComponentName = string | number; // May not be falsy.
+
+    export function component<T>(
+        name: ComponentName,
+        fn: (x?: T) => Vdom,
+        x?: T
+    ): IVdom;
+    export function component<T>(
+        name: ComponentName,
+        obs: Obs.IObservable<Vdom>
+    ): IVdom;
+    export function component(name: ComponentName, fn: any, x?: any): IVdom {
         const existingVdom = existingNamedComponentInstance(name);
         if (existingVdom) return existingVdom;
         const obs =
             ( Obs.isObservable(fn)
             ? fn as Obs.IObservable<Vdom>
-            : Obs.fn(fn)
+            : Obs.fn(() => fn(x))
             );
         const vdom = {
             isIVdom: true,
@@ -134,15 +150,16 @@ namespace Od {
     // Any subcomponents of the component currently being defined.
     var parentSubcomponents = null as ISubComponents;
 
-    const existingNamedComponentInstance = (name: string): IVdom =>
+    const existingNamedComponentInstance = (name: ComponentName): IVdom =>
         name &&
         parentSubcomponents &&
-        parentSubcomponents[name] as IVdom;
+        parentSubcomponents[name as string] as IVdom;
 
-    const addAsParentSubcomponent = (name: string, child: IVdom): void => {
+    const addAsParentSubcomponent =
+    (name: ComponentName, child: IVdom): void => {
         if (!parentSubcomponents) parentSubcomponents = {} as ISubComponents;
         if (name) {
-            parentSubcomponents[name] = child;
+            parentSubcomponents[name as string] = child;
             return;
         }
         // Otherwise, this child has no name.  Aww.  In this case we

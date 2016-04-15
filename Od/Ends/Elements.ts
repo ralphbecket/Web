@@ -242,6 +242,12 @@ namespace Od {
     export declare const HEAD: ElementConstructor;
     export declare const HEADER: ElementConstructor;
     export declare const HGROUP: ElementConstructor;
+    export declare const H1: ElementConstructor;
+    export declare const H2: ElementConstructor;
+    export declare const H3: ElementConstructor;
+    export declare const H4: ElementConstructor;
+    export declare const H5: ElementConstructor;
+    export declare const H6: ElementConstructor;
     export declare const HR: ElementConstructor;
     export declare const HTML: ElementConstructor;
     export declare const I: ElementConstructor;

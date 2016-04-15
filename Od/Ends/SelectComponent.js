@@ -1,4 +1,4 @@
-/// <reference path="./Elements.ts" />
+/// <reference path="../Ends/Elements.ts" />
 var Od;
 (function (Od) {
     Od.selectComponent = function (args) {
@@ -8,8 +8,8 @@ var Od;
         };
         var optionView = args.optionView || defaultOptionView;
         var e = Od.element;
-        var vdom = Od.component(function () {
-            var props = args.props || {};
+        var vdom = Od.component(props["name"], function () {
+            var props = Obs.value(args.props) || {};
             var options = Obs.value(args.options);
             var selection = args.selection();
             var iTop = options.length;

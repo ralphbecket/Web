@@ -18,7 +18,7 @@ namespace Od {
 
         var selection = args.selection || Obs.of(null as ITab);
 
-        const vdom = Od.component(() => {
+        const vdom = Od.component("TabDemo", () => {
             const tabs = Obs.value(args.tabs);
             const vdom =
                 Od.DIV(

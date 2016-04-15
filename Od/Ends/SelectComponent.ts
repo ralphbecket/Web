@@ -1,4 +1,4 @@
-﻿/// <reference path="./Elements.ts" />
+﻿/// <reference path="../Ends/Elements.ts" />
 
 namespace Od {
 
@@ -6,7 +6,7 @@ namespace Od {
         options: Obs.IObservablish<T[]>;
         optionView?: (option: T) => string;
         selection: Obs.IObservable<T>;
-        props?: Obs.IObservablish<Od.IProps>;
+        props?: Od.IProps;
     }): IVdom => {
         const props = args.props || {} as IProps;
         props["onchange"] = (v: any) => {
@@ -17,8 +17,8 @@ namespace Od {
         };
         const optionView = args.optionView || defaultOptionView;
         const e = Od.element;
-        const vdom = Od.component(() => {
-            const props = args.props || {} as IProps;
+        const vdom = Od.component(props["name"], () => {
+            const props = Obs.value(args.props) || {} as IProps;
             const options = Obs.value(args.options);
             const selection = args.selection();
             const iTop = options.length;

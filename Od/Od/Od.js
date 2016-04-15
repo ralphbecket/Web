@@ -72,22 +72,13 @@ var Od;
                 : [childOrChildren]);
         return { isIVdom: true, tag: tag, props: props, children: children };
     };
-    // Construct a component node from a function computing a vDOM node.
-    Od.component = function (fn) {
-        return Od.namedComponent(null, fn);
-    };
-    // A named component persists within the scope of the component within
-    // which it is defined.  That is, the parent component can be re-evaluated,
-    // but any named child components will persist from the original
-    // construction of the parent, rather than being recreated.  Passing a
-    // falsy name is equivalent to calling the plain 'component' function.
-    Od.namedComponent = function (name, fn) {
+    function component(name, fn, x) {
         var existingVdom = existingNamedComponentInstance(name);
         if (existingVdom)
             return existingVdom;
         var obs = (Obs.isObservable(fn)
             ? fn
-            : Obs.fn(fn));
+            : Obs.fn(function () { return fn(x); }));
         var vdom = {
             isIVdom: true,
             obs: obs,
@@ -109,7 +100,9 @@ var Od;
         // Restore the parent subcomponent context.
         parentSubcomponents = tmp;
         return vdom;
-    };
+    }
+    Od.component = component;
+    ;
     // Any subcomponents of the component currently being defined.
     var parentSubcomponents = null;
     var existingNamedComponentInstance = function (name) {

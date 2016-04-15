@@ -498,22 +498,13 @@ var Od;
                 : [childOrChildren]);
         return { isIVdom: true, tag: tag, props: props, children: children };
     };
-    // Construct a component node from a function computing a vDOM node.
-    Od.component = function (fn) {
-        return Od.namedComponent(null, fn);
-    };
-    // A named component persists within the scope of the component within
-    // which it is defined.  That is, the parent component can be re-evaluated,
-    // but any named child components will persist from the original
-    // construction of the parent, rather than being recreated.  Passing a
-    // falsy name is equivalent to calling the plain 'component' function.
-    Od.namedComponent = function (name, fn) {
+    function component(name, fn, x) {
         var existingVdom = existingNamedComponentInstance(name);
         if (existingVdom)
             return existingVdom;
         var obs = (Obs.isObservable(fn)
             ? fn
-            : Obs.fn(fn));
+            : Obs.fn(function () { return fn(x); }));
         var vdom = {
             isIVdom: true,
             obs: obs,
@@ -535,7 +526,9 @@ var Od;
         // Restore the parent subcomponent context.
         parentSubcomponents = tmp;
         return vdom;
-    };
+    }
+    Od.component = component;
+    ;
     // Any subcomponents of the component currently being defined.
     var parentSubcomponents = null;
     var existingNamedComponentInstance = function (name) {
@@ -1235,7 +1228,7 @@ window.onload = function () {
     });
     Test.run("Patch Cmpt(DIV(xyz) -> DIV(wxy)) vs null", function () {
         var text = Obs.of("xyz");
-        var cmpt = Od.component(function () { return e("DIV", null, text()); });
+        var cmpt = Od.component(null, function () { return e("DIV", null, text()); });
         var A = cmpt;
         var B = null;
         var C = Od.patchDom(A, B, null);
@@ -1246,8 +1239,8 @@ window.onload = function () {
         chk(C, [0], "#wxy");
     });
     Test.run("Patch DIV(Cmpt(DIV), Cmpt(P)) -> DIV(Cmpt(P), Cmpt(DIV)) vs null", function () {
-        var X = Od.component(function () { return e("DIV"); });
-        var Y = Od.component(function () { return e("P"); });
+        var X = Od.component(null, function () { return e("DIV"); });
+        var Y = Od.component(null, function () { return e("P"); });
         var A1 = e("DIV", null, [X, Y]);
         var B = null;
         var C1 = Od.patchDom(A1, B, null);
@@ -1269,7 +1262,7 @@ window.onload = function () {
     Test.run("Patch Cmpt(DIV(P(xyz) -> pqr)) vs null", function () {
         var X = e("P", null, "xyz");
         var T = Obs.of(true);
-        var A = Od.component(function () { return e("DIV", null, T() ? X : "pqr"); });
+        var A = Od.component(null, function () { return e("DIV", null, T() ? X : "pqr"); });
         var B = null;
         var C = Od.patchDom(A, B, null);
         chk(C, [], "DIV", 1);
@@ -1281,7 +1274,7 @@ window.onload = function () {
     });
     Test.run("Deleting the DOM of a live component.", function () {
         var X = Obs.of("Hi!");
-        var A = Od.component(function () { return e("DIV", null, X()); });
+        var A = Od.component(null, function () { return e("DIV", null, X()); });
         var B = null;
         var C = Od.patchDom(A, B, null);
         chk(C, [], "DIV", 1);

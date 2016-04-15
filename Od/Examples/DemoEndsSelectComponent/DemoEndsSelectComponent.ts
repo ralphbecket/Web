@@ -1,4 +1,5 @@
-﻿/// <reference path="../../Od/Od.ts"/>
+﻿/// <reference path="../../Ends/Elements.ts"/>
+/// <reference path="../../Ends/SelectComponent.ts"/>
 
 namespace DemoEndsSelectComponent {
 

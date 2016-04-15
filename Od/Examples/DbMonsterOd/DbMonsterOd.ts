@@ -6,7 +6,7 @@ namespace DbMonsterOd {
 
     // We might shave off an FPS or two by not using the Ends/Elements
     // shorthand (Od.TABLE etc.), but who would do that in practice?
-    export const vdom = Od.component(() => 
+    export const vdom = Od.component("DbMonster", () => 
         Od.TABLE({ className: "table table-striped latest-data" },
             Od.TBODY(rows().map(row => 
                 Od.TR([

@@ -498,22 +498,13 @@ var Od;
                 : [childOrChildren]);
         return { isIVdom: true, tag: tag, props: props, children: children };
     };
-    // Construct a component node from a function computing a vDOM node.
-    Od.component = function (fn) {
-        return Od.namedComponent(null, fn);
-    };
-    // A named component persists within the scope of the component within
-    // which it is defined.  That is, the parent component can be re-evaluated,
-    // but any named child components will persist from the original
-    // construction of the parent, rather than being recreated.  Passing a
-    // falsy name is equivalent to calling the plain 'component' function.
-    Od.namedComponent = function (name, fn) {
+    function component(name, fn, x) {
         var existingVdom = existingNamedComponentInstance(name);
         if (existingVdom)
             return existingVdom;
         var obs = (Obs.isObservable(fn)
             ? fn
-            : Obs.fn(fn));
+            : Obs.fn(function () { return fn(x); }));
         var vdom = {
             isIVdom: true,
             obs: obs,
@@ -535,7 +526,9 @@ var Od;
         // Restore the parent subcomponent context.
         parentSubcomponents = tmp;
         return vdom;
-    };
+    }
+    Od.component = component;
+    ;
     // Any subcomponents of the component currently being defined.
     var parentSubcomponents = null;
     var existingNamedComponentInstance = function (name) {
@@ -1038,35 +1031,214 @@ var Od;
         console.log.apply(console, arguments);
     };
 })(Od || (Od = {}));
-/// <reference path="../../Od/Od.ts"/>
+// Elements.ts
+//
+// This library provides some handy syntactic sugar.  Rather than writing
+// any of
+//
+//  Od.element("HR")
+//  Od.element("DIV", null, [children...])
+//  Od.element("A", { href: "..." }, [children...])
+//  Od.element("INPUT", { type: "text" })
+//
+// you can write the somewhat more perspicuous
+//
+//  Od.HR()
+//  Od.DIV([children...])
+//  Od.A({ href: "..." }, [children...])
+//  Od.INPUT({ type: "text" })
+// 
+/// <reference path="../Od/Od.ts"/>
+var Od;
+(function (Od) {
+    var isVdoms = function (x) {
+        return (x != null) && ((x.isIVdom) ||
+            (x instanceof Array) ||
+            (typeof (x) === "string"));
+    };
+    var elt = function (tag, fst, snd) {
+        var fstIsVdoms = isVdoms(fst);
+        if (fstIsVdoms && snd != null)
+            throw new Error("Od." + tag + ": given two args, but first arg is not props.");
+        return (fstIsVdoms
+            ? Od.element(tag, null, fst)
+            : Od.element(tag, fst, snd));
+    };
+    // This approach is short, but sweet.
+    ["A",
+        "ABBR",
+        "ACRONYM",
+        "ADDRESS",
+        "APPLET",
+        "AREA",
+        "ARTICLE",
+        "ASIDE",
+        "AUDIO",
+        "B",
+        "BASE",
+        "BASEFONT",
+        "BDI",
+        "BDO",
+        "BGSOUND",
+        "BIG",
+        "BLINK",
+        "BLOCKQUOTE",
+        "BODY",
+        "BR",
+        "BUTTON",
+        "CANVAS",
+        "CAPTION",
+        "CENTER",
+        "CITE",
+        "CODE",
+        "COL",
+        "COLGROUP",
+        "COMMAND",
+        "CONTENT",
+        "DATA",
+        "DATALIST",
+        "DD",
+        "DEL",
+        "DETAILS",
+        "DFN",
+        "DIALOG",
+        "DIR",
+        "DIV",
+        "DL",
+        "DT",
+        "ELEMENT",
+        "EM",
+        "EMBED",
+        "FIELDSET",
+        "FIGCAPTION",
+        "FIGURE",
+        "FONT",
+        "FOOTER",
+        "FORM",
+        "FRAME",
+        "FRAMESET",
+        "H1",
+        "H2",
+        "H3",
+        "H4",
+        "H5",
+        "H6",
+        "HEAD",
+        "HEADER",
+        "HGROUP",
+        "HR",
+        "HTML",
+        "I",
+        "IFRAME",
+        "IMAGE",
+        "IMG",
+        "INPUT",
+        "INS",
+        "ISINDEX",
+        "KBD",
+        "KEYGEN",
+        "LABEL",
+        "LEGEND",
+        "LI",
+        "LINK",
+        "LISTING",
+        "MAIN",
+        "MAP",
+        "MARK",
+        "MARQUEE",
+        "MENU",
+        "MENUITEM",
+        "META",
+        "METER",
+        "MULTICOL",
+        "NAV",
+        "NOBR",
+        "NOEMBED",
+        "NOFRAMES",
+        "NOSCRIPT",
+        "OBJECT",
+        "OL",
+        "OPTGROUP",
+        "OPTION",
+        "OUTPUT",
+        "P",
+        "PARAM",
+        "PICTURE",
+        "PLAINTEXT",
+        "PRE",
+        "PROGRESS",
+        "Q",
+        "RP",
+        "RT",
+        "RTC",
+        "RUBY",
+        "S",
+        "SAMP",
+        "SCRIPT",
+        "SECTION",
+        "SELECT",
+        "SHADOW",
+        "SMALL",
+        "SOURCE",
+        "SPACER",
+        "SPAN",
+        "STRIKE",
+        "STRONG",
+        "STYLE",
+        "SUB",
+        "SUMMARY",
+        "SUP",
+        "TABLE",
+        "TBODY",
+        "TD",
+        "TEMPLATE",
+        "TEXTAREA",
+        "TFOOT",
+        "TH",
+        "THEAD",
+        "TIME",
+        "TITLE",
+        "TR",
+        "TRACK",
+        "TT",
+        "U",
+        "UL",
+        "VAR",
+        "VIDEO",
+        "WBR",
+        "XMP"
+    ].forEach(function (tag) {
+        Od[tag] = function (fst, snd) { return elt(tag, fst, snd); };
+    });
+})(Od || (Od = {}));
+/// <reference path="../../Ends/Elements.ts"/>
 window.onload = function () {
     // ---- Preamble.
-    var e = Od.element;
     var addDemo = function (title, content) {
-        var vdom = e("DIV", null, [
-            e("H3", null, title),
-            e("DIV", { className: "DemoContainer" }, content())
+        var vdom = Od.DIV([
+            Od.H3(title),
+            Od.DIV({ className: "DemoContainer" }, content())
         ]);
         Od.appendChild(vdom, document.body);
     };
     // ---- A simple incrementing counter component.
-    var counter = function (x, style) {
+    var counter = function (name, x, style) {
         console.log("-- Creating counter.");
         var inc = function () {
             x(x() + 1);
         };
-        var cmpt = Od.component(function () {
+        var cmpt = Od.component(name, function () {
             console.log("-- Updating counter vDOM.");
-            return e("BUTTON", { style: style, onclick: inc }, x().toString());
+            return Od.BUTTON({ style: style, onclick: inc }, x().toString());
         });
         return cmpt;
     };
     addDemo("Simple components", function () {
-        return counter(Obs.of(0));
+        return counter("A", Obs.of(0));
     });
     // ---- A component that swaps sub-components around.  This demonstrates
     //      how Od does not re-generate, re-patch, or re-render sub-components.
-    var swapper = function (x, y) {
+    var swapper = function (name, x, y) {
         console.log("-- Creating swapper.");
         var X = Obs.of(x);
         var Y = Obs.of(y);
@@ -1079,35 +1251,35 @@ window.onload = function () {
             Y(tmp);
             Obs.endUpdate();
         };
-        var cmpt = Od.component(function () {
+        var cmpt = Od.component(name, function () {
             console.log("-- Updating swapper vDOM.");
-            return e("DIV", null, [
+            return Od.DIV([
                 X(),
-                e("BUTTON", { onclick: swap }, "Swap!"),
+                Od.BUTTON({ onclick: swap }, "Swap!"),
                 Y()
             ]);
         });
         return cmpt;
     };
     addDemo("Nested components", function () {
-        return swapper(counter(Obs.of(0), "color: blue;"), counter(Obs.of(0), "color: red;"));
+        return swapper("B", counter("BA", Obs.of(0), "color: blue;"), counter("BB", Obs.of(0), "color: red;"));
     });
     // ---- More of the same, but deeper.
     addDemo("Nested nested components", function () {
-        var A = counter(Obs.of(0), "color: blue;");
-        var B = counter(Obs.of(0), "color: red;");
-        var C = counter(Obs.of(0), "color: blue;");
-        var D = counter(Obs.of(0), "color: red;");
-        var AB = e("DIV", { style: "border: 1ex solid yellow; display: inline-block;" }, swapper(A, B));
-        var CD = e("DIV", { style: "border: 1ex solid cyan; display: inline-block;" }, swapper(C, D));
-        return swapper(AB, CD);
+        var A = counter("CA", Obs.of(0), "color: blue;");
+        var B = counter("CB", Obs.of(0), "color: red;");
+        var C = counter("CC", Obs.of(0), "color: blue;");
+        var D = counter("CD", Obs.of(0), "color: red;");
+        var AB = Od.DIV({ style: "border: 1ex solid yellow; display: inline-block;" }, swapper("CAB", A, B));
+        var CD = Od.DIV({ style: "border: 1ex solid cyan; display: inline-block;" }, swapper("CCD", C, D));
+        return swapper("CABCD", AB, CD);
     });
     // ---- Simple inputs.
     var bindValueOnChange = function (x, props) {
         if (props === void 0) { props = {}; }
         props["value"] = x();
-        props["onchange"] = function (e) {
-            x(e.target.value);
+        props["onchange"] = function (v) {
+            x(v.target.value);
         };
         return props;
     };
@@ -1121,12 +1293,12 @@ window.onload = function () {
         var Y = Obs.of(2);
         var Z = Obs.fn(function () { return +X() + +Y(); });
         var props = { style: "width: 2em; text-align: right;" };
-        return e("DIV", null, [
-            e("INPUT", bindValueOnChange(X, props)),
+        return Od.DIV([
+            Od.INPUT(bindValueOnChange(X, props)),
             " + ",
-            e("INPUT", bindValueOnChange(Y, props)),
+            Od.INPUT(bindValueOnChange(Y, props)),
             " = ",
-            Od.component(function () { return Z().toString(); })
+            Od.component("D", function () { return Z().toString(); })
         ]);
     });
     // ---- Simple lists.
@@ -1144,11 +1316,11 @@ window.onload = function () {
             xs.pop();
             Xs(xs);
         };
-        return e("DIV", null, [
-            e("BUTTON", { onclick: inc, style: "width: 2em;" }, "+"),
-            e("BUTTON", { onclick: dec, style: "width: 2em;" }, "-"),
-            Od.component(function () {
-                return e("DIV", null, Xs().map(function (x) { return e("SPAN", null, " " + x + " "); }));
+        return Od.DIV([
+            Od.BUTTON({ onclick: inc, style: "width: 2em;" }, "+"),
+            Od.BUTTON({ onclick: dec, style: "width: 2em;" }, "-"),
+            Od.component("E", function () {
+                return Od.DIV(Xs().map(function (x) { return Od.SPAN(" " + x + " "); }));
             })
         ]);
     });

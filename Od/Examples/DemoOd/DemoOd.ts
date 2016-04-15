@@ -1,41 +1,41 @@
-﻿/// <reference path="../../Od/Od.ts"/>
+﻿/// <reference path="../../Ends/Elements.ts"/>
 
 window.onload = () => {
 
     // ---- Preamble.
 
-    const e = Od.element;
-
     const addDemo = (title: string, content: () => Od.Vdom): void => {
-        const vdom = e("DIV", null, [
-            e("H3", null, title),
-            e("DIV", { className: "DemoContainer" }, content())
+        const vdom = Od.DIV([
+            Od.H3(title),
+            Od.DIV({ className: "DemoContainer" }, content())
         ]);
         Od.appendChild(vdom, document.body);
     };
 
     // ---- A simple incrementing counter component.
 
-    const counter = (x: Obs.IObservable<number>, style?: string): Od.Vdom => {
+    const counter =
+    (name: Od.ComponentName, x: Obs.IObservable<number>, style?: string): Od.Vdom => {
         console.log("-- Creating counter.");
         const inc = () => {
             x(x() + 1);
         };
-        const cmpt = Od.component(() => {
+        const cmpt = Od.component(name, () => {
             console.log("-- Updating counter vDOM.");
-            return e("BUTTON", { style: style, onclick: inc }, x().toString())
+            return Od.BUTTON({ style: style, onclick: inc }, x().toString())
         });
         return cmpt;
     };
 
     addDemo("Simple components", () =>
-        counter(Obs.of(0))
+        counter("A", Obs.of(0))
     );
 
     // ---- A component that swaps sub-components around.  This demonstrates
     //      how Od does not re-generate, re-patch, or re-render sub-components.
 
-    const swapper = (x: Od.Vdom, y: Od.Vdom): Od.Vdom => {
+    const swapper =
+    (name: Od.ComponentName, x: Od.Vdom, y: Od.Vdom): Od.Vdom => {
         console.log("-- Creating swapper.");
         const X = Obs.of(x);
         const Y = Obs.of(y);
@@ -48,11 +48,11 @@ window.onload = () => {
             Y(tmp);
             Obs.endUpdate();
         };
-        const cmpt = Od.component(() => {
+        const cmpt = Od.component(name, () => {
             console.log("-- Updating swapper vDOM.");
-            return e("DIV", null, [
+            return Od.DIV([
                 X(),
-                e("BUTTON", { onclick: swap }, "Swap!"),
+                Od.BUTTON({ onclick: swap }, "Swap!"),
                 Y()
             ]);
         });
@@ -60,28 +60,28 @@ window.onload = () => {
     };
 
     addDemo("Nested components", () =>
-        swapper(
-            counter(Obs.of(0), "color: blue;"),
-            counter(Obs.of(0), "color: red;")
+        swapper("B",
+            counter("BA", Obs.of(0), "color: blue;"),
+            counter("BB", Obs.of(0), "color: red;")
         )
     );
 
     // ---- More of the same, but deeper.
 
     addDemo("Nested nested components", () => {
-        const A = counter(Obs.of(0), "color: blue;");
-        const B = counter(Obs.of(0), "color: red;");
-        const C = counter(Obs.of(0), "color: blue;");
-        const D = counter(Obs.of(0), "color: red;");
-        const AB = e("DIV",
+        const A = counter("CA", Obs.of(0), "color: blue;");
+        const B = counter("CB", Obs.of(0), "color: red;");
+        const C = counter("CC", Obs.of(0), "color: blue;");
+        const D = counter("CD", Obs.of(0), "color: red;");
+        const AB = Od.DIV(
             { style: "border: 1ex solid yellow; display: inline-block;" },
-            swapper(A, B)
+            swapper("CAB", A, B)
         );
-        const CD = e("DIV",
+        const CD = Od.DIV(
             { style: "border: 1ex solid cyan; display: inline-block;" },
-            swapper(C, D)
+            swapper("CCD", C, D)
         );
-        return swapper(AB, CD);
+        return swapper("CABCD", AB, CD);
     });
 
     // ---- Simple inputs.
@@ -91,8 +91,8 @@ window.onload = () => {
         props: Od.IProps = {}
     ): Od.IProps => {
         props["value"] = x();
-        props["onchange"] = (e: Event) => {
-            x((e.target as any).value);
+        props["onchange"] = (v: Event) => {
+            x((v.target as any).value);
         };
         return props;
     }
@@ -111,12 +111,12 @@ window.onload = () => {
         const Z = Obs.fn(() => +X() + +Y());
         const props = { style: "width: 2em; text-align: right;" } as Od.IProps;
         
-        return e("DIV", null, [
-            e("INPUT", bindValueOnChange(X, props)),
+        return Od.DIV([
+            Od.INPUT(bindValueOnChange(X, props)),
             " + ",
-            e("INPUT", bindValueOnChange(Y, props)),
+            Od.INPUT(bindValueOnChange(Y, props)),
             " = ",
-            Od.component(() => Z().toString())
+            Od.component("D", () => Z().toString())
         ]);
     });
 
@@ -135,13 +135,11 @@ window.onload = () => {
             xs.pop();
             Xs(xs);
         };
-        return e("DIV", null, [
-            e("BUTTON", { onclick: inc, style: "width: 2em;" }, "+"),
-            e("BUTTON", { onclick: dec, style: "width: 2em;" }, "-"),
-            Od.component(() =>
-                e("DIV", null,
-                    Xs().map(x => e("SPAN", null, " " + x + " "))
-                )
+        return Od.DIV([
+            Od.BUTTON({ onclick: inc, style: "width: 2em;" }, "+"),
+            Od.BUTTON({ onclick: dec, style: "width: 2em;" }, "-"),
+            Od.component("E", () =>
+                Od.DIV(Xs().map(x => Od.SPAN(" " + x + " ")))
             )
         ]);
     });
