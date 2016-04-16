@@ -7,6 +7,8 @@ window.onload = () => {
     var n = 0;
     var args = {} as Jigsaw.IRouteArgs;
 
+    Jigsaw.addRoute("", (a) => { n = 0; args = a; });
+
     Jigsaw.addRoute("foo/bar/baz", (a) => { n = 1; args = a; });
 
     Jigsaw.addRoute("foo/:bar/?baz/*quux/:fub", (a) => { n = 2; args = a; });
@@ -22,6 +24,9 @@ window.onload = () => {
     Jigsaw.defaultRouteHandler = (_) => { n = 7; };
 
     Test.run("Jigsaw router", () => {
+
+        Jigsaw.takeRoute("");
+        Test.expect("Empty route", n === 0);
 
         Jigsaw.takeRoute("foo/bar/baz");
         Test.expect("All fixed route", n === 1);
@@ -60,9 +65,6 @@ window.onload = () => {
 
         Jigsaw.takeRoute("bar/bar");
         Test.expect("Default route handler 3", n === 7);
-
-        Jigsaw.takeRoute("");
-        Test.expect("Default route handler 4", n === 7);
 
     });
 

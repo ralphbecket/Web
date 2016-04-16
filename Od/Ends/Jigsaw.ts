@@ -64,7 +64,7 @@ namespace Jigsaw {
             query = hash.substr(queryIdx + 1);
             hash = hash.substr(0, queryIdx);
         }
-        const parts = (hash || "").split("/").map(decodeURIComponent);
+        const parts = (!hash ? [] : hash.split("/").map(decodeURIComponent));
         for (var i = 0; i < compiledRoutes.length; i++) {
             const compiledRoute = compiledRoutes[i];
             const args = compiledRoute.matcher(parts, 0, {});

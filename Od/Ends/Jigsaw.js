@@ -51,7 +51,7 @@ var Jigsaw;
             query = hash.substr(queryIdx + 1);
             hash = hash.substr(0, queryIdx);
         }
-        var parts = (hash || "").split("/").map(decodeURIComponent);
+        var parts = (!hash ? [] : hash.split("/").map(decodeURIComponent));
         for (var i = 0; i < compiledRoutes.length; i++) {
             var compiledRoute = compiledRoutes[i];
             var args = compiledRoute.matcher(parts, 0, {});
