@@ -1514,26 +1514,29 @@ var Xhr;
     Xhr.send = function (url, opts) {
         if (opts === void 0) { opts = {}; }
         var xhr = new XMLHttpRequest();
-        var method = opts["method"] || "GET";
-        var async = (opts["async"] !== false);
-        var user = opts["user"];
-        var password = opts["password"];
-        var data = opts["data"];
+        var method = opts.method || "GET";
+        var async = (opts.async !== false);
+        var user = opts.user;
+        var password = opts.password;
         xhr.open(method, url, async, user, password);
-        for (var key in opts) {
-            var value = opts[key];
-            xhr[key] = value;
-        }
-        var requestHeaders = opts["requestHeaders"];
+        var requestHeaders = opts.requestHeaders;
         if (requestHeaders)
             for (var header in requestHeaders) {
                 var value = requestHeaders[header];
                 xhr.setRequestHeader(header, value);
             }
+        if (opts.timeout != null)
+            xhr.timeout = opts.timeout;
+        if (opts.withCredentials != null)
+            xhr.withCredentials = opts.withCredentials;
+        if (opts.onprogress)
+            xhr.addEventListener("progress", opts.onprogress);
+        if (opts.overrideMimeType)
+            xhr.overrideMimeType(opts.overrideMimeType);
         var promise = Oath.make(function (pass, fail) {
             xhr.onreadystatechange = readyStateChangeHandler(xhr, pass, fail);
         });
-        xhr.send(data);
+        xhr.send(opts.data);
         return promise;
     };
     var readyStateChangeHandler = function (xhr, pass, fail) {
