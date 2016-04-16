@@ -19,6 +19,7 @@ A compact virtual-DOM library in the style of Mithril.
 * [Od - Demo - Calculator](https://jsfiddle.net/ralphbecket/df8bfnhe/)
 * [Od - Demo - Basic To-do List](https://jsfiddle.net/ralphbecket/bbvtwyuq/)
 * [Od - Demo - Tabs](https://jsfiddle.net/ralphbecket/beLjfmsj/)
+* [Od - Demo - Jigsaw router](https://jsfiddle.net/ralphbecket/3mj53jpm/)
 
 ## Interactive tutorials
 
