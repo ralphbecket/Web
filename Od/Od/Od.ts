@@ -544,7 +544,7 @@ namespace Od {
         const newDom = patchDom(vdom, dom, domParent);
         setDomComponent(newDom, component);
         component.dom = newDom;
-        lifecycleHooks("updated", newDom);
+        lifecycleHooks(dom ? "updated" : "created", newDom);
     }
 
     const disposeAnonymousSubcomponents = (vdom: IVdom): void => {

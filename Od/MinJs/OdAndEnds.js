@@ -876,7 +876,7 @@ var Od;
         var newDom = Od.patchDom(vdom, dom, domParent);
         setDomComponent(newDom, component);
         component.dom = newDom;
-        lifecycleHooks("updated", newDom);
+        lifecycleHooks(dom ? "updated" : "created", newDom);
     }
     var disposeAnonymousSubcomponents = function (vdom) {
         var anonymousSubcomponents = vdom.subcomponents && vdom.subcomponents[""];
