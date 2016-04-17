@@ -27,6 +27,22 @@ A compact virtual-DOM library in the style of Mithril.
 * [Obs - Observables](https://jsfiddle.net/ralphbecket/wo5pb7m4/)   - the underlying magic.
 * [Od - Components](https://jsfiddle.net/ralphbecket/kyvfcj7h/)     - dynamic, interactive HTML components.
 
+## What makes Od different?
+
+In most virtual-DOM schemes, the application has to regenerate the entire 
+virtual-DOM structure on every event that can update the UI.  This is then
+patched against the entire DOM.
+
+In Od, only the virtual-DOM pertaining to individual updated components
+is regenerated and patched.  Consider the following example:
+
+![OdComponents example](http://ralphbecket.github.io/Images/Od/OdComponents.svg)
+
+With Od, when component B updates, only the virtual-DOM and DOM nodes
+corresponding to B are updated and patched.  Neither the parent 
+component A nor the sub-component C would be regenerated or patched.
+This makes Od udpates compellingly efficient.
+
 ## Observables-based vDOM.
 
 Virtual-DOM schemes are all the rage.  Because manually updating the
