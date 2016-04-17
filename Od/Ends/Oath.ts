@@ -20,13 +20,13 @@
 
     var nextID = 1;
 
-    export const resolve = <T>(x: T): IPromise<T> =>
+    export const resolve = <T>(x: T): IThenable<T> =>
         make<T>((pass, fail) => pass(x));
 
-    export const reject = <T>(r: any): IPromise<T> =>
+    export const reject = <T>(r: any): IThenable<T> =>
         make<T>((pass, fail) => fail(r));
 
-    export const all = <T>(ps: IThenable<T>[]): IPromise<T[]> =>
+    export const all = <T>(ps: IThenable<T>[]): IThenable<T[]> =>
         make<T[]>((pass, fail) => {
             var xs = [] as T[];
             var n = ps.length;
@@ -35,14 +35,14 @@
             });
         });
 
-    export const race = <T>(ps: IThenable<T>[]): IPromise<T> =>
+    export const race = <T>(ps: IThenable<T>[]): IThenable<T> =>
         make<T>((pass, fail) => {
             ps.forEach((p, i) => {
                 p.then(x => { pass(x); });
             });
         });
 
-    export const delay = <T>(t: number, f: (T | (() => T))): IPromise<T> =>
+    export const delay = <T>(t: number, f: (T | (() => T))): IThenable<T> =>
         make<T>((pass, fail) => {
             setTimeout(() => {
                 pass(isFunction(f) ? (f as () => T)() : (f as T));
@@ -57,7 +57,7 @@
 
     export const make = <T>(
         setup: (pass: (x: T) => void, fail: (r: any) => void) => void
-    ): IPromise<T> => {
+    ): IThenable<T> => {
         const p = {
             value: null,
             state: pending,
