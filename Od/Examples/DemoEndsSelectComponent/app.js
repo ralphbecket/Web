@@ -1243,117 +1243,84 @@ var Od;
         Od[tag] = function (fst, snd) { return elt(tag, fst, snd); };
     });
 })(Od || (Od = {}));
-/// <reference path="../../Ends/Elements.ts"/>
-window.onload = function () {
-    // ---- Preamble.
-    var addDemo = function (title, content) {
-        var vdom = Od.DIV([
-            Od.H3(title),
-            Od.DIV({ className: "DemoContainer" }, content())
-        ]);
-        Od.appendChild(vdom, document.body);
-    };
-    // ---- A simple incrementing counter component.
-    var counter = function (name, x, style) {
-        console.log("-- Creating counter.");
-        var inc = function () {
-            x(x() + 1);
-        };
-        var cmpt = Od.component(name, function () {
-            console.log("-- Updating counter vDOM.");
-            return Od.BUTTON({ style: style, onclick: inc }, x().toString());
-        });
-        return cmpt;
-    };
-    addDemo("Simple components", function () {
-        return counter("A", Obs.of(0));
-    });
-    // ---- A component that swaps sub-components around.  This demonstrates
-    //      how Od does not re-generate, re-patch, or re-render sub-components.
-    var swapper = function (name, x, y) {
-        console.log("-- Creating swapper.");
-        var X = Obs.of(x);
-        var Y = Obs.of(y);
-        var swap = function () {
-            // This updates two observables, but we only want to update the
-            // vDOM once, hence we do the updates in an atomic update region.
-            Obs.startUpdate();
-            var tmp = X();
-            X(Y());
-            Y(tmp);
-            Obs.endUpdate();
-        };
-        var cmpt = Od.component(name, function () {
-            console.log("-- Updating swapper vDOM.");
-            return Od.DIV([
-                X(),
-                Od.BUTTON({ onclick: swap }, "Swap!"),
-                Y()
-            ]);
-        });
-        return cmpt;
-    };
-    addDemo("Nested components", function () {
-        return swapper("B", counter("BA", Obs.of(0), "color: blue;"), counter("BB", Obs.of(0), "color: red;"));
-    });
-    // ---- More of the same, but deeper.
-    addDemo("Nested nested components", function () {
-        var A = counter("CA", Obs.of(0), "color: blue;");
-        var B = counter("CB", Obs.of(0), "color: red;");
-        var C = counter("CC", Obs.of(0), "color: blue;");
-        var D = counter("CD", Obs.of(0), "color: red;");
-        var AB = Od.DIV({ style: "border: 1ex solid yellow; display: inline-block;" }, swapper("CAB", A, B));
-        var CD = Od.DIV({ style: "border: 1ex solid cyan; display: inline-block;" }, swapper("CCD", C, D));
-        return swapper("CABCD", AB, CD);
-    });
-    // ---- Simple inputs.
-    var bindValueOnChange = function (x, props) {
-        if (props === void 0) { props = {}; }
-        props["value"] = x();
+/// <reference path="../Ends/Elements.ts" />
+var Od;
+(function (Od) {
+    Od.selectComponent = function (args) {
+        var props = args.props || {};
         props["onchange"] = function (v) {
-            x(v.target.value);
+            updateSelection(Obs.value(args.options), args.selection, v.target.selectedIndex);
         };
-        return props;
+        var optionView = args.optionView || defaultOptionView;
+        var e = Od.element;
+        var vdom = Od.component(props["name"], function () {
+            var props = Obs.value(args.props) || {};
+            var options = Obs.value(args.options);
+            var selection = args.selection();
+            var iTop = options.length;
+            for (var i = 0; i < iTop; i++)
+                if (options[i] === selection)
+                    break;
+            if (i === iTop) {
+                if (selection !== null)
+                    args.selection(null);
+                i = -1;
+            }
+            props["selectedIndex"] = i;
+            var vdom = Od.SELECT(props, options.map(function (x) { return Od.OPTION(optionView(x)); }));
+            return vdom;
+        });
+        return vdom;
     };
-    var bindValue = function (x, props) {
-        if (props === void 0) { props = {}; }
-        props["value"] = x();
-        return props;
+    var updateSelection = function (options, selection, i) {
+        if (i == null)
+            return;
+        selection(options[i]);
     };
-    addDemo("Simple inputs", function () {
-        var X = Obs.of(2);
-        var Y = Obs.of(2);
-        var Z = Obs.fn(function () { return +X() + +Y(); });
-        var props = { style: "width: 2em; text-align: right;" };
-        return Od.DIV([
-            Od.INPUT(bindValueOnChange(X, props)),
-            " + ",
-            Od.INPUT(bindValueOnChange(Y, props)),
-            " = ",
-            Od.component("D", function () { return Z().toString(); })
+    var defaultOptionView = function (x) {
+        return (x == null) ? "null" : x.toString();
+    };
+})(Od || (Od = {}));
+/// <reference path="../../Ends/Elements.ts"/>
+/// <reference path="../../Ends/SelectComponent.ts"/>
+var DemoEndsSelectComponent;
+(function (DemoEndsSelectComponent) {
+    DemoEndsSelectComponent.vdom = function () {
+        var options = Obs.of([
+            "One",
+            "Two",
+            "Three",
+            "Four",
+            "Five",
+            "Six",
+            "Seven",
+            "Eight",
+            "Nine",
+            "Ten"
         ]);
-    });
-    // ---- Simple lists.
-    addDemo("Simple lists", function () {
-        var Xs = Obs.of([1], Obs.alwaysUpdate);
-        var inc = function () {
-            var xs = Xs();
-            xs.push(xs.length + 1);
-            Xs(xs);
+        var optionView = function (x) { return x.toUpperCase(); };
+        var selection = Obs.of(null);
+        var changeOptions = function () {
+            options().sort(function (a, b) { return Math.random() - 0.5; });
+            Obs.updateDependents(options);
         };
-        var dec = function () {
-            var xs = Xs();
-            if (xs.length <= 1)
-                return;
-            xs.pop();
-            Xs(xs);
+        var changeSelection = function () {
+            var opts = options();
+            var n = opts.length;
+            selection(opts[(n * Math.random()) | 0]);
         };
-        return Od.DIV([
-            Od.BUTTON({ onclick: inc, style: "width: 2em;" }, "+"),
-            Od.BUTTON({ onclick: dec, style: "width: 2em;" }, "-"),
-            Od.component("E", function () {
-                return Od.DIV(Xs().map(function (x) { return Od.SPAN(" " + x + " "); }));
+        var e = Od.element;
+        var vdom = e("DIV", null, [
+            e("BUTTON", { onclick: changeOptions }, "Randomize options"),
+            e("BUTTON", { onclick: changeSelection }, "Randomize selection"),
+            e("HR"),
+            Od.selectComponent({
+                options: options,
+                optionView: optionView,
+                selection: selection,
+                props: { style: "color: blue;" }
             })
         ]);
-    });
-};
+        return vdom;
+    };
+})(DemoEndsSelectComponent || (DemoEndsSelectComponent = {}));

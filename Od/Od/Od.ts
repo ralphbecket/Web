@@ -231,7 +231,7 @@ namespace Od {
             vdom.subscription = null;
         }
         if (vdom.dom) {
-            lifecycleHooks("destroyed", vdom.dom);
+            lifecycleHooks("removed", vdom.dom);
             enqueueNodeForStripping(vdom.dom);
             vdom.dom = null;
         }
@@ -544,7 +544,7 @@ namespace Od {
         const newDom = patchDom(vdom, dom, domParent);
         setDomComponent(newDom, component);
         component.dom = newDom;
-        lifecycleHooks("created", newDom);
+        lifecycleHooks("updated", newDom);
     }
 
     const disposeAnonymousSubcomponents = (vdom: IVdom): void => {
@@ -687,13 +687,39 @@ namespace Od {
     // Some component nodes will have life-cycle hooks to call.
     const lifecycleHooks = (what: string, dom: Node): void => {
         const props = dom && getEltOdProps(dom);
-        const hook = props && props["odlifecycle"];
-        if (hook) hook(what, dom);
-        //console.log([what, dom]);
+        const hook = props && props["onodevent"];
+        if (!hook) return;
+        switch (what) {
+            case "created": pendingOnCreatedNodes.push(dom); break;
+            case "updated": pendingOnUpdatedNodes.push(dom); break;
+            case "removed": pendingOnRemovedNodes.push(dom); break;
+        }
+        if (pendingOdEventsID) return;
+        pendingOdEventsID = setTimeout(processPendingOdEvents, 0);
+    };
+
+    var pendingOdEventsID = 0;
+    const pendingOnCreatedNodes = [] as Node[];
+    const pendingOnUpdatedNodes = [] as Node[];
+    const pendingOnRemovedNodes = [] as Node[];
+
+    // We process Od lifecycle events after the DOM has had a chance to
+    // rearrange itself.
+    const processPendingOdEvents = (): void => {
+        var node: Node;
+        while (node = pendingOnCreatedNodes.pop()) {
+            (node as any).onodevent("created", node);
+        }
+        while (node = pendingOnUpdatedNodes.pop()) {
+            (node as any).onodevent("updated", node);
+        }
+        while (node = pendingOnRemovedNodes.pop()) {
+            (node as any).onodevent("removed", node);
+        }
+        pendingOdEventsID = 0;
     };
 
     // Debugging.
-
     const trace: any = function() {
         if (!debug) return;
         if (!window.console || !window.console.log) return;

@@ -610,7 +610,7 @@ var Od;
             vdom.subscription = null;
         }
         if (vdom.dom) {
-            lifecycleHooks("destroyed", vdom.dom);
+            lifecycleHooks("removed", vdom.dom);
             enqueueNodeForStripping(vdom.dom);
             vdom.dom = null;
         }
@@ -876,7 +876,7 @@ var Od;
         var newDom = Od.patchDom(vdom, dom, domParent);
         setDomComponent(newDom, component);
         component.dom = newDom;
-        lifecycleHooks("created", newDom);
+        lifecycleHooks("updated", newDom);
     }
     var disposeAnonymousSubcomponents = function (vdom) {
         var anonymousSubcomponents = vdom.subcomponents && vdom.subcomponents[""];
@@ -938,7 +938,7 @@ var Od;
         }
         var newDom = Od.patchDom(vdom, dom, domParent);
         setDomComponent(newDom, component);
-        lifecycleHooks("updated", newDom);
+        lifecycleHooks(dom ? "updated" : "created", newDom);
         component.dom = newDom;
     };
     // A DOM node will be replaced by a new DOM structure if it
@@ -1018,10 +1018,42 @@ var Od;
     // Some component nodes will have life-cycle hooks to call.
     var lifecycleHooks = function (what, dom) {
         var props = dom && getEltOdProps(dom);
-        var hook = props && props["odlifecycle"];
-        if (hook)
-            hook(what, dom);
-        //console.log([what, dom]);
+        var hook = props && props["onodevent"];
+        if (!hook)
+            return;
+        switch (what) {
+            case "created":
+                pendingOnCreatedNodes.push(dom);
+                break;
+            case "updated":
+                pendingOnUpdatedNodes.push(dom);
+                break;
+            case "removed":
+                pendingOnRemovedNodes.push(dom);
+                break;
+        }
+        if (pendingOdEventsID)
+            return;
+        pendingOdEventsID = setTimeout(processPendingOdEvents, 0);
+    };
+    var pendingOdEventsID = 0;
+    var pendingOnCreatedNodes = [];
+    var pendingOnUpdatedNodes = [];
+    var pendingOnRemovedNodes = [];
+    // We process Od lifecycle events after the DOM has had a chance to
+    // rearrange itself.
+    var processPendingOdEvents = function () {
+        var node;
+        while (node = pendingOnCreatedNodes.pop()) {
+            node.onodevent("created", node);
+        }
+        while (node = pendingOnUpdatedNodes.pop()) {
+            node.onodevent("updated", node);
+        }
+        while (node = pendingOnRemovedNodes.pop()) {
+            node.onodevent("removed", node);
+        }
+        pendingOdEventsID = 0;
     };
     // Debugging.
     var trace = function () {
