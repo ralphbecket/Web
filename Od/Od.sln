@@ -35,12 +35,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestEndsRouter", "Tests\Tes
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MinJs", "MinJs\MinJs.csproj", "{E0DFBC82-816E-4809-8783-46CAB34BD279}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Images", "Images", "{C48BD8CE-1A99-4D9B-9A67-E1C3963A5715}"
-	ProjectSection(SolutionItems) = preProject
-		Images\OdComponents.svg = Images\OdComponents.svg
-		Images\OdComponents.xml = Images\OdComponents.xml
-	EndProjectSection
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
