@@ -1063,319 +1063,197 @@ var Od;
         console.log.apply(console, arguments);
     };
 })(Od || (Od = {}));
-var Test;
-(function (Test) {
-    Test.passedTestsID = "passed";
-    Test.failedTestsID = "failed";
-    Test.addPassReport = function (name) {
-        addReport(Test.passedTestsID, name);
+// Elements.ts
+//
+// This library provides some handy syntactic sugar.  Rather than writing
+// any of
+//
+//  Od.element("HR")
+//  Od.element("DIV", null, [children...])
+//  Od.element("A", { href: "..." }, [children...])
+//  Od.element("INPUT", { type: "text" })
+//
+// you can write the somewhat more perspicuous
+//
+//  Od.HR()
+//  Od.DIV([children...])
+//  Od.A({ href: "..." }, [children...])
+//  Od.INPUT({ type: "text" })
+// 
+/// <reference path="../Od/Od.ts"/>
+var Od;
+(function (Od) {
+    var isVdoms = function (x) {
+        return (x != null) && ((x.isIVdom) ||
+            (x instanceof Array) ||
+            (typeof (x) === "string"));
     };
-    Test.addFailureReport = function (name, e) {
-        var msg = ": " + (typeof (e) === "string" ? e : JSON.stringify(e));
-        if (e === null || e === undefined || e === "")
-            msg = "";
-        addReport(Test.failedTestsID, name + msg);
+    var elt = function (tag, fst, snd) {
+        var fstIsVdoms = isVdoms(fst);
+        if (fstIsVdoms && snd != null)
+            throw new Error("Od." + tag + ": given two args, but first arg is not props.");
+        return (fstIsVdoms
+            ? Od.element(tag, null, fst)
+            : Od.element(tag, fst, snd));
     };
-    var addReport = function (id, msg) {
-        var div = document.getElementById(id);
-        var p = document.createElement("P");
-        p.textContent = msg;
-        div.appendChild(p);
-    };
-    Test.expect = function (what, cond) {
-        if (!cond)
-            throw what;
-    };
-    Test.run = function (name, action) {
-        try {
-            window.console && window.console.log("---- " + name + " ----");
-            action();
-            Test.addPassReport(name);
-        }
-        catch (e) {
-            var what = (typeof (e) === "string" ? e : JSON.stringify(e));
-            Test.addFailureReport(name, what);
-        }
-    };
-    Test.runDeferred = function (timeoutInMS, name, action) {
-        var completed = false;
-        var pass = function () {
-            if (completed)
-                return;
-            Test.addPassReport(name);
-            completed = true;
-        };
-        var expect = function (what, cond) {
-            if (completed)
-                return;
-            if (cond)
-                return;
-            Test.addFailureReport(name, what);
-            completed = true;
-        };
-        setTimeout(function () {
-            if (completed)
-                return;
-            expect("timed out", false);
-        }, timeoutInMS);
-        try {
-            action(pass, expect);
-        }
-        catch (e) {
-            expect(e.message, false);
-        }
-    };
-})(Test || (Test = {}));
-/// <reference path="../../Od/Od.ts"/>
-/// <reference path="../TestHarness/Test.ts"/>
+    // This approach is short, but sweet.
+    ["A",
+        "ABBR",
+        "ACRONYM",
+        "ADDRESS",
+        "APPLET",
+        "AREA",
+        "ARTICLE",
+        "ASIDE",
+        "AUDIO",
+        "B",
+        "BASE",
+        "BASEFONT",
+        "BDI",
+        "BDO",
+        "BGSOUND",
+        "BIG",
+        "BLINK",
+        "BLOCKQUOTE",
+        "BODY",
+        "BR",
+        "BUTTON",
+        "CANVAS",
+        "CAPTION",
+        "CENTER",
+        "CITE",
+        "CODE",
+        "COL",
+        "COLGROUP",
+        "COMMAND",
+        "CONTENT",
+        "DATA",
+        "DATALIST",
+        "DD",
+        "DEL",
+        "DETAILS",
+        "DFN",
+        "DIALOG",
+        "DIR",
+        "DIV",
+        "DL",
+        "DT",
+        "ELEMENT",
+        "EM",
+        "EMBED",
+        "FIELDSET",
+        "FIGCAPTION",
+        "FIGURE",
+        "FONT",
+        "FOOTER",
+        "FORM",
+        "FRAME",
+        "FRAMESET",
+        "H1",
+        "H2",
+        "H3",
+        "H4",
+        "H5",
+        "H6",
+        "HEAD",
+        "HEADER",
+        "HGROUP",
+        "HR",
+        "HTML",
+        "I",
+        "IFRAME",
+        "IMAGE",
+        "IMG",
+        "INPUT",
+        "INS",
+        "ISINDEX",
+        "KBD",
+        "KEYGEN",
+        "LABEL",
+        "LEGEND",
+        "LI",
+        "LINK",
+        "LISTING",
+        "MAIN",
+        "MAP",
+        "MARK",
+        "MARQUEE",
+        "MENU",
+        "MENUITEM",
+        "META",
+        "METER",
+        "MULTICOL",
+        "NAV",
+        "NOBR",
+        "NOEMBED",
+        "NOFRAMES",
+        "NOSCRIPT",
+        "OBJECT",
+        "OL",
+        "OPTGROUP",
+        "OPTION",
+        "OUTPUT",
+        "P",
+        "PARAM",
+        "PICTURE",
+        "PLAINTEXT",
+        "PRE",
+        "PROGRESS",
+        "Q",
+        "RP",
+        "RT",
+        "RTC",
+        "RUBY",
+        "S",
+        "SAMP",
+        "SCRIPT",
+        "SECTION",
+        "SELECT",
+        "SHADOW",
+        "SMALL",
+        "SOURCE",
+        "SPACER",
+        "SPAN",
+        "STRIKE",
+        "STRONG",
+        "STYLE",
+        "SUB",
+        "SUMMARY",
+        "SUP",
+        "TABLE",
+        "TBODY",
+        "TD",
+        "TEMPLATE",
+        "TEXTAREA",
+        "TFOOT",
+        "TH",
+        "THEAD",
+        "TIME",
+        "TITLE",
+        "TR",
+        "TRACK",
+        "TT",
+        "U",
+        "UL",
+        "VAR",
+        "VIDEO",
+        "WBR",
+        "XMP"
+    ].forEach(function (tag) {
+        Od[tag] = function (fst, snd) { return elt(tag, fst, snd); };
+    });
+})(Od || (Od = {}));
+/// <reference path="../../Ends/Elements.ts"/>
+var n = Obs.of(0);
+var view = Od.component("view", function () {
+    return Od.BUTTON({
+        onodevent: function (what, dom) {
+            Od.appendChild(Od.P("Button " + what), document.body);
+        },
+        onclick: function () { n(n() + 1); }
+    }, n().toString());
+});
 window.onload = function () {
-    Od.deferComponentUpdates = false; // Deferred updates make testing harder.
-    var e = Od.element;
-    var t = Od.text;
-    var d = function (v) { return Od.patchDom(v, null, null); };
-    var nav = function (dom, path) {
-        var iTop = path.length;
-        for (var i = 0; i < iTop; i++) {
-            dom = dom.childNodes[path[i]];
-            if (!dom)
-                throw "Node does not match path " + JSON.stringify(path);
-        }
-        return dom;
-    };
-    var chk = function (dom, path, tag, numChildren, props) {
-        var dom = nav(dom, path);
-        var textMatches = (dom.nodeType === Node.TEXT_NODE) &&
-            (tag[0] === "#") &&
-            (dom.textContent === tag.substr(1));
-        var tagMatches = (dom.tagName === tag);
-        if (!textMatches && !tagMatches)
-            throw "Node tag is not " + tag;
-        if (numChildren != undefined && dom.childNodes.length != numChildren)
-            throw "Node does not have " + numChildren + " children.";
-        return chkProps(dom, props);
-    };
-    var chkProps = function (dom, props) {
-        if (!props)
-            return true;
-        for (var key in props) {
-            var value = props[key];
-            if ((value && dom[key] !== value))
-                throw "Node does not have expected value for " + key;
-            if ((!value && dom[key]))
-                throw "Node has unexpected value for " + key;
-        }
-        return true;
-    };
-    var same = function (x, y) {
-        if (x === y)
-            return true;
-        throw ("Nodes should be identical.");
-    };
-    var diff = function (x, y) {
-        if (x !== y)
-            return true;
-        throw ("Nodes should be different.");
-    };
-    Test.run("Patch xyz vs null", function () {
-        var A = "xyz";
-        var B = null;
-        var C = Od.patchDom(A, B, null);
-        chk(C, [], "#xyz");
-    });
-    Test.run("Patch xyz vs pqr", function () {
-        var A = "xyz";
-        var B = d("pqr");
-        var C = Od.patchDom(A, B, null);
-        chk(C, [], "#xyz");
-        same(B, C);
-    });
-    Test.run("Patch xyz vs xyz", function () {
-        var A = "xyz";
-        var B = d("xyz");
-        var C = Od.patchDom(A, B, null);
-        chk(C, [], "#xyz");
-        same(B, C);
-    });
-    Test.run("Patch xyz vs DIV", function () {
-        var A = "xyz";
-        var B = d(e("DIV"));
-        var C = Od.patchDom(A, B, null);
-        chk(C, [], "#xyz");
-        diff(B, C);
-    });
-    Test.run("Patch DIV(xyz) vs null", function () {
-        var A = e("DIV", null, "xyz");
-        var B = null;
-        var C = Od.patchDom(A, B, null);
-        chk(C, [], "DIV", 1);
-        chk(C, [0], "#xyz");
-    });
-    Test.run("Patch DIV(xyz) vs pqr", function () {
-        var A = e("DIV", null, "xyz");
-        var B = d("pqr");
-        var C = Od.patchDom(A, B, null);
-        chk(C, [], "DIV", 1);
-        chk(C, [0], "#xyz");
-        diff(B, C);
-    });
-    Test.run("Patch DIV(xyz) vs DIV(pqr)", function () {
-        var A = e("DIV", null, "xyz");
-        var B = d(e("DIV", null, "pqr"));
-        var C = Od.patchDom(A, B, null);
-        chk(C, [], "DIV", 1);
-        chk(C, [0], "#xyz");
-        same(B, C);
-    });
-    Test.run("Patch DIV(xyz) vs P", function () {
-        var A = e("DIV", null, "xyz");
-        var B = d(e("P"));
-        var C = Od.patchDom(A, B, null);
-        chk(C, [], "DIV", 1);
-        chk(C, [0], "#xyz");
-        diff(B, C);
-    });
-    Test.run("Patch DIV vs DIV(pqr, qrs)", function () {
-        var A = e("DIV");
-        var B = d(e("DIV", null, ["pqr", "qrs"]));
-        var C = Od.patchDom(A, B, null);
-        chk(C, [], "DIV", 0);
-        same(B, C);
-    });
-    Test.run("Patch DIV(xyz) vs DIV(pqr, qrs)", function () {
-        var A = e("DIV", null, "xyz");
-        var B = d(e("DIV", null, ["pqr", "qrs"]));
-        var C = Od.patchDom(A, B, null);
-        chk(C, [], "DIV", 1);
-        chk(C, [0], "#xyz");
-        same(B, C);
-    });
-    Test.run("Patch DIV(xyz, wxy) vs DIV(pqr)", function () {
-        var A = e("DIV", null, ["xyz", "wxy"]);
-        var B = d(e("DIV", null, "pqr"));
-        var C = Od.patchDom(A, B, null);
-        chk(C, [], "DIV", 2);
-        chk(C, [0], "#xyz");
-        chk(C, [1], "#wxy");
-        same(B, C);
-    });
-    Test.run("Patch Cmpt(DIV(xyz) -> DIV(wxy)) vs null", function () {
-        var text = Obs.of("xyz");
-        var cmpt = Od.component(null, function () { return e("DIV", null, text()); });
-        var A = cmpt;
-        var B = null;
-        var C = Od.patchDom(A, B, null);
-        chk(C, [], "DIV", 1);
-        chk(C, [0], "#xyz");
-        text("wxy");
-        chk(C, [], "DIV", 1);
-        chk(C, [0], "#wxy");
-    });
-    Test.run("Patch DIV(Cmpt(DIV), Cmpt(P)) -> DIV(Cmpt(P), Cmpt(DIV)) vs null", function () {
-        var X = Od.component(null, function () { return e("DIV"); });
-        var Y = Od.component(null, function () { return e("P"); });
-        var A1 = e("DIV", null, [X, Y]);
-        var B = null;
-        var C1 = Od.patchDom(A1, B, null);
-        chk(C1, [], "DIV", 2);
-        var C10 = nav(C1, [0]);
-        var C11 = nav(C1, [1]);
-        chk(C10, [], "DIV", 0);
-        chk(C11, [], "P", 0);
-        var A2 = e("DIV", null, [Y, X]);
-        var C2 = Od.patchDom(A2, C1, null);
-        chk(C2, [], "DIV", 2);
-        var C20 = nav(C2, [0]);
-        var C21 = nav(C2, [1]);
-        chk(C20, [], "P", 0);
-        chk(C21, [], "DIV", 0);
-        same(C10, C21);
-        same(C11, C20);
-    });
-    Test.run("Patch Cmpt(DIV(P(xyz) -> pqr)) vs null", function () {
-        var X = e("P", null, "xyz");
-        var T = Obs.of(true);
-        var A = Od.component(null, function () { return e("DIV", null, T() ? X : "pqr"); });
-        var B = null;
-        var C = Od.patchDom(A, B, null);
-        chk(C, [], "DIV", 1);
-        chk(C, [0], "P", 1);
-        chk(C, [0, 0], "#xyz");
-        T(false);
-        chk(C, [], "DIV", 1);
-        chk(C, [0], "#pqr");
-    });
-    Test.run("Deleting the DOM of a live component.", function () {
-        var X = Obs.of("Hi!");
-        var A = Od.component(null, function () { return e("DIV", null, X()); });
-        var B = null;
-        var C = Od.patchDom(A, B, null);
-        chk(C, [], "DIV", 1);
-        chk(C, [0], "#Hi!");
-        A.dom = null;
-        X("Bye.");
-        var D = Od.patchDom(A, B, null);
-        chk(D, [], "DIV", 1);
-        chk(D, [0], "#Bye.");
-    });
-    Test.run("Keyed lists.", function () {
-        var x = e("P", { key: "x" });
-        var y = e("SPAN", { key: "y" });
-        var z = e("TABLE", { key: "z" });
-        var A1 = e("DIV", { keyed: true }, [x, y, z]);
-        var B = null;
-        var C = Od.patchDom(A1, B, null);
-        chk(C, [], "DIV", 3);
-        chk(C, [0], "P");
-        chk(C, [1], "SPAN");
-        chk(C, [2], "TABLE");
-        var C0 = nav(C, [0]);
-        var C1 = nav(C, [1]);
-        var C2 = nav(C, [2]);
-        var A2 = e("DIV", { keyed: true }, [y, z, x]);
-        var D = Od.patchDom(A2, C, null);
-        chk(D, [], "DIV", 3);
-        chk(D, [0], "SPAN");
-        chk(D, [1], "TABLE");
-        chk(D, [2], "P");
-        var D0 = nav(D, [0]);
-        var D1 = nav(D, [1]);
-        var D2 = nav(D, [2]);
-        same(C0, D2);
-        same(C1, D0);
-        same(C2, D1);
-    });
-    Test.run("Dom from HTML strings.", function () {
-        var X = Od.fromHtml("<H4>xyz<SPAN>pqr</SPAN></H4>");
-        var A = e("DIV", null, X);
-        var B = null;
-        var C = Od.patchDom(A, B, null);
-        chk(C, [], "DIV", 1);
-        chk(C, [0], "H4", 2);
-        chk(C, [0, 0], "#xyz");
-        chk(C, [0, 1], "SPAN", 1);
-        chk(C, [0, 1, 0], "#pqr");
-    });
-    Test.run("Style properties.", function () {
-        var A1 = e("DIV", null, "xyz");
-        var B = null;
-        var C = Od.patchDom(A1, B, null);
-        chk(C, [], "DIV", 1);
-        chk(C, [0], "#xyz");
-        Test.expect("Initial colour is not set.", C.style.color === "");
-        var A2 = e("DIV", {
-            style: { color: "red" }
-        });
-        Od.patchDom(A2, C, null);
-        Test.expect("Colour is now red.", C.style.color === "red");
-        var A3 = e("DIV", {
-            style: { color: "blue" }
-        });
-        Od.patchDom(A3, C, null);
-        Test.expect("Colour is now blue.", C.style.color === "blue");
-        var A4 = e("DIV", {
-            style: null
-        });
-        Od.patchDom(A4, C, null);
-        Test.expect("Colour is not set again.", C.style.color === "");
-    });
+    Od.appendChild(view, document.body);
 };
+//# sourceMappingURL=app.js.map

@@ -937,7 +937,7 @@ var Od;
         }
         var newDom = Od.patchDom(vdom, dom, domParent);
         setDomComponent(newDom, component);
-        lifecycleHooks(dom ? "updated" : "created", newDom);
+        lifecycleHooks("updated", newDom);
         component.dom = newDom;
     };
     // A DOM node will be replaced by a new DOM structure if it
