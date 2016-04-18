@@ -98,7 +98,7 @@ namespace Od {
     // recreated.  Names need only be unique within the scope of the
     // immediate parent component.
     //
-    // Passing a falsy name creates an anonymous 'component', which is
+    // Passing a nully name creates an anonymous 'component', which is
     // ephemeral (i.e., it will be re-created every time the parent component
     // updates).  Typically you do not want this!
     //
@@ -151,7 +151,7 @@ namespace Od {
     var parentSubcomponents = null as ISubComponents;
 
     const existingNamedComponentInstance = (name: ComponentName): IVdom =>
-        name &&
+        (name != null) &&
         parentSubcomponents &&
         parentSubcomponents[name as string] as IVdom;
 
@@ -206,16 +206,18 @@ namespace Od {
     // Bind a vDOM node to a DOM node.  For example,
     // Od.bind(myVdom, document.body.getElementById("foo"));
     // This will either update or replace the DOM node in question.
-    export const bind = (vdom: Vdom, dom: Node): void => {
+    export const bind = (vdom: Vdom, dom: Node): Node => {
         const domParent = dom.parentNode;
-        patchDom(vdom, dom, domParent);
+        const node = patchDom(vdom, dom, domParent);
+        return node;
     };
 
     // Bind a vDOM node to a DOM node as new child.  For example,
     // Od.appendChild(myVdom, document.body);
-    export const appendChild = (vdom: Vdom, domParent: Node): void => {
+    export const appendChild = (vdom: Vdom, domParent: Node): Node => {
         const dom = null as Node;
-        patchDom(vdom, dom, domParent);
+        const node = patchDom(vdom, dom, domParent);
+        return node;
     };
 
     // Dispose of a component, removing any observable dependencies

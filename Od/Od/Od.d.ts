@@ -14,8 +14,8 @@ declare namespace Od {
     function component<T>(name: ComponentName, obs: Obs.IObservable<Vdom>): IVdom;
     const fromHtml: (html: string) => IVdom;
     const fromDom: (dom: Node) => IVdom;
-    const bind: (vdom: string | IVdom, dom: Node) => void;
-    const appendChild: (vdom: string | IVdom, domParent: Node) => void;
+    const bind: (vdom: string | IVdom, dom: Node) => Node;
+    const appendChild: (vdom: string | IVdom, domParent: Node) => Node;
     const dispose: (vdom: IVdom) => void;
     var deferComponentUpdates: boolean;
     interface ISubComponents {

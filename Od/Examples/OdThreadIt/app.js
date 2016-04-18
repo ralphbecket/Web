@@ -532,7 +532,7 @@ var Od;
     // Any subcomponents of the component currently being defined.
     var parentSubcomponents = null;
     var existingNamedComponentInstance = function (name) {
-        return name &&
+        return (name != null) &&
             parentSubcomponents &&
             parentSubcomponents[name];
     };
@@ -587,13 +587,15 @@ var Od;
     // This will either update or replace the DOM node in question.
     Od.bind = function (vdom, dom) {
         var domParent = dom.parentNode;
-        Od.patchDom(vdom, dom, domParent);
+        var node = Od.patchDom(vdom, dom, domParent);
+        return node;
     };
     // Bind a vDOM node to a DOM node as new child.  For example,
     // Od.appendChild(myVdom, document.body);
     Od.appendChild = function (vdom, domParent) {
         var dom = null;
-        Od.patchDom(vdom, dom, domParent);
+        var node = Od.patchDom(vdom, dom, domParent);
+        return node;
     };
     // Dispose of a component, removing any observable dependencies
     // it may have.
@@ -1757,4 +1759,3 @@ var main = function () {
 window.onload = function () {
     main();
 };
-s
