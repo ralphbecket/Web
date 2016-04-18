@@ -258,3 +258,4 @@ const main = (): void => {
 window.onload = () => {
     main();
 };
+
