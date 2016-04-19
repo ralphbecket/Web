@@ -484,7 +484,7 @@ var Obs;
 /// <reference path="./Obs.ts"/>
 var Od;
 (function (Od) {
-    var debug = true;
+    var debug = false;
     ;
     Od.text = function (text) {
         return ({ isIVdom: true, text: isNully(text) ? "" : text.toString() });
@@ -1019,34 +1019,19 @@ var Od;
         var hook = props && props["onodevent"];
         if (!hook)
             return;
-        switch (what) {
-            case "created":
-                pendingOnCreatedNodes.push(dom);
-                break;
-            case "updated":
-                pendingOnUpdatedNodes.push(dom);
-                break;
-            case "removed":
-                hook(what, dom);
-                return;
-        }
+        pendingLifecycleCallbacks.push(function () { return hook(what, dom); });
         if (pendingOdEventsID)
             return;
         pendingOdEventsID = setTimeout(processPendingOdEvents, 0);
     };
     var pendingOdEventsID = 0;
-    var pendingOnCreatedNodes = [];
-    var pendingOnUpdatedNodes = [];
+    var pendingLifecycleCallbacks = [];
     // We process Od lifecycle events after the DOM has had a chance to
     // rearrange itself.
     var processPendingOdEvents = function () {
-        var node;
-        while (node = pendingOnCreatedNodes.pop()) {
-            node.onodevent("created", node);
-        }
-        while (node = pendingOnUpdatedNodes.pop()) {
-            node.onodevent("updated", node);
-        }
+        for (var i = 0; i < pendingLifecycleCallbacks.length; i++)
+            pendingLifecycleCallbacks[i]();
+        pendingLifecycleCallbacks = [];
         pendingOdEventsID = 0;
     };
     // Debugging.

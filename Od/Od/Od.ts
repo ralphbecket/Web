@@ -57,7 +57,7 @@
 /// <reference path="./Obs.ts"/>
 namespace Od {
 
-    const debug = true;
+    const debug = false;
 
     // ---- Public interface. ----
 
@@ -685,29 +685,20 @@ namespace Od {
         const props = dom && getEltOdProps(dom);
         const hook = props && props["onodevent"];
         if (!hook) return;
-        switch (what) {
-            case "created": pendingOnCreatedNodes.push(dom); break;
-            case "updated": pendingOnUpdatedNodes.push(dom); break;
-            case "removed": hook(what, dom); return;
-        }
+        pendingLifecycleCallbacks.push(() => hook(what, dom));
         if (pendingOdEventsID) return;
         pendingOdEventsID = setTimeout(processPendingOdEvents, 0);
     };
 
     var pendingOdEventsID = 0;
-    const pendingOnCreatedNodes = [] as Node[];
-    const pendingOnUpdatedNodes = [] as Node[];
+    var pendingLifecycleCallbacks = [] as (() => void)[];
 
     // We process Od lifecycle events after the DOM has had a chance to
     // rearrange itself.
     const processPendingOdEvents = (): void => {
-        var node: Node;
-        while (node = pendingOnCreatedNodes.pop()) {
-            (node as any).onodevent("created", node);
-        }
-        while (node = pendingOnUpdatedNodes.pop()) {
-            (node as any).onodevent("updated", node);
-        }
+        for (var i = 0; i < pendingLifecycleCallbacks.length; i++)
+            pendingLifecycleCallbacks[i]();
+        pendingLifecycleCallbacks = [];
         pendingOdEventsID = 0;
     };
 
