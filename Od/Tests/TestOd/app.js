@@ -200,7 +200,7 @@ var Obs;
         if (valueStr && Obs.toStringMaxValueLength < valueStr.length) {
             valueStr = valueStr.substr(0, Obs.toStringMaxValueLength) + "...";
         }
-        return "{obs " + this.id + " = " + valueStr + "}";
+        return "{obs " + (this.id || "") + " = " + valueStr + "}";
     };
     // Break the connection between an observable and its dependencies.
     Obs.dispose = function (obs) {
@@ -483,7 +483,7 @@ var Obs;
 /// <reference path="./Obs.ts"/>
 var Od;
 (function (Od) {
-    var debug = false;
+    var debug = true;
     ;
     Od.text = function (text) {
         return ({ isIVdom: true, text: isNully(text) ? "" : text.toString() });
@@ -498,56 +498,52 @@ var Od;
                 : [childOrChildren]);
         return { isIVdom: true, tag: tag, props: props, children: children };
     };
-    function component(name, fn, x) {
+    Od.component = function (name, fn, x) {
         var existingVdom = existingNamedComponentInstance(name);
         if (existingVdom)
             return existingVdom;
-        var obs = (Obs.isObservable(fn)
-            ? fn
-            : Obs.fn(function () { return fn(x); }));
-        var vdom = {
+        var component = {
             isIVdom: true,
-            obs: obs,
-            subscription: null,
+            obs: null,
             subcomponents: null,
             dom: null
         };
-        var subs = Obs.subscribe([obs], updateComponent.bind(vdom));
-        vdom.subscription = subs;
+        component.obs = Obs.fn(function () { return updateComponent(component, fn, x); });
         // Attach this component as a subcomponent of the parent context.
-        addAsParentSubcomponent(name, vdom);
-        // Set the component context for the component body.
-        var tmp = parentSubcomponents;
-        parentSubcomponents = null;
-        // Initialise the dom component.
-        subs();
-        // Record any subcomponents we have.
-        vdom.subcomponents = parentSubcomponents;
-        // Restore the parent subcomponent context.
-        parentSubcomponents = tmp;
-        return vdom;
-    }
-    Od.component = component;
-    ;
-    // Any subcomponents of the component currently being defined.
-    var parentSubcomponents = null;
+        addAsSubcomponentOfParent(name, component);
+        return component;
+    };
+    // The current parent component scope, if any.
+    var parentComponent = null;
     var existingNamedComponentInstance = function (name) {
         return (name != null) &&
-            parentSubcomponents &&
-            parentSubcomponents[name];
+            parentComponent &&
+            parentComponent.subcomponents &&
+            parentComponent.subcomponents[name];
     };
-    var addAsParentSubcomponent = function (name, child) {
-        if (!parentSubcomponents)
-            parentSubcomponents = {};
-        if (name) {
-            parentSubcomponents[name] = child;
+    var anonymousSubcomponentsKey = "__OdAnonymousSubcomponents__";
+    var addAsSubcomponentOfParent = function (name, child) {
+        if (!parentComponent)
             return;
+        if (!parentComponent.subcomponents)
+            parentComponent.subcomponents = {};
+        var subcomponents = parentComponent.subcomponents;
+        if (name != null) {
+            // This is a named sub-component which will persist for the
+            // lifetime of the parent component.
+            subcomponents[name] = child;
         }
-        // Otherwise, this child has no name.  Aww.  In this case we
-        // store a list of these nameless children under the special name "".
-        if (!("" in parentSubcomponents))
-            parentSubcomponents[""] = [];
-        parentSubcomponents[""].push(child);
+        else {
+            // This child has no name.  Aww.  In this case we store a list
+            // of these nameless children under a special name.
+            var anonSubcomponents = subcomponents[anonymousSubcomponentsKey];
+            if (!anonSubcomponents) {
+                subcomponents[anonymousSubcomponentsKey] = [child];
+            }
+            else {
+                anonSubcomponents.push(child);
+            }
+        }
     };
     // Construct a static DOM subtree from an HTML string.
     // Note: this vDOM node can, like DOM nodes, only appear
@@ -599,31 +595,27 @@ var Od;
     };
     // Dispose of a component, removing any observable dependencies
     // it may have.
-    Od.dispose = function (vdom) {
-        if (!vdom)
+    Od.dispose = function (component) {
+        if (!component)
             return;
-        if (vdom.obs) {
-            Obs.dispose(vdom.obs);
-            vdom.obs = null;
+        if (component.obs) {
+            Obs.dispose(component.obs);
+            component.obs = null;
         }
-        if (vdom.subscription) {
-            Obs.dispose(vdom.subscription);
-            vdom.subscription = null;
+        if (component.dom) {
+            lifecycleHooks("removed", component.dom);
+            enqueueNodeForStripping(component.dom);
+            component.dom = null;
         }
-        if (vdom.dom) {
-            lifecycleHooks("removed", vdom.dom);
-            enqueueNodeForStripping(vdom.dom);
-            vdom.dom = null;
-        }
-        if (vdom.subcomponents) {
-            disposeSubcomponents(vdom.subcomponents);
-            vdom.subcomponents = null;
+        if (component.subcomponents) {
+            disposeSubcomponents(component.subcomponents);
+            component.subcomponents = null;
         }
     };
     var disposeSubcomponents = function (subcomponents) {
         for (var name in subcomponents) {
             var subcomponent = subcomponents[name];
-            if (name === "") {
+            if (name === anonymousSubcomponentsKey) {
                 // These are anonymous subcomponents, kept in an list.
                 subcomponent.forEach(Od.dispose);
             }
@@ -856,35 +848,39 @@ var Od;
     var domBelongsToComponent = function (dom) {
         return !!getDomComponent(dom);
     };
-    function updateComponent() {
-        var component = this;
+    var updateComponent = function (component, fn, x) {
         // If the component has anonymous subcomponents, we should dispose
-        // of them now -- they will be recreated if needed.  Named
+        // of them now -- they will be recreated by fn if needed.  Named
         // subcomponents will persist.
         disposeAnonymousSubcomponents(component);
-        var dom = component.dom;
+        // Evaluate the vDOM function with this component as the parent for
+        // any sub-components it generates.
+        var tmp = parentComponent;
+        parentComponent = component;
+        var vdom = fn(x);
+        parentComponent = tmp;
         // If a DOM node is already associated with the component, we
         // can defer the patching operation (which is nicer for the
         // web browser).
-        if (dom) {
-            enqueueComponentForPatching(component);
-            return;
+        if (!component.dom) {
+            var dom = Od.patchDom(vdom, null, null);
+            setDomComponent(dom, component);
+            component.dom = dom;
+            lifecycleHooks("created", dom);
         }
-        // Otherwise we have to establish the association up front.
-        var vdom = component.obs();
-        var domParent = dom && dom.parentNode;
-        setDomComponent(dom, null);
-        var newDom = Od.patchDom(vdom, dom, domParent);
-        setDomComponent(newDom, component);
-        component.dom = newDom;
-        lifecycleHooks(dom ? "updated" : "created", newDom);
-    }
-    var disposeAnonymousSubcomponents = function (vdom) {
-        var anonymousSubcomponents = vdom.subcomponents && vdom.subcomponents[""];
+        else {
+            // The updated lifecycle hooks will be invoked here.
+            enqueueComponentForPatching(component, vdom);
+        }
+        return vdom;
+    };
+    var disposeAnonymousSubcomponents = function (component) {
+        var anonymousSubcomponents = component.subcomponents &&
+            component.subcomponents[anonymousSubcomponentsKey];
         if (!anonymousSubcomponents)
             return;
         anonymousSubcomponents.forEach(Od.dispose);
-        vdom.subcomponents[""] = null;
+        component.subcomponents[anonymousSubcomponentsKey] = null;
     };
     // We defer DOM updates using requestAnimationFrame.  It's better to
     // batch DOM updates where possible.
@@ -894,9 +890,9 @@ var Od;
     var requestAnimationFrame = window.requestAnimationFrame || requestAnimationFrameSubstitute;
     var componentsAwaitingUpdate = [];
     var requestAnimationFrameID = 0;
-    var enqueueComponentForPatching = function (component) {
+    var enqueueComponentForPatching = function (component, vdom) {
         if (!Od.deferComponentUpdates) {
-            patchUpdatedComponent(component);
+            patchUpdatedComponent(component, vdom);
             return;
         }
         componentsAwaitingUpdate.push(component);
@@ -924,8 +920,8 @@ var Od;
         // new RAF request on the next update.
         requestAnimationFrameID = 0;
     };
-    var patchUpdatedComponent = function (component) {
-        var vdom = component.obs();
+    var patchUpdatedComponent = function (component, vdom) {
+        vdom = (vdom != null ? vdom : component.obs());
         var dom = component.dom;
         var domParent = dom && dom.parentNode;
         if (domWillBeReplaced(vdom, dom)) {
@@ -1030,8 +1026,8 @@ var Od;
                 pendingOnUpdatedNodes.push(dom);
                 break;
             case "removed":
-                pendingOnRemovedNodes.push(dom);
-                break;
+                hook(what, dom);
+                return;
         }
         if (pendingOdEventsID)
             return;
@@ -1040,7 +1036,6 @@ var Od;
     var pendingOdEventsID = 0;
     var pendingOnCreatedNodes = [];
     var pendingOnUpdatedNodes = [];
-    var pendingOnRemovedNodes = [];
     // We process Od lifecycle events after the DOM has had a chance to
     // rearrange itself.
     var processPendingOdEvents = function () {
@@ -1050,9 +1045,6 @@ var Od;
         }
         while (node = pendingOnUpdatedNodes.pop()) {
             node.onodevent("updated", node);
-        }
-        while (node = pendingOnRemovedNodes.pop()) {
-            node.onodevent("removed", node);
         }
         pendingOdEventsID = 0;
     };
@@ -1379,5 +1371,36 @@ window.onload = function () {
         });
         Od.patchDom(A4, C, null);
         Test.expect("Colour is not set again.", C.style.color === "");
+    });
+    Test.runDeferred(1000, "Anonymous components", function (pass, expect) {
+        var X = Obs.of(false);
+        var nCreated = 0;
+        var nUpdated = 0;
+        var nDeleted = 0;
+        var handler = function (what, e) {
+            switch (what) {
+                case "created":
+                    nCreated++;
+                    break;
+                case "updated":
+                    nUpdated++;
+                    break;
+                case "removed":
+                    nDeleted++;
+                    break;
+            }
+        };
+        var A1 = Od.component("A1", function () {
+            return X() ? Od.component(null, function () { return e("DIV", { onodevent: handler }); })
+                : Od.component(null, function () { return e("P", { onodevent: handler }); });
+        });
+        var B = null;
+        var C = Od.patchDom(A1, B, null);
+        X(true);
+        X(false);
+        setTimeout(function () {
+            expect("Num removed", nDeleted === 2);
+            expect("Num created", nCreated === 3);
+        }, 200);
     });
 };

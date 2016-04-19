@@ -57,7 +57,7 @@
 /// <reference path="./Obs.ts"/>
 namespace Od {
 
-    const debug = false;
+    const debug = true;
 
     // ---- Public interface. ----
 
@@ -98,74 +98,64 @@ namespace Od {
     // recreated.  Names need only be unique within the scope of the
     // immediate parent component.
     //
-    // Passing a nully name creates an anonymous 'component', which is
+    // Passing a null name creates an anonymous 'component', which is
     // ephemeral (i.e., it will be re-created every time the parent component
     // updates).  Typically you do not want this!
     //
     // Component vDOM functions may optionally take an argument.  This is
     // convenient when constructing components that depend on external state. 
     //
-    export type ComponentName = string | number; // May not be falsy.
+    export type ComponentName = string | number;
 
-    export function component<T>(
+    export const component = <T>(
         name: ComponentName,
         fn: (x?: T) => Vdom,
         x?: T
-    ): IVdom;
-    export function component<T>(
-        name: ComponentName,
-        obs: Obs.IObservable<Vdom>
-    ): IVdom;
-    export function component(name: ComponentName, fn: any, x?: any): IVdom {
+    ): IVdom => {
         const existingVdom = existingNamedComponentInstance(name);
         if (existingVdom) return existingVdom;
-        const obs =
-            ( Obs.isObservable(fn)
-            ? fn as Obs.IObservable<Vdom>
-            : Obs.fn(() => fn(x))
-            );
-        const vdom = {
+        const component = {
             isIVdom: true,
-            obs: obs,
-            subscription: null,
+            obs: null,
             subcomponents: null,
             dom: null
         } as IVdom;
-        const subs = Obs.subscribe([obs], updateComponent.bind(vdom));
-        vdom.subscription = subs;
+        component.obs = Obs.fn(() => updateComponent(component, fn, x));
         // Attach this component as a subcomponent of the parent context.
-        addAsParentSubcomponent(name, vdom);
-        // Set the component context for the component body.
-        const tmp = parentSubcomponents;
-        parentSubcomponents = null;
-        // Initialise the dom component.
-        subs();
-        // Record any subcomponents we have.
-        vdom.subcomponents = parentSubcomponents;
-        // Restore the parent subcomponent context.
-        parentSubcomponents = tmp;
-        return vdom;
+        addAsSubcomponentOfParent(name, component);
+        return component;
     };
 
-    // Any subcomponents of the component currently being defined.
-    var parentSubcomponents = null as ISubComponents;
+    // The current parent component scope, if any.
+    var parentComponent = null as IVdom;
 
     const existingNamedComponentInstance = (name: ComponentName): IVdom =>
         (name != null) &&
-        parentSubcomponents &&
-        parentSubcomponents[name as string] as IVdom;
+        parentComponent &&
+        parentComponent.subcomponents &&
+        parentComponent.subcomponents[name as string] as IVdom;
 
-    const addAsParentSubcomponent =
+    const anonymousSubcomponentsKey = "__OdAnonymousSubcomponents__";
+
+    const addAsSubcomponentOfParent =
     (name: ComponentName, child: IVdom): void => {
-        if (!parentSubcomponents) parentSubcomponents = {} as ISubComponents;
-        if (name) {
-            parentSubcomponents[name as string] = child;
-            return;
+        if (!parentComponent) return;
+        if (!parentComponent.subcomponents) parentComponent.subcomponents = {};
+        const subcomponents = parentComponent.subcomponents;
+        if (name != null) {
+            // This is a named sub-component which will persist for the
+            // lifetime of the parent component.
+            subcomponents[name as string] = child;
+        } else {
+            // This child has no name.  Aww.  In this case we store a list
+            // of these nameless children under a special name.
+            const anonSubcomponents = subcomponents[anonymousSubcomponentsKey];
+            if (!anonSubcomponents) {
+                subcomponents[anonymousSubcomponentsKey] = [child];
+            } else {
+                (anonSubcomponents as IVdom[]).push(child);
+            }
         }
-        // Otherwise, this child has no name.  Aww.  In this case we
-        // store a list of these nameless children under the special name "".
-        if (!("" in parentSubcomponents)) parentSubcomponents[""] = [];
-        (parentSubcomponents[""] as IVdom[]).push(child);
     }
 
     // Construct a static DOM subtree from an HTML string.
@@ -222,31 +212,27 @@ namespace Od {
 
     // Dispose of a component, removing any observable dependencies
     // it may have.
-    export const dispose = (vdom: IVdom): void => {
-        if (!vdom) return;
-        if (vdom.obs) {
-            Obs.dispose(vdom.obs);
-            vdom.obs = null;
+    export const dispose = (component: IVdom): void => {
+        if (!component) return;
+        if (component.obs) {
+            Obs.dispose(component.obs);
+            component.obs = null;
         }
-        if (vdom.subscription) {
-            Obs.dispose(vdom.subscription);
-            vdom.subscription = null;
+        if (component.dom) {
+            lifecycleHooks("removed", component.dom);
+            enqueueNodeForStripping(component.dom);
+            component.dom = null;
         }
-        if (vdom.dom) {
-            lifecycleHooks("removed", vdom.dom);
-            enqueueNodeForStripping(vdom.dom);
-            vdom.dom = null;
-        }
-        if (vdom.subcomponents) {
-            disposeSubcomponents(vdom.subcomponents);
-            vdom.subcomponents = null;
+        if (component.subcomponents) {
+            disposeSubcomponents(component.subcomponents);
+            component.subcomponents = null;
         }
     };
 
     const disposeSubcomponents = (subcomponents: ISubComponents): void => {
         for (var name in subcomponents) {
             const subcomponent = subcomponents[name];
-            if (name === "") {
+            if (name === anonymousSubcomponentsKey) {
                 // These are anonymous subcomponents, kept in an list.
                 (subcomponent as IVdom[]).forEach(dispose);
             } else {
@@ -525,36 +511,43 @@ namespace Od {
     const domBelongsToComponent = (dom: Node): boolean =>
         !!getDomComponent(dom);
 
-    function updateComponent(): void {
-        const component = this as IVdom;
+    const updateComponent =
+    <T>(component: IVdom, fn: (x?: T) => Vdom, x?: T): Vdom => {
+
         // If the component has anonymous subcomponents, we should dispose
-        // of them now -- they will be recreated if needed.  Named
+        // of them now -- they will be recreated by fn if needed.  Named
         // subcomponents will persist.
         disposeAnonymousSubcomponents(component);
-        const dom = component.dom;
+
+        // Evaluate the vDOM function with this component as the parent for
+        // any sub-components it generates.
+        const tmp = parentComponent;
+        parentComponent = component;
+        const vdom = fn(x);
+        parentComponent = tmp;
+
         // If a DOM node is already associated with the component, we
         // can defer the patching operation (which is nicer for the
         // web browser).
-        if (dom) {
-            enqueueComponentForPatching(component);
-            return;
+        if (!component.dom) {
+            const dom = Od.patchDom(vdom, null, null);
+            setDomComponent(dom, component);
+            component.dom = dom;
+            lifecycleHooks("created", dom);
+        } else {
+            // The updated lifecycle hooks will be invoked here.
+            enqueueComponentForPatching(component, vdom);
         }
-        // Otherwise we have to establish the association up front.
-        const vdom = component.obs();
-        const domParent = dom && dom.parentNode;
-        setDomComponent(dom, null);
-        const newDom = patchDom(vdom, dom, domParent);
-        setDomComponent(newDom, component);
-        component.dom = newDom;
-        lifecycleHooks(dom ? "updated" : "created", newDom);
+        return vdom;
     }
 
-    const disposeAnonymousSubcomponents = (vdom: IVdom): void => {
+    const disposeAnonymousSubcomponents = (component: IVdom): void => {
         const anonymousSubcomponents =
-            vdom.subcomponents && vdom.subcomponents[""] as IVdom[];
+            component.subcomponents &&
+            component.subcomponents[anonymousSubcomponentsKey] as IVdom[];
         if (!anonymousSubcomponents) return;
         anonymousSubcomponents.forEach(dispose);
-        vdom.subcomponents[""] = null;
+        component.subcomponents[anonymousSubcomponentsKey] = null;
     };
 
     // We defer DOM updates using requestAnimationFrame.  It's better to
@@ -571,9 +564,10 @@ namespace Od {
 
     var requestAnimationFrameID = 0;
 
-    const enqueueComponentForPatching = (component: IVdom): void => {
+    const enqueueComponentForPatching =
+    (component: IVdom, vdom: Vdom): void => {
         if (!deferComponentUpdates) {
-            patchUpdatedComponent(component);
+            patchUpdatedComponent(component, vdom);
             return;
         }
         componentsAwaitingUpdate.push(component);
@@ -601,8 +595,8 @@ namespace Od {
         requestAnimationFrameID = 0;
     };
 
-    const patchUpdatedComponent = (component: IVdom): void => {
-        const vdom = component.obs();
+    const patchUpdatedComponent = (component: IVdom, vdom?: Vdom): void => {
+        vdom = (vdom != null ? vdom : component.obs());
         const dom = component.dom;
         const domParent = dom && dom.parentNode;
         if (domWillBeReplaced(vdom, dom)) {
@@ -694,7 +688,7 @@ namespace Od {
         switch (what) {
             case "created": pendingOnCreatedNodes.push(dom); break;
             case "updated": pendingOnUpdatedNodes.push(dom); break;
-            case "removed": pendingOnRemovedNodes.push(dom); break;
+            case "removed": hook(what, dom); return;
         }
         if (pendingOdEventsID) return;
         pendingOdEventsID = setTimeout(processPendingOdEvents, 0);
@@ -703,7 +697,6 @@ namespace Od {
     var pendingOdEventsID = 0;
     const pendingOnCreatedNodes = [] as Node[];
     const pendingOnUpdatedNodes = [] as Node[];
-    const pendingOnRemovedNodes = [] as Node[];
 
     // We process Od lifecycle events after the DOM has had a chance to
     // rearrange itself.
@@ -714,9 +707,6 @@ namespace Od {
         }
         while (node = pendingOnUpdatedNodes.pop()) {
             (node as any).onodevent("updated", node);
-        }
-        while (node = pendingOnRemovedNodes.pop()) {
-            (node as any).onodevent("removed", node);
         }
         pendingOdEventsID = 0;
     };

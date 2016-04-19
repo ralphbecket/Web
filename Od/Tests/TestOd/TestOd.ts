@@ -281,4 +281,32 @@ window.onload = () => {
         Od.patchDom(A4, C, null);
         Test.expect("Colour is not set again.", C.style.color === "");
     });
+
+    Test.runDeferred(1000, "Anonymous components", (pass, expect) => {
+        const X = Obs.of(false);
+        var nCreated = 0;
+        var nUpdated = 0;
+        var nDeleted = 0;
+        const handler = (what: string, e: Node) => {
+            switch (what) {
+                case "created": nCreated++; break;
+                case "updated": nUpdated++; break;
+                case "removed": nDeleted++; break;
+            }
+        };
+        const A1 = Od.component("A1", () =>
+            X() ? Od.component(null, () => e("DIV", { onodevent: handler }))
+                : Od.component(null, () => e("P", { onodevent: handler }))
+        );
+        const B = null;
+        const C = Od.patchDom(A1, B, null);
+        X(true);
+        X(false);
+        setTimeout(() => {
+            expect("Num removed", nDeleted === 2);
+            expect("Num created", nCreated === 3);
+        }, 200);
+    });
+
+
 };

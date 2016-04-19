@@ -10,13 +10,12 @@ declare namespace Od {
     const text: (text: string) => IVdom;
     const element: (tag: string, props?: IProps, childOrChildren?: string | IVdom | (string | IVdom)[]) => IVdom;
     type ComponentName = string | number;
-    function component<T>(name: ComponentName, fn: (x?: T) => Vdom, x?: T): IVdom;
-    function component<T>(name: ComponentName, obs: Obs.IObservable<Vdom>): IVdom;
+    const component: <T>(name: string | number, fn: (x?: T) => string | IVdom, x?: T) => IVdom;
     const fromHtml: (html: string) => IVdom;
     const fromDom: (dom: Node) => IVdom;
     const bind: (vdom: string | IVdom, dom: Node) => Node;
     const appendChild: (vdom: string | IVdom, domParent: Node) => Node;
-    const dispose: (vdom: IVdom) => void;
+    const dispose: (component: IVdom) => void;
     var deferComponentUpdates: boolean;
     interface ISubComponents {
         [name: string]: (IVdom | IVdom[]);

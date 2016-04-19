@@ -232,7 +232,7 @@ module Obs {
         if (valueStr && toStringMaxValueLength < valueStr.length) {
             valueStr = valueStr.substr(0, toStringMaxValueLength) + "...";
         }
-        return "{obs " + this.id + " = " + valueStr + "}";
+        return "{obs " + (this.id || "") + " = " + valueStr + "}";
     };
 
     // Break the connection between an observable and its dependencies.

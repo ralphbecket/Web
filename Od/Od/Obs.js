@@ -200,7 +200,7 @@ var Obs;
         if (valueStr && Obs.toStringMaxValueLength < valueStr.length) {
             valueStr = valueStr.substr(0, Obs.toStringMaxValueLength) + "...";
         }
-        return "{obs " + this.id + " = " + valueStr + "}";
+        return "{obs " + (this.id || "") + " = " + valueStr + "}";
     };
     // Break the connection between an observable and its dependencies.
     Obs.dispose = function (obs) {
