@@ -499,7 +499,7 @@ var Od;
                 : [childOrChildren]);
         return { isIVdom: true, tag: tag, props: props, children: children };
     };
-    Od.component = function (name, fn, x) {
+    Od.component = function (name, fn) {
         var existingVdom = existingNamedComponentInstance(name);
         if (existingVdom)
             return existingVdom;
@@ -509,7 +509,7 @@ var Od;
             subcomponents: null,
             dom: null
         };
-        component.obs = Obs.fn(function () { return updateComponent(component, fn, x); });
+        component.obs = Obs.fn(function () { return updateComponent(component, fn); });
         // Attach this component as a subcomponent of the parent context.
         addAsSubcomponentOfParent(name, component);
         return component;
@@ -849,7 +849,7 @@ var Od;
     var domBelongsToComponent = function (dom) {
         return !!getDomComponent(dom);
     };
-    var updateComponent = function (component, fn, x) {
+    var updateComponent = function (component, fn) {
         // If the component has anonymous subcomponents, we should dispose
         // of them now -- they will be recreated by fn if needed.  Named
         // subcomponents will persist.
@@ -858,7 +858,7 @@ var Od;
         // any sub-components it generates.
         var tmp = parentComponent;
         parentComponent = component;
-        var vdom = fn(x);
+        var vdom = fn();
         parentComponent = tmp;
         // If a DOM node is already associated with the component, we
         // can defer the patching operation (which is nicer for the

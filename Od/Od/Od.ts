@@ -107,11 +107,7 @@ namespace Od {
     //
     export type ComponentName = string | number;
 
-    export const component = <T>(
-        name: ComponentName,
-        fn: (x?: T) => Vdom,
-        x?: T
-    ): IVdom => {
+    export const component = <T>(name: ComponentName, fn: () => Vdom): IVdom => {
         const existingVdom = existingNamedComponentInstance(name);
         if (existingVdom) return existingVdom;
         const component = {
@@ -120,7 +116,7 @@ namespace Od {
             subcomponents: null,
             dom: null
         } as IVdom;
-        component.obs = Obs.fn(() => updateComponent(component, fn, x));
+        component.obs = Obs.fn(() => updateComponent(component, fn));
         // Attach this component as a subcomponent of the parent context.
         addAsSubcomponentOfParent(name, component);
         return component;
@@ -511,8 +507,7 @@ namespace Od {
     const domBelongsToComponent = (dom: Node): boolean =>
         !!getDomComponent(dom);
 
-    const updateComponent =
-    <T>(component: IVdom, fn: (x?: T) => Vdom, x?: T): Vdom => {
+    const updateComponent = <T>(component: IVdom, fn: () => Vdom): Vdom => {
 
         // If the component has anonymous subcomponents, we should dispose
         // of them now -- they will be recreated by fn if needed.  Named
@@ -523,7 +518,7 @@ namespace Od {
         // any sub-components it generates.
         const tmp = parentComponent;
         parentComponent = component;
-        const vdom = fn(x);
+        const vdom = fn();
         parentComponent = tmp;
 
         // If a DOM node is already associated with the component, we
