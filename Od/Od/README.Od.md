@@ -24,9 +24,9 @@ Builds a vDOM element node.
 * `props` is an optional set of properties for the element (these correspond directly to HTML element node properties).
 * `childOrChildren` is an optional single `Vdom` or array of `Vdom` nodes: the children of the vDOM element node.
 
-Example: `Od.element("P", { className: "foo", style: { color: "blue" } }, ["Hello, ", Od.element("SPAN", null, "World!")])`
+Example: `Od.element("P", { className: "foo", style: { color: "blue" } }, ["Hello, ", Od.element("EM", null, "World!")])`
 
-Note: the [Ends/Elements](../Ends/Elements.ts) extension defines useful shorthand functions for the HTML5 elements.  For example, the above could also be written as `Od.P({ ... }, ["Hello, ", Od.SPAN("World!")])`.
+Note: the [Ends/Elements](../Ends/Elements.ts) extension defines useful shorthand functions for the HTML5 elements.  For example, the above could also be written as `Od.P({ ... }, ["Hello, ", Od.EM("World!")])`.
 
 ### Components
 ```TypeScript
