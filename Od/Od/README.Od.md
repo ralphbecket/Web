@@ -91,7 +91,23 @@ External components are unaffected by the disposal of their parent component.
 
 #### Component lifecycle events
 
-A component whose top-level properties include an `onodevent` 
+A component whose top-level element includes an `onodevent` event handler property will receive lifecycle events via that callback.
+
+Example:
+```TypeScript
+const myEventHandler = (what, dom) => {
+  console.log(what, dom);
+};
+const A = Od.component(null, () => 
+  Od.DIV({onodevent: myEventHandler, ...}, ...)
+);
+```
+The `dom` argument is the DOM subtree corresponding to the component.
+The `what` argument will be
+* `"created"` if the component's vDOM function has just been run for the first time;
+* `"udpated"` if the component's vDOM function has just been re-run;
+* `"removed"` if the component has just been disposed of.
+These lifecycle hooks provide an opportunity to post-process the Od-generated DOM subtree, for example if you are using a third-party library such as jQuery.
 
 ### Explicit component disposal
 ```TypeScript
@@ -103,5 +119,10 @@ Recursively disposes of the component and any named or ephemeral sub-components 
 Disposal also strips any properties, event handlers, and so forth that have been added by Od from the component DOM tree.  This process takes place in the background to avoid slowing the DOM update process.
 
 Disposal is recommended to avoid memory leaks.  Since a component `C` establishes a dependency on any observable `X` it uses, `C` will persist as long as `X` is live.  Disposing of `C` breaks this connection, allowing `C` to be garbage collected once it becomes unreachable.
+
+## Virtual DOM binding
+
+
+
 
 XXX WRITE MORE.  MOOOOORE!
