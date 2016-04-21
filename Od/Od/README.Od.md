@@ -102,7 +102,7 @@ const A = Od.component(null, () =>
   Od.DIV({onodevent: myEventHandler, ...}, ...)
 );
 ```
-The `dom` argument is the DOM subtree corresponding to the component.
+The `dom` argument is the up-to-date DOM subtree corresponding to the component.
 The `what` argument will be
 * `"created"` if the component's vDOM function has just been run for the first time;
 * `"udpated"` if the component's vDOM function has just been re-run;
