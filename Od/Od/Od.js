@@ -302,6 +302,10 @@ var Od;
             dom.removeAttribute(prop);
     };
     var setDomProp = function (dom, prop, value) {
+        if (prop.substr(0, 5) === "data-") {
+            dom.setAttribute(prop, value);
+            return;
+        }
         if (prop === "class")
             prop = "className"; // This is convenient.
         dom[prop] = value;

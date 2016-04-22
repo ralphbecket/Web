@@ -377,6 +377,10 @@ namespace Od {
     };
 
     const setDomProp = (dom: Node, prop: string, value: any): void => {
+        if (prop.substr(0, 5) === "data-") {
+            (dom as HTMLElement).setAttribute(prop, value);
+            return;
+        }
         if (prop === "class") prop = "className"; // This is convenient.
         (dom as any)[prop] = value;
     };
