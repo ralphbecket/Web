@@ -1,7 +1,9 @@
 # Od
 (C) Ralph Becket, 2016
 
-A compact virtual-DOM library in the style of Mithril.
+A smart virtual-DOM library.
+* Other vDOM schemes: "redraw _everything_, _every time_... _really fast_!".
+* Od: "quickly redraw just what you need, when you need it -- and Keep It Simple!".
 
 ## Why try Od?
 * It's small (the full set including promises, routing, named element constructors, etc., is 5.3 KBytes minified and gzipped).
@@ -21,6 +23,7 @@ A compact virtual-DOM library in the style of Mithril.
 * [Od - Demo - Tabs](https://jsfiddle.net/ralphbecket/beLjfmsj/)
 * [Od - Demo - Jigsaw router](https://jsfiddle.net/ralphbecket/3mj53jpm/)
 * [Od - Demo - Velocity](https://jsfiddle.net/ralphbecket/5k6z3cym/) (lifecycle hooks and 3rd party integration).
+* [Od - Demo - Component lifecycle](https://jsfiddle.net/ralphbecket/e7Lw649k/)
 
 ## Interactive tutorials
 
