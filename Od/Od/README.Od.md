@@ -4,7 +4,7 @@
 
 Virtual DOM (vDOM) structures are used to efficiently update the live DOM.
 
-* `Vdom`: either a string (denoting a text node) or an _IVdom_
+* `Vdom`: either a string (denoting a text node) or an `IVdom`
 * `IVdom`: a virtual DOM node corresponding to a DOM subtree (can be a text node, an element, or a _component_).
 
 ### Text nodes
@@ -13,7 +13,10 @@ Od.text(x: string): IVdom
 ```
 Builds a vDOM text node.  This is typically unneccessary, since ordinary text strings are accepted as vDOM nodes.
 
-Example: `Od.text("Hello, World!")`
+Example:
+```TypeScript
+Od.text("Hello, World!")
+```
 
 ### Element nodes
 ```TypeScript
@@ -24,7 +27,13 @@ Builds a vDOM element node.
 * `props` is an optional set of properties for the element (these correspond directly to HTML element node properties).
 * `childOrChildren` is an optional single `Vdom` or array of `Vdom` nodes: the children of the vDOM element node.
 
-Example: `Od.element("P", { className: "foo", style: { color: "blue" } }, ["Hello, ", Od.element("EM", null, "World!")])`
+Example: 
+```TypeScript
+Od.element("P", 
+  { className: "foo", style: { color: "blue" } },
+  ["Hello, ", Od.element("EM", null, "World!")]
+)
+```
 
 Note: the [Ends/Elements](../Ends/Elements.ts) extension defines useful shorthand functions for the HTML5 elements.  For example, the above could also be written as `Od.P({ ... }, ["Hello, ", Od.EM("World!")])`.
 
@@ -55,18 +64,18 @@ const foo = Od.component("foo", () => Od.DIV(
   isOn() ? ["Level ", Od.component(null, () => level().toString())]
          : ["Off"]
 ));
-const bar = Od.component("foo", () => Od.DIV(
-  isOn() ? ["Level ", Od.component("level", () => level().toString())]
+const bar = Od.component("bar", () => Od.DIV(
+  isOn() ? ["Level ", Od.component("baz", () => level().toString())]
          : ["Off"]
 ));
 ```
-Here, `foo` uses an _ephemeral sub-component_ (i.e., one with no name), whereas `bar` uses a _named sub-component_ ("level").
+Here, `foo` uses an _ephemeral sub-component_ (i.e., one with no name), whereas `bar` uses a _named sub-component_ ("baz").
 
 Whenever `level` changes, the sub-components update as one would expect.
 
 When `isOn` changes, however, `foo` and `bar` behave slightly differently.  
-* Since `foo`'s nested component has no name, it is ephemeral: the nested component will be rebuilt (i.e., the old one disposed of and a new one created) every time `foo` updates.  
-* In `bar`, though, the nested component is _named_: "level".  When `bar` updates, instead of rebuilding the "level" component, it preserves the previous instance of the sub-component and, hence, any state it may have.
+* Since `foo`'s nested component has no name, it is _ephemeral_: the nested component will be rebuilt (i.e., the old one disposed of and a new one created) every time `foo` updates.  
+* In `bar`, though, the nested component is _named_: "baz".  When `bar` updates, instead of rebuilding the "baz" component, it preserves the previous instance of the sub-component and, hence, any state it may have.
 
 Component names are meaningful only within the scope of the parent component's vDOM function.  It is quite safe to reuse names across different scopes.
 
@@ -118,7 +127,7 @@ Recursively disposes of the component and any named or ephemeral sub-components 
 
 Disposal also strips any properties, event handlers, and so forth that have been added by Od from the component DOM tree.  This process takes place in the background to avoid slowing the DOM update process.
 
-Disposal is recommended to avoid memory leaks.  Since a component `C` establishes a dependency on any observable `X` it uses, `C` will persist as long as `X` is live.  Disposing of `C` breaks this connection, allowing `C` to be garbage collected once it becomes unreachable.
+Disposal is recommended to avoid memory leaks.  Since a component `C` establishes a dependency on any observable `X` it uses, `C` will persist as long as `X` is live.  Disposing of `C` breaks this connection, allowing `C` to be garbage collected once it becomes unreachable (`X` is unaffected by the disposal of `C`).
 
 ## Virtual DOM binding
 
