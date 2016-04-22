@@ -592,6 +592,9 @@ namespace Od {
         // Tell enqueueComponentForPatching that it needs to make a
         // new RAF request on the next update.
         requestAnimationFrameID = 0;
+
+        // XXX Try for now to ensure any pending Od events are processed here.
+        processPendingOdEvents();
     };
 
     const patchUpdatedComponent = (component: IVdom, vdom?: Vdom): void => {
@@ -686,7 +689,7 @@ namespace Od {
         if (!hook) return;
         pendingLifecycleCallbacks.push(() => hook(what, dom));
         if (pendingOdEventsID) return;
-        pendingOdEventsID = setTimeout(processPendingOdEvents, 0);
+        pendingOdEventsID = setTimeout(processPendingOdEvents, 20); // XXX!
     };
 
     var pendingOdEventsID = 0;

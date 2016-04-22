@@ -1044,6 +1044,8 @@ var Od;
         // Tell enqueueComponentForPatching that it needs to make a
         // new RAF request on the next update.
         requestAnimationFrameID = 0;
+        // XXX Try for now to ensure any pending Od events are processed here.
+        processPendingOdEvents();
     };
     var patchUpdatedComponent = function (component, vdom) {
         vdom = (vdom != null ? vdom : component.obs());
@@ -1146,7 +1148,7 @@ var Od;
         pendingLifecycleCallbacks.push(function () { return hook(what, dom); });
         if (pendingOdEventsID)
             return;
-        pendingOdEventsID = setTimeout(processPendingOdEvents, 0);
+        pendingOdEventsID = setTimeout(processPendingOdEvents, 20); // XXX!
     };
     var pendingOdEventsID = 0;
     var pendingLifecycleCallbacks = [];
