@@ -308,5 +308,22 @@ window.onload = () => {
         }, 200);
     });
 
+    Test.run("Attrs properties", () => {
+        const A1 = e("DIV", {
+            attrs: { "data-bind": "foo", "ng-xyz": "bar" }
+        });
+        const B = null;
+        const C1 = Od.patchDom(A1, B, null) as HTMLElement;
+        chk(C1, [], "DIV", 0);
+        Test.expect("Has data-bind", C1.getAttribute("data-bind") === "foo");
+        Test.expect("Has ng-xyz", C1.getAttribute("ng-xyz") === "bar");
+        const A2 = e("DIV", {
+            attrs: { "ng-xyz": "baz" }
+        });
+        const C2 = Od.patchDom(A2, C1, null) as HTMLElement;
+        chk(C1, [], "DIV", 0);
+        Test.expect("Has no data-bind", C1.getAttribute("data-bind") == null);
+        Test.expect("Has ng-xyz", C1.getAttribute("ng-xyz") === "baz");
+    });
 
 };

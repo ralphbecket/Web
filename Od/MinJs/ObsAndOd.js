@@ -595,21 +595,28 @@ var Od;
         return node;
     };
     // Dispose of a component, removing any observable dependencies
-    // it may have.
+    // it may have.  This also removes the component's DOM from the
+    // DOM tree.
     Od.dispose = function (component) {
         if (!component)
             return;
-        if (component.obs) {
-            Obs.dispose(component.obs);
+        var obs = component.obs;
+        if (obs) {
+            Obs.dispose(obs);
             component.obs = null;
         }
-        if (component.dom) {
-            lifecycleHooks("removed", component.dom);
-            enqueueNodeForStripping(component.dom);
+        var dom = component.dom;
+        if (dom) {
+            lifecycleHooks("removed", dom);
+            var domParent = dom && dom.parentNode;
+            if (domParent)
+                domParent.removeChild(dom);
+            enqueueNodeForStripping(dom);
             component.dom = null;
         }
-        if (component.subcomponents) {
-            disposeSubcomponents(component.subcomponents);
+        var subcomponents = component.subcomponents;
+        if (subcomponents) {
+            disposeSubcomponents(subcomponents);
             component.subcomponents = null;
         }
     };
@@ -701,6 +708,9 @@ var Od;
         var eltStyleProps = oldProps && oldProps["style"];
         var vdomStyleProps = newProps && newProps["style"];
         patchStyleProps(elt, eltStyleProps, vdomStyleProps);
+        var eltAttrProps = oldProps && oldProps["attrs"];
+        var vdomAttrProps = newProps && newProps["attrs"];
+        patchAttrProps(elt, eltAttrProps, vdomAttrProps);
         setEltOdProps(elt, newProps);
     };
     var patchStyleProps = function (elt, oldStyleProps, newStyleProps) {
@@ -723,16 +733,24 @@ var Od;
             if (!(prop in newStyleProps))
                 eltStyle[prop] = null;
     };
+    var patchAttrProps = function (elt, oldAttrProps, newAttrProps) {
+        if (newAttrProps)
+            for (var attr in newAttrProps) {
+                elt.setAttribute(attr, newAttrProps[attr]);
+            }
+        if (oldAttrProps)
+            for (var attr in oldAttrProps) {
+                if (newAttrProps && (attr in newAttrProps))
+                    continue;
+                elt.removeAttribute(attr);
+            }
+    };
     var removeDomProp = function (dom, prop) {
         dom[prop] = null;
         if (dom instanceof HTMLElement)
             dom.removeAttribute(prop);
     };
     var setDomProp = function (dom, prop, value) {
-        if (prop.substr(0, 5) === "data-") {
-            dom.setAttribute(prop, value);
-            return;
-        }
         if (prop === "class")
             prop = "className"; // This is convenient.
         dom[prop] = value;
@@ -924,7 +942,7 @@ var Od;
         // Tell enqueueComponentForPatching that it needs to make a
         // new RAF request on the next update.
         requestAnimationFrameID = 0;
-        // XXX Try for now to ensure any pending Od events are processed here.
+        // Any pending Od events are also processed here.
         processPendingOdEvents();
     };
     var patchUpdatedComponent = function (component, vdom) {
@@ -1028,7 +1046,12 @@ var Od;
         pendingLifecycleCallbacks.push(function () { return hook(what, dom); });
         if (pendingOdEventsID)
             return;
-        pendingOdEventsID = setTimeout(processPendingOdEvents, 20); // XXX!
+        // Either there will be a requestAnimationFrame call due in
+        // 16ms or this will fire in 20ms.  We would prefer the RAF
+        // call to handle the pending Od events because then the
+        // callbacks will see the corresponding events in their proper
+        // DOM contexts.
+        pendingOdEventsID = setTimeout(processPendingOdEvents, 20);
     };
     var pendingOdEventsID = 0;
     var pendingLifecycleCallbacks = [];
