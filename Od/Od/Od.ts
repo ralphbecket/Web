@@ -219,8 +219,8 @@ namespace Od {
         const dom = component.dom;
         if (dom) {
             lifecycleHooks("removed", dom);
-            const domParent = dom && dom.parentNode;
-            if (domParent) domParent.removeChild(dom);
+            // We have to remove the component reference before stripping.
+            setDomComponent(dom, null);
             enqueueNodeForStripping(dom);
             component.dom = null;
         }
