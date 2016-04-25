@@ -2,8 +2,8 @@
 (C) Ralph Becket, 2016
 
 A smart virtual-DOM library.
-* Other vDOM schemes: "redraw _everything_, _every time_... _really fast_!".
-* Od: "quickly redraw just what you need, when you need it -- and Keep It Predictable!".
+* Other vDOM schemes: "redraw _everything_, _every time_... _really fast._".
+* Od: "quickly redraw just what you need, when you need it -- and Keep It Predictable.".
 
 ## Why try Od?
 * It's small (the full set including promises, routing, named element constructors, etc., is 5.3 KBytes minified and gzipped).
