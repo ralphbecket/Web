@@ -3,7 +3,7 @@
 
 A smart virtual-DOM library.
 * Other vDOM schemes: "redraw _everything_, _every time_... _really fast_!".
-* Od: "quickly redraw just what you need, when you need it -- and Keep It Simple!".
+* Od: "quickly redraw just what you need, when you need it -- and Keep It Predictable!".
 
 ## Why try Od?
 * It's small (the full set including promises, routing, named element constructors, etc., is 5.3 KBytes minified and gzipped).
@@ -209,7 +209,8 @@ on my machine gives the following results (as of 2016-03-31):
 
 Take these numbers with a pinch of salt: some of the libraries will
 have moved on somewhat; I'm also somewhat suspicious of Angular's
-120 fps score in the low-frequency update rate column.
+120 fps score in the low-frequency update rate column.  I'm told the
+forthcoming Mithril rewrite will have best-in-class performance.
 
 Note also that this is just a test of raw speed in a
 particular, unlikely, situation.  Od's real strength is in how easy
@@ -217,6 +218,3 @@ it is to use without having to know about the underlying
 implementation details.  Od's abstraction does not leak all over the
 place when you get into the corner cases.
 
-#### TO DO...
-
-- Add lifecycle hooks for components.
