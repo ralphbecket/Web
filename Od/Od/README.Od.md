@@ -37,6 +37,20 @@ Od.element("P",
 
 Note: the [Ends/Elements](../Ends/Elements.ts) extension defines useful shorthand functions for the HTML5 elements.  For example, the above could also be written as `Od.P({ ... }, ["Hello, ", Od.EM("World!")])`.
 
+#### Special properties: `class`, `style` and `attrs`
+
+The property `class` is supported as a convenient shortcut for the standard `className` property.
+
+The `style` property takes an object giving element style settings.  For example:
+```TypeScript
+Od.element("P", { ..., style: { color: "blue", fontWeight: "bold" } }, ...)
+```
+
+The `attrs` property takes an object giving non-standard attribute settings.  Normally, attributes are set via the corresponding DOM element property.  With `attrs`, attributes are set directly using the DOM element `setAttribute` method.  For example:
+```TypeScript
+Od.element("P", { attrs: { "data-bind": ..., "aria-label": true, ... } }, ...)
+```
+
 ### Components
 ```TypeScript
 Od.component(name: number | string, fn: Obs.IObservable<Vdom> | (() => Vdom)): IVdom
