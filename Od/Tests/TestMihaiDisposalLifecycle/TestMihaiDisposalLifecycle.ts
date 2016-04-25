@@ -19,9 +19,7 @@ homePage = function () {
                         console.log(dom);
                         console.log(dom.offsetWidth);
                         console.log(dom.offsetHeight);
-                        if (dom.offsetWidth === 0 || dom.offsetHeight === 0) {
-                            return alert('a');
-                        }
+                        console.log("home-page", dom.offsetWidth, dom.offsetHeight);
                     }
                 }
             }, 'home page');

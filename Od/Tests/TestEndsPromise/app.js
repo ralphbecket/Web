@@ -821,7 +821,7 @@ var Od;
                     setDomProp(elt, prop, newProps[prop]);
         if (oldProps)
             for (var prop in oldProps)
-                if (!(prop in newProps))
+                if (!newProps || !(prop in newProps))
                     removeDomProp(elt, prop);
         // Style properties are special.
         var eltStyleProps = oldProps && oldProps["style"];

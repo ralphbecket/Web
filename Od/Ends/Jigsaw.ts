@@ -106,8 +106,16 @@ namespace Jigsaw {
 
     // ---- Implementation detail. ----
 
+    var previousHash = null as string;
+
+    // Rapid changes to the location hash can cause the application
+    // to receive multiple onhashchange events, but each receiving only
+    // the very latest hash.  We "debounce" that behaviour here.
     const processHash = (): void => {
-        takeRoute(location.hash.substr(1));
+        const hash = location.hash.substr(1);
+        if (hash === previousHash) return;
+        takeRoute(hash);
+        previousHash = hash;
     };
 
     type Matcher = (parts: string[], i: number, args: IRouteArgs) => IRouteArgs;

@@ -91,8 +91,16 @@ var Jigsaw;
         return args;
     };
     // ---- Implementation detail. ----
+    var previousHash = null;
+    // Rapid changes to the location hash can cause the application
+    // to receive multiple onhashchange events, but each receiving only
+    // the very latest hash.  We "debounce" that behaviour here.
     var processHash = function () {
-        Jigsaw.takeRoute(location.hash.substr(1));
+        var hash = location.hash.substr(1);
+        if (hash === previousHash)
+            return;
+        Jigsaw.takeRoute(hash);
+        previousHash = hash;
     };
     var matchEnd = function (parts, i, args) { return (parts[i] == null) && args; };
     // '.../foo/...'
