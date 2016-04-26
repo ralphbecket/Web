@@ -5,6 +5,7 @@
 Virtual DOM (vDOM) structures are used to efficiently update the live DOM.
 
 * `Vdom`: either a string (denoting a text node) or an `IVdom`
+* `Vdoms`: either a single `Vdom` or an array of `Vdom`s.
 * `IVdom`: a virtual DOM node corresponding to a DOM subtree (can be a text node, an element, or a _component_).
 
 ### Text nodes
@@ -143,9 +144,40 @@ Disposal also strips any properties, event handlers, and so forth that have been
 
 Disposal is recommended to avoid memory leaks.  Since a component `C` establishes a dependency on any observable `X` it uses, `C` will persist as long as `X` is live.  Disposing of `C` breaks this connection, allowing `C` to be garbage collected once it becomes unreachable (`X` is unaffected by the disposal of `C`).
 
+## Alternative vDOM constructors
+
+```TypeScript
+Od.fromHtml(html: string): IVdom
+```
+Constructs a vDOM element from the given HTML string.  If the HTML has more than one root element, the result will be wrapped in a `DIV`.
+
+```TypeScript
+Od.fromDom(dom: Node): IVdom
+```
+Constructs a vDOM element from the given DOM node.  Like components, DOM nodes can only appear in one place: if you need copies, you must create them from clones of the DOM node.
+
 ## Virtual DOM binding
 
+```TypeScript
+Od.bind(vdom: Vdom, dom: Node): Node
+```
+Patches the current `dom` node with `vdom`.  Any components in `vdom` will effectively be "live" after this point.  The patched root DOM node is returned.
 
+```TypeScript
+Od.appendChild(vdom: Vdom, domParent: Node): Node
+```
+Appends to `domParent` a new DOM child node defined by `vdom`.  Any components in `vdom` will effectively be "live" after this point.  The new DOM node is returned.
 
+## Eager vs deferred component patching
 
-XXX WRITE MORE.  MOOOOORE!
+```TypeScript
+Od.deferComponentUpdates = true
+```
+Ordinarily, component updates are batched and evaluated together via `requestAnimationFrame` or equivalent `setTimeout` call.  Multiple updates to the same component before the next frame will result in just a single update.  However, if eager (i.e., non-batched) updates are required, set `Od.deferComponentUpdates = false`, whereupon each component update will be evaluated immediately on any change to an observable dependency.
+
+## Patching algorithm
+
+Text nodes and element nodes are patched in the same way: if the update is for the same kind of node, the DOM is updated in place; otherwise a replacement DOM node is created.  Patching applies recursively to children (excess DOM children being disposed of, extra vDOM children being appended).
+
+Component nodes are different.  Patching never proceeds into a DOM subtree managed by a component node: it is solely the responsibility of that component to manage its own DOM subtree.  A component subtree can be replaced by another component or by an ordinary element.  XXX MORE HERE!
+
