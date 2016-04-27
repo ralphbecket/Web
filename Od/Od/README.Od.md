@@ -190,6 +190,20 @@ Patching is the process of changing a DOM subtree to match a vDOM tree.
 * Element/element patching: _update_ if tags match, otherwise _replace_.
 * Component/component patching: do nothing if components are the same, otherwise _replace_ with the new component's DOM.
 
+## Keyed lists
+
+If a parent node has property `keyed: true` and its children have `key: ...` properties, then the children will be rearranged, if necessary, to match the corresponding `key` property values in the vDOM.  This can substantially reduce the number DOM updates required when, say, the order of a list is changed.  `key` values can be any string or number.
+
+Example:
+```TypeScript
+Od.UL({ keyed: true }, [
+  Od.LI({ key: 1 }, "Alice"),
+  Od.LI({ key: 2 }, "Bob"),
+  Od.LI({ key: 3 }, "Charlotte"),
+  ...
+])
+```
+
 ## Node stripping
 
 Replaced DOM nodes that do not belong to a component are "stripped" in a background task which is responsible for removing any dangling event handlers.  It is not necessary to do this manually unless you added event handlers through some non-Od mechanism.
