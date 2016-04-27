@@ -177,7 +177,19 @@ Ordinarily, component updates are batched and evaluated together via `requestAni
 
 ## Patching algorithm
 
-Text nodes and element nodes are patched in the same way: if the update is for the same kind of node, the DOM is updated in place; otherwise a replacement DOM node is created.  Patching applies recursively to children (excess DOM children being disposed of, extra vDOM children being appended).
+Patching is the process of changing a DOM subtree to match a vDOM tree.  
+* An _update_ changes the existing DOM node.
+* A _replacement_ substitutes a new DOM node for the old.
 
-Component nodes are different.  Patching never proceeds into a DOM subtree managed by a component node: it is solely the responsibility of that component to manage its own DOM subtree.  A component subtree can be replaced by another component or by an ordinary element.  XXX MORE HERE!
+| Old\New   | Text       | Element    | Component  |
+| :-------- | :--------: | :--------: | :--------: |
+| Text      | Update     | Replace    | Replace    |
+| Element   | Replace    | Depends on tags | Replace |
+| Component | Replace    | Replace    | Depends on components |
 
+* Element/element patching: _update_ if tags match, otherwise _replace_.
+* Component/component patching: do nothing if components are the same, otherwise _replace_ with the new component's DOM.
+
+## Node stripping
+
+Replaced DOM nodes that do not belong to a component are "stripped" in a background task which is responsible for removing any dangling event handlers.  It is not necessary to do this manually unless you added event handlers through some non-Od mechanism.
