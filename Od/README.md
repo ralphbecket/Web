@@ -2,8 +2,10 @@
 (C) Ralph Becket, 2016
 
 A smart virtual-DOM library.
-* Other vDOM schemes: "redraw _everything_, _every time_... _really fast._".
-* Od: "quickly redraw just what you need, when you need it -- and Keep It Predictable.".
+* Other vDOM schemes: "_redraw everything, every time... really fast._".
+* Od: "_quickly redraw just what you need, when you need it -- and keep it predictable._".
+
+Od's compartmentalised approach to UI components brings two benefits you don't often see in (any?) other vDOM libraries.  The first is that you can move a component anywhere in the DOM without redrawing it, losing its state, or, worse, having its state confused with that of another component.  The second is that an update to one component has no effect on the DOM of any other component; this is quite helpful when working with third-party libraries that also want access to DOM elements in your components.
 
 ## Why try Od?
 * It's small (the full set including promises, routing, named element constructors, etc., is 5.3 KBytes minified and gzipped).
