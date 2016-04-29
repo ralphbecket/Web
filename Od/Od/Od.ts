@@ -576,7 +576,7 @@ namespace Od {
     // batch DOM updates where possible.
 
     const requestAnimationFrameSubstitute = (callback: () => void): number => {
-        return setTimeout(callback, 16); // 16 ms = 1/60 s.
+        return setTimeout(callback, processPendingOdEventsDelay); // 16 ms = 1/60 s.
     };
 
     const requestAnimationFrame =
