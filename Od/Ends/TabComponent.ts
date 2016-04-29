@@ -1,5 +1,5 @@
 ﻿/// <reference path="./Elements.ts" />
-/// <reference path="./WithClassName.ts" />
+/// <reference path="./MergeProps.ts" />
 
 namespace Od {
 
@@ -9,6 +9,7 @@ namespace Od {
     }
 
     export const tabComponent = (args: {
+        name?: ComponentName;
         tabs: Obs.IObservablish<ITab[]>;
         selection?: Obs.IObservable<ITab>;
         props?: Obs.IObservablish<Od.IProps>;
@@ -18,11 +19,14 @@ namespace Od {
 
         var selection = args.selection || Obs.of(null as ITab);
 
-        const vdom = Od.component("TabDemo", () => {
+        const vdom = Od.component(args.name, () => {
             const tabs = Obs.value(args.tabs);
             const vdom =
                 Od.DIV(
-                    withClassName("OdTabComponent", Obs.value(args.props)),
+                    mergeProps(
+                        Obs.value(args.props),
+                        { className: "OdTabComponent" }
+                    ),
                     [
                         Od.DIV(
                             { className: "OdTabHeadings" },
@@ -42,7 +46,6 @@ namespace Od {
 
     const tabHeading =
     (selection: Obs.IObservable<ITab>, tab: ITab): Od.IVdom => {
-        const e = Od.element;
         const heading = Obs.value(tab.heading);
         const seln = Obs.value(selection);
         const className =

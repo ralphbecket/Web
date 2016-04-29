@@ -3,6 +3,7 @@
 namespace Od {
 
     export const selectComponent = <T>(args: {
+        name?: ComponentName;
         options: Obs.IObservablish<T[]>;
         optionView?: (option: T) => string;
         selection: Obs.IObservable<T>;
@@ -17,7 +18,7 @@ namespace Od {
         };
         const optionView = args.optionView || defaultOptionView;
         const e = Od.element;
-        const vdom = Od.component(props["name"], () => {
+        const vdom = Od.component(args.name, () => {
             const props = Obs.value(args.props) || {} as IProps;
             const options = Obs.value(args.options);
             const selection = args.selection();

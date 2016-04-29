@@ -8,7 +8,7 @@ var Od;
         };
         var optionView = args.optionView || defaultOptionView;
         var e = Od.element;
-        var vdom = Od.component(props["name"], function () {
+        var vdom = Od.component(args.name, function () {
             var props = Obs.value(args.props) || {};
             var options = Obs.value(args.options);
             var selection = args.selection();

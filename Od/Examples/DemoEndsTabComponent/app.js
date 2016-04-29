@@ -483,6 +483,10 @@ var Obs;
 /// <reference path="./Obs.ts"/>
 var Od;
 (function (Od) {
+    // XXX This is to help diagnose Mihai's bug.
+    // Set to -ve to process immediately.
+    // Otherwise Od events will be processed with this setTimeout delay.
+    var processPendingOdEventsDelay = -1;
     var debug = false;
     ;
     Od.text = function (text) {
@@ -512,38 +516,6 @@ var Od;
         // Attach this component as a subcomponent of the parent context.
         addAsSubcomponentOfParent(name, component);
         return component;
-    };
-    // The current parent component scope, if any.
-    var parentComponent = null;
-    var existingNamedComponentInstance = function (name) {
-        return (name != null) &&
-            parentComponent &&
-            parentComponent.subcomponents &&
-            parentComponent.subcomponents[name];
-    };
-    var anonymousSubcomponentsKey = "__OdAnonymousSubcomponents__";
-    var addAsSubcomponentOfParent = function (name, child) {
-        if (!parentComponent)
-            return;
-        if (!parentComponent.subcomponents)
-            parentComponent.subcomponents = {};
-        var subcomponents = parentComponent.subcomponents;
-        if (name != null) {
-            // This is a named sub-component which will persist for the
-            // lifetime of the parent component.
-            subcomponents[name] = child;
-        }
-        else {
-            // This child has no name.  Aww.  In this case we store a list
-            // of these nameless children under a special name.
-            var anonSubcomponents = subcomponents[anonymousSubcomponentsKey];
-            if (!anonSubcomponents) {
-                subcomponents[anonymousSubcomponentsKey] = [child];
-            }
-            else {
-                anonSubcomponents.push(child);
-            }
-        }
     };
     // Construct a static DOM subtree from an HTML string.
     // Note: this vDOM node can, like DOM nodes, only appear
@@ -616,18 +588,6 @@ var Od;
         if (subcomponents) {
             disposeSubcomponents(subcomponents);
             component.subcomponents = null;
-        }
-    };
-    var disposeSubcomponents = function (subcomponents) {
-        for (var name in subcomponents) {
-            var subcomponent = subcomponents[name];
-            if (name === anonymousSubcomponentsKey) {
-                // These are anonymous subcomponents, kept in an list.
-                subcomponent.forEach(Od.dispose);
-            }
-            else {
-                Od.dispose(subcomponent);
-            }
         }
     };
     // Normally, component updates will be batched via requestAnimationFrame
@@ -895,6 +855,38 @@ var Od;
         }
         return vdom;
     };
+    // The current parent component scope, if any.
+    var parentComponent = null;
+    var existingNamedComponentInstance = function (name) {
+        return (name != null) &&
+            parentComponent &&
+            parentComponent.subcomponents &&
+            parentComponent.subcomponents[name];
+    };
+    var anonymousSubcomponentsKey = "__OdAnonymousSubcomponents__";
+    var addAsSubcomponentOfParent = function (name, child) {
+        if (!parentComponent)
+            return;
+        if (!parentComponent.subcomponents)
+            parentComponent.subcomponents = {};
+        var subcomponents = parentComponent.subcomponents;
+        if (name != null) {
+            // This is a named sub-component which will persist for the
+            // lifetime of the parent component.
+            subcomponents[name] = child;
+        }
+        else {
+            // This child has no name.  Aww.  In this case we store a list
+            // of these nameless children under a special name.
+            var anonSubcomponents = subcomponents[anonymousSubcomponentsKey];
+            if (!anonSubcomponents) {
+                subcomponents[anonymousSubcomponentsKey] = [child];
+            }
+            else {
+                anonSubcomponents.push(child);
+            }
+        }
+    };
     var disposeAnonymousSubcomponents = function (component) {
         var anonymousSubcomponents = component.subcomponents &&
             component.subcomponents[anonymousSubcomponentsKey];
@@ -902,6 +894,18 @@ var Od;
             return;
         anonymousSubcomponents.forEach(Od.dispose);
         component.subcomponents[anonymousSubcomponentsKey] = null;
+    };
+    var disposeSubcomponents = function (subcomponents) {
+        for (var name in subcomponents) {
+            var subcomponent = subcomponents[name];
+            if (name === anonymousSubcomponentsKey) {
+                // These are anonymous subcomponents, kept in an list.
+                subcomponent.forEach(Od.dispose);
+            }
+            else {
+                Od.dispose(subcomponent);
+            }
+        }
     };
     // We defer DOM updates using requestAnimationFrame.  It's better to
     // batch DOM updates where possible.
@@ -941,7 +945,10 @@ var Od;
         // new RAF request on the next update.
         requestAnimationFrameID = 0;
         // Any pending Od events are also processed here.
-        processPendingOdEvents();
+        if (processPendingOdEventsDelay < 0)
+            processPendingOdEvents();
+        if (processPendingOdEventsDelay >= 0)
+            setTimeout(processPendingOdEvents, 0);
     };
     var patchUpdatedComponent = function (component, vdom) {
         vdom = (vdom != null ? vdom : component.obs());
@@ -1250,29 +1257,79 @@ var Od;
         Od[tag] = function (fst, snd) { return elt(tag, fst, snd); };
     });
 })(Od || (Od = {}));
-/// <reference path="../Od/Od.ts" />
+/// <reference path="../Od/Od.ts"/>
 var Od;
 (function (Od) {
-    Od.withClassName = function (name, props) {
-        props = props || {};
-        var className = props["className"] || "";
-        name = " " + name + " ";
-        var nameIsAbsent = className.indexOf(name) === -1;
-        if (nameIsAbsent)
-            props["className"] = name + className;
-        return props;
+    // Merge a list of property sets, giving priority to property sets
+    // later in the list.  "className" and "style" properties are merged
+    // in the way you'd expect, as a biased union.  Null property sets
+    // are ignored.
+    Od.mergeProps = function () {
+        var propsList = [];
+        for (var _i = 0; _i < arguments.length; _i++) {
+            propsList[_i - 0] = arguments[_i];
+        }
+        var resultProps = {};
+        for (var i = 0; i < propsList.length; i++) {
+            var inputProps = propsList[i];
+            if (!inputProps)
+                continue;
+            for (var prop in inputProps) {
+                var value = inputProps[prop];
+                switch (prop) {
+                    case "class":
+                    case "className":
+                        mergeClassName(value, resultProps);
+                        break;
+                    case "style":
+                        mergeStyle(value, resultProps);
+                        break;
+                    default:
+                        resultProps[prop] = value;
+                }
+            }
+        }
+        return resultProps;
+    };
+    var mergeClassName = function (newClassNames, props) {
+        var currClassNames = props["className"];
+        if (!currClassNames) {
+            props["className"] = newClassNames;
+            return;
+        }
+        var currClasses = currClassNames.split(" ");
+        var newClasses = newClassNames.split(" ");
+        for (var i = newClasses.length - 1; 0 <= i; i--) {
+            var newClass = newClasses[i];
+            for (var j = currClasses.length - 1; 0 <= j; j--) {
+                if (newClass === currClasses[j])
+                    break;
+            }
+            if (j === -1)
+                currClasses.push(newClass);
+        }
+        props["className"] = currClasses.join(" ");
+    };
+    var mergeStyle = function (newStyle, props) {
+        var currStyle = props["style"];
+        if (!currStyle) {
+            props["style"] = newStyle;
+            return;
+        }
+        for (var style in newStyle)
+            currStyle[style] = newStyle[style];
     };
 })(Od || (Od = {}));
 /// <reference path="./Elements.ts" />
-/// <reference path="./WithClassName.ts" />
+/// <reference path="./MergeProps.ts" />
 var Od;
 (function (Od) {
     Od.tabComponent = function (args) {
         var e = Od.element;
         var selection = args.selection || Obs.of(null);
-        var vdom = Od.component("TabDemo", function () {
+        var vdom = Od.component(args.name, function () {
             var tabs = Obs.value(args.tabs);
-            var vdom = Od.DIV(Od.withClassName("OdTabComponent", Obs.value(args.props)), [
+            var vdom = Od.DIV(Od.mergeProps(Obs.value(args.props), { className: "OdTabComponent" }), [
                 Od.DIV({ className: "OdTabHeadings" }, tabs.map(function (tab) { return tabHeading(selection, tab); })),
                 Od.DIV({ className: "OdTabBody" }, tabBody(selection()))
             ]);
@@ -1281,7 +1338,6 @@ var Od;
         return vdom;
     };
     var tabHeading = function (selection, tab) {
-        var e = Od.element;
         var heading = Obs.value(tab.heading);
         var seln = Obs.value(selection);
         var className = (seln === tab

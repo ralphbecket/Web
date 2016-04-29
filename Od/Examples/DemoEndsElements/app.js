@@ -483,6 +483,10 @@ var Obs;
 /// <reference path="./Obs.ts"/>
 var Od;
 (function (Od) {
+    // XXX This is to help diagnose Mihai's bug.
+    // Set to -ve to process immediately.
+    // Otherwise Od events will be processed with this setTimeout delay.
+    var processPendingOdEventsDelay = -1;
     var debug = false;
     ;
     Od.text = function (text) {
@@ -512,38 +516,6 @@ var Od;
         // Attach this component as a subcomponent of the parent context.
         addAsSubcomponentOfParent(name, component);
         return component;
-    };
-    // The current parent component scope, if any.
-    var parentComponent = null;
-    var existingNamedComponentInstance = function (name) {
-        return (name != null) &&
-            parentComponent &&
-            parentComponent.subcomponents &&
-            parentComponent.subcomponents[name];
-    };
-    var anonymousSubcomponentsKey = "__OdAnonymousSubcomponents__";
-    var addAsSubcomponentOfParent = function (name, child) {
-        if (!parentComponent)
-            return;
-        if (!parentComponent.subcomponents)
-            parentComponent.subcomponents = {};
-        var subcomponents = parentComponent.subcomponents;
-        if (name != null) {
-            // This is a named sub-component which will persist for the
-            // lifetime of the parent component.
-            subcomponents[name] = child;
-        }
-        else {
-            // This child has no name.  Aww.  In this case we store a list
-            // of these nameless children under a special name.
-            var anonSubcomponents = subcomponents[anonymousSubcomponentsKey];
-            if (!anonSubcomponents) {
-                subcomponents[anonymousSubcomponentsKey] = [child];
-            }
-            else {
-                anonSubcomponents.push(child);
-            }
-        }
     };
     // Construct a static DOM subtree from an HTML string.
     // Note: this vDOM node can, like DOM nodes, only appear
@@ -616,18 +588,6 @@ var Od;
         if (subcomponents) {
             disposeSubcomponents(subcomponents);
             component.subcomponents = null;
-        }
-    };
-    var disposeSubcomponents = function (subcomponents) {
-        for (var name in subcomponents) {
-            var subcomponent = subcomponents[name];
-            if (name === anonymousSubcomponentsKey) {
-                // These are anonymous subcomponents, kept in an list.
-                subcomponent.forEach(Od.dispose);
-            }
-            else {
-                Od.dispose(subcomponent);
-            }
         }
     };
     // Normally, component updates will be batched via requestAnimationFrame
@@ -895,6 +855,38 @@ var Od;
         }
         return vdom;
     };
+    // The current parent component scope, if any.
+    var parentComponent = null;
+    var existingNamedComponentInstance = function (name) {
+        return (name != null) &&
+            parentComponent &&
+            parentComponent.subcomponents &&
+            parentComponent.subcomponents[name];
+    };
+    var anonymousSubcomponentsKey = "__OdAnonymousSubcomponents__";
+    var addAsSubcomponentOfParent = function (name, child) {
+        if (!parentComponent)
+            return;
+        if (!parentComponent.subcomponents)
+            parentComponent.subcomponents = {};
+        var subcomponents = parentComponent.subcomponents;
+        if (name != null) {
+            // This is a named sub-component which will persist for the
+            // lifetime of the parent component.
+            subcomponents[name] = child;
+        }
+        else {
+            // This child has no name.  Aww.  In this case we store a list
+            // of these nameless children under a special name.
+            var anonSubcomponents = subcomponents[anonymousSubcomponentsKey];
+            if (!anonSubcomponents) {
+                subcomponents[anonymousSubcomponentsKey] = [child];
+            }
+            else {
+                anonSubcomponents.push(child);
+            }
+        }
+    };
     var disposeAnonymousSubcomponents = function (component) {
         var anonymousSubcomponents = component.subcomponents &&
             component.subcomponents[anonymousSubcomponentsKey];
@@ -902,6 +894,18 @@ var Od;
             return;
         anonymousSubcomponents.forEach(Od.dispose);
         component.subcomponents[anonymousSubcomponentsKey] = null;
+    };
+    var disposeSubcomponents = function (subcomponents) {
+        for (var name in subcomponents) {
+            var subcomponent = subcomponents[name];
+            if (name === anonymousSubcomponentsKey) {
+                // These are anonymous subcomponents, kept in an list.
+                subcomponent.forEach(Od.dispose);
+            }
+            else {
+                Od.dispose(subcomponent);
+            }
+        }
     };
     // We defer DOM updates using requestAnimationFrame.  It's better to
     // batch DOM updates where possible.
@@ -941,7 +945,10 @@ var Od;
         // new RAF request on the next update.
         requestAnimationFrameID = 0;
         // Any pending Od events are also processed here.
-        processPendingOdEvents();
+        if (processPendingOdEventsDelay < 0)
+            processPendingOdEvents();
+        if (processPendingOdEventsDelay >= 0)
+            setTimeout(processPendingOdEvents, 0);
     };
     var patchUpdatedComponent = function (component, vdom) {
         vdom = (vdom != null ? vdom : component.obs());
