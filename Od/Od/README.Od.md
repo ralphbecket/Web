@@ -5,6 +5,7 @@
 Virtual DOM (vDOM) structures are used to efficiently update the live DOM.
 
 * `Vdom`: either a string (denoting a text node) or an `IVdom`
+* `Vdoms`: either a single `Vdom` or an array of `Vdom`s.
 * `IVdom`: a virtual DOM node corresponding to a DOM subtree (can be a text node, an element, or a _component_).
 
 ### Text nodes
@@ -36,6 +37,20 @@ Od.element("P",
 ```
 
 Note: the [Ends/Elements](../Ends/Elements.ts) extension defines useful shorthand functions for the HTML5 elements.  For example, the above could also be written as `Od.P({ ... }, ["Hello, ", Od.EM("World!")])`.
+
+#### Special properties: `class`, `style` and `attrs`
+
+The property `class` is supported as a convenient shortcut for the standard `className` property.
+
+The `style` property takes an object giving element style settings.  For example:
+```TypeScript
+Od.element("P", { ..., style: { color: "blue", fontWeight: "bold" } }, ...)
+```
+
+The `attrs` property takes an object giving non-standard attribute settings.  Normally, attributes are set via the corresponding DOM element property.  With `attrs`, attributes are set directly using the DOM element `setAttribute` method.  For example:
+```TypeScript
+Od.element("P", { attrs: { "data-bind": ..., "aria-label": true, ... } }, ...)
+```
 
 ### Components
 ```TypeScript
@@ -129,9 +144,66 @@ Disposal also strips any properties, event handlers, and so forth that have been
 
 Disposal is recommended to avoid memory leaks.  Since a component `C` establishes a dependency on any observable `X` it uses, `C` will persist as long as `X` is live.  Disposing of `C` breaks this connection, allowing `C` to be garbage collected once it becomes unreachable (`X` is unaffected by the disposal of `C`).
 
+## Alternative vDOM constructors
+
+```TypeScript
+Od.fromHtml(html: string): IVdom
+```
+Constructs a vDOM element from the given HTML string.  If the HTML has more than one root element, the result will be wrapped in a `DIV`.
+
+```TypeScript
+Od.fromDom(dom: Node): IVdom
+```
+Constructs a vDOM element from the given DOM node.  Like components, DOM nodes can only appear in one place: if you need copies, you must create them from clones of the DOM node.
+
 ## Virtual DOM binding
 
+```TypeScript
+Od.bind(vdom: Vdom, dom: Node): Node
+```
+Patches the current `dom` node with `vdom`.  Any components in `vdom` will effectively be "live" after this point.  The patched root DOM node is returned.
 
+```TypeScript
+Od.appendChild(vdom: Vdom, domParent: Node): Node
+```
+Appends to `domParent` a new DOM child node defined by `vdom`.  Any components in `vdom` will effectively be "live" after this point.  The new DOM node is returned.
 
+## Eager vs deferred component patching
 
-XXX WRITE MORE.  MOOOOORE!
+```TypeScript
+Od.deferComponentUpdates = true
+```
+Ordinarily, component updates are batched and evaluated together via `requestAnimationFrame` or equivalent `setTimeout` call.  Multiple updates to the same component before the next frame will result in just a single update.  However, if eager (i.e., non-batched) updates are required, set `Od.deferComponentUpdates = false`, whereupon each component update will be evaluated immediately on any change to an observable dependency.
+
+## Patching algorithm
+
+Patching is the process of changing a DOM subtree to match a vDOM tree.  
+* An _update_ changes the existing DOM node.
+* A _replacement_ substitutes a new DOM node for the old.
+
+| Old\New   | Text       | Element    | Component  |
+| :-------- | :--------: | :--------: | :--------: |
+| Text      | Update     | Replace    | Replace    |
+| Element   | Replace    | Depends on tags | Replace |
+| Component | Replace    | Replace    | Depends on components |
+
+* Element/element patching: _update_ if tags match, otherwise _replace_.
+* Component/component patching: do nothing if components are the same, otherwise _replace_ with the new component's DOM.
+
+## Keyed lists
+
+If a parent node has property `keyed: true` and its children have `key: ...` properties, then the children will be rearranged, if necessary, to match the corresponding `key` property values in the vDOM.  This can substantially reduce the number DOM updates required when, say, the order of a list is changed.  `key` values can be any string or number.
+
+Example:
+```TypeScript
+Od.UL({ keyed: true }, [
+  Od.LI({ key: 1 }, "Alice"),
+  Od.LI({ key: 2 }, "Bob"),
+  Od.LI({ key: 3 }, "Charlotte"),
+  ...
+])
+```
+
+## Node stripping
+
+Replaced DOM nodes that do not belong to a component are "stripped" in a background task which is responsible for removing any dangling event handlers.  It is not necessary to do this manually unless you added event handlers through some non-Od mechanism.
