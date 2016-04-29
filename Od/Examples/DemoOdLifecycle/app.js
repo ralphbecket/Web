@@ -910,7 +910,7 @@ var Od;
     // We defer DOM updates using requestAnimationFrame.  It's better to
     // batch DOM updates where possible.
     var requestAnimationFrameSubstitute = function (callback) {
-        return setTimeout(callback, 16); // 16 ms = 1/60 s.
+        return setTimeout(callback, processPendingOdEventsDelay); // 16 ms = 1/60 s.
     };
     var requestAnimationFrame = window.requestAnimationFrame || requestAnimationFrameSubstitute;
     var componentsAwaitingUpdate = [];
