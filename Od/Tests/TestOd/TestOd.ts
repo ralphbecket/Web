@@ -4,6 +4,7 @@
 window.onload = () => {
 
     Od.deferComponentUpdates = false; // Deferred updates make testing harder.
+    // Od.processPendingOdEventsDelay = 1;
 
     const e = Od.element;
     const t = Od.text;
@@ -305,6 +306,7 @@ window.onload = () => {
         setTimeout(() => {
             expect("Num removed", nDeleted === 2);
             expect("Num created", nCreated === 3);
+            pass();
         }, 200);
     });
 

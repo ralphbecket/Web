@@ -12,7 +12,7 @@ window.onload = () => {
         }),
         "'", Od.component(null, () => x().toString()), "'",
         Od.BUTTON({
-            onclick: () => { x(-x()); }
+            onclick: () => { if (typeof(x()) === "number") x(-x()); }
         }, "Negate!"
         )
     ]);

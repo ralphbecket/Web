@@ -1,5 +1,6 @@
 /// <reference path="Obs.d.ts" />
 declare namespace Od {
+    var processPendingOdEventsDelay: number;
     interface IVdom {
     }
     type Vdom = string | IVdom;

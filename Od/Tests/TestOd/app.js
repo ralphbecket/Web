@@ -486,7 +486,7 @@ var Od;
     // XXX This is to help diagnose Mihai's bug.
     // Set to -ve to process immediately.
     // Otherwise Od events will be processed with this setTimeout delay.
-    var processPendingOdEventsDelay = -1;
+    Od.processPendingOdEventsDelay = -1;
     var debug = false;
     ;
     Od.text = function (text) {
@@ -578,7 +578,7 @@ var Od;
         }
         var dom = component.dom;
         if (dom) {
-            lifecycleHooks("removed", dom);
+            enqueueOdEventCallback(null, "removed", dom);
             // We have to remove the component reference before stripping.
             setDomComponent(dom, null);
             enqueueNodeForStripping(dom);
@@ -847,7 +847,7 @@ var Od;
             var dom = Od.patchDom(vdom, null, null);
             setDomComponent(dom, component);
             component.dom = dom;
-            lifecycleHooks("created", dom);
+            enqueueOdEventCallback(vdom, "created", dom);
         }
         else {
             // The updated lifecycle hooks will be invoked here.
@@ -910,7 +910,7 @@ var Od;
     // We defer DOM updates using requestAnimationFrame.  It's better to
     // batch DOM updates where possible.
     var requestAnimationFrameSubstitute = function (callback) {
-        return setTimeout(callback, processPendingOdEventsDelay); // 16 ms = 1/60 s.
+        return setTimeout(callback, Od.processPendingOdEventsDelay); // 16 ms = 1/60 s.
     };
     var requestAnimationFrame = window.requestAnimationFrame || requestAnimationFrameSubstitute;
     var componentsAwaitingUpdate = [];
@@ -945,10 +945,10 @@ var Od;
         // new RAF request on the next update.
         requestAnimationFrameID = 0;
         // Any pending Od events are also processed here.
-        if (processPendingOdEventsDelay < 0)
-            processPendingOdEvents();
-        if (processPendingOdEventsDelay >= 0)
-            setTimeout(processPendingOdEvents, 0);
+        if (Od.processPendingOdEventsDelay < 0)
+            processPendingOdEventCallbacks();
+        if (Od.processPendingOdEventsDelay >= 0)
+            setTimeout(processPendingOdEventCallbacks, 0);
     };
     var patchUpdatedComponent = function (component, vdom) {
         vdom = (vdom != null ? vdom : component.obs());
@@ -965,7 +965,7 @@ var Od;
         }
         var newDom = Od.patchDom(vdom, dom, domParent);
         setDomComponent(newDom, component);
-        lifecycleHooks("updated", newDom);
+        enqueueOdEventCallback(vdom, "updated", newDom);
         component.dom = newDom;
     };
     // A DOM node will be replaced by a new DOM structure if it
@@ -1043,12 +1043,18 @@ var Od;
         }
     };
     // Some component nodes will have life-cycle hooks to call.
-    var lifecycleHooks = function (what, dom) {
-        var props = dom && getEltOdProps(dom);
+    var enqueueOdEventCallback = function (vdom, what, dom) {
+        // Od events only apply to top-level DOM elements of components.
+        // If the source vDOM is itself a component (i.e., this is a component
+        // that has another component as it's top-level) this means the Od
+        // event will have already been queued, so we shouldn't do it twice here.
+        if (vdom && vdom.obs)
+            return;
+        var props = getEltOdProps(dom);
         var hook = props && props["onodevent"];
         if (!hook)
             return;
-        pendingLifecycleCallbacks.push(function () { return hook(what, dom); });
+        pendingOdEventCallbacks.push(function () { hook(what, dom); });
         if (pendingOdEventsID)
             return;
         // Either there will be a requestAnimationFrame call due in
@@ -1056,16 +1062,16 @@ var Od;
         // call to handle the pending Od events because then the
         // callbacks will see the corresponding events in their proper
         // DOM contexts.
-        pendingOdEventsID = setTimeout(processPendingOdEvents, 20);
+        pendingOdEventsID = setTimeout(processPendingOdEventCallbacks, 20);
     };
     var pendingOdEventsID = 0;
-    var pendingLifecycleCallbacks = [];
+    var pendingOdEventCallbacks = [];
     // We process Od lifecycle events after the DOM has had a chance to
     // rearrange itself.
-    var processPendingOdEvents = function () {
-        for (var i = 0; i < pendingLifecycleCallbacks.length; i++)
-            pendingLifecycleCallbacks[i]();
-        pendingLifecycleCallbacks = [];
+    var processPendingOdEventCallbacks = function () {
+        for (var i = 0; i < pendingOdEventCallbacks.length; i++)
+            pendingOdEventCallbacks[i]();
+        pendingOdEventCallbacks = [];
         pendingOdEventsID = 0;
     };
     // Debugging.
@@ -1144,6 +1150,7 @@ var Test;
 /// <reference path="../TestHarness/Test.ts"/>
 window.onload = function () {
     Od.deferComponentUpdates = false; // Deferred updates make testing harder.
+    // Od.processPendingOdEventsDelay = 1;
     var e = Od.element;
     var t = Od.text;
     var d = function (v) { return Od.patchDom(v, null, null); };
@@ -1421,6 +1428,7 @@ window.onload = function () {
         setTimeout(function () {
             expect("Num removed", nDeleted === 2);
             expect("Num created", nCreated === 3);
+            pass();
         }, 200);
     });
     Test.run("Attrs properties", function () {

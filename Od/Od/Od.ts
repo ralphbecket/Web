@@ -60,7 +60,7 @@ namespace Od {
     // XXX This is to help diagnose Mihai's bug.
     // Set to -ve to process immediately.
     // Otherwise Od events will be processed with this setTimeout delay.
-    var processPendingOdEventsDelay = -1;
+    export var processPendingOdEventsDelay = -1;
 
     const debug = false;
 
@@ -191,7 +191,7 @@ namespace Od {
         }
         const dom = component.dom;
         if (dom) {
-            lifecycleHooks("removed", dom);
+            enqueueOdEventCallback(null, "removed", dom);
             // We have to remove the component reference before stripping.
             setDomComponent(dom, null);
             enqueueNodeForStripping(dom);
@@ -511,7 +511,7 @@ namespace Od {
             const dom = Od.patchDom(vdom, null, null);
             setDomComponent(dom, component);
             component.dom = dom;
-            lifecycleHooks("created", dom);
+            enqueueOdEventCallback(vdom, "created", dom);
         } else {
             // The updated lifecycle hooks will be invoked here.
             enqueueComponentForPatching(component, vdom);
@@ -617,8 +617,8 @@ namespace Od {
         requestAnimationFrameID = 0;
 
         // Any pending Od events are also processed here.
-        if (processPendingOdEventsDelay < 0) processPendingOdEvents();
-        if (processPendingOdEventsDelay >= 0) setTimeout(processPendingOdEvents, 0);
+        if (processPendingOdEventsDelay < 0) processPendingOdEventCallbacks();
+        if (processPendingOdEventsDelay >= 0) setTimeout(processPendingOdEventCallbacks, 0);
     };
 
     const patchUpdatedComponent = (component: IVdom, vdom?: Vdom): void => {
@@ -635,7 +635,7 @@ namespace Od {
         }
         const newDom = patchDom(vdom, dom, domParent);
         setDomComponent(newDom, component);
-        lifecycleHooks("updated", newDom);
+        enqueueOdEventCallback(vdom, "updated", newDom);
         component.dom = newDom;
     };
 
@@ -707,29 +707,35 @@ namespace Od {
     };
 
     // Some component nodes will have life-cycle hooks to call.
-    const lifecycleHooks = (what: string, dom: Node): void => {
-        const props = dom && getEltOdProps(dom);
+    const enqueueOdEventCallback =
+    (vdom: Vdom, what: string, dom: Node): void => {
+        // Od events only apply to top-level DOM elements of components.
+        // If the source vDOM is itself a component (i.e., this is a component
+        // that has another component as it's top-level) this means the Od
+        // event will have already been queued, so we shouldn't do it twice here.
+        if (vdom && (vdom as IVdom).obs) return;
+        const props = getEltOdProps(dom);
         const hook = props && props["onodevent"];
         if (!hook) return;
-        pendingLifecycleCallbacks.push(() => hook(what, dom));
+        pendingOdEventCallbacks.push(() => { hook(what, dom); });
         if (pendingOdEventsID) return;
         // Either there will be a requestAnimationFrame call due in
         // 16ms or this will fire in 20ms.  We would prefer the RAF
         // call to handle the pending Od events because then the
         // callbacks will see the corresponding events in their proper
         // DOM contexts.
-        pendingOdEventsID = setTimeout(processPendingOdEvents, 20);
+        pendingOdEventsID = setTimeout(processPendingOdEventCallbacks, 20);
     };
 
     var pendingOdEventsID = 0;
-    var pendingLifecycleCallbacks = [] as (() => void)[];
+    var pendingOdEventCallbacks = [] as (() => void)[];
 
     // We process Od lifecycle events after the DOM has had a chance to
     // rearrange itself.
-    const processPendingOdEvents = (): void => {
-        for (var i = 0; i < pendingLifecycleCallbacks.length; i++)
-            pendingLifecycleCallbacks[i]();
-        pendingLifecycleCallbacks = [];
+    const processPendingOdEventCallbacks = (): void => {
+        for (var i = 0; i < pendingOdEventCallbacks.length; i++)
+            pendingOdEventCallbacks[i]();
+        pendingOdEventCallbacks = [];
         pendingOdEventsID = 0;
     };
 
