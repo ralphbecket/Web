@@ -1503,25 +1503,31 @@ var Oath;
     };
     var pending = function (p, passed, failed, pass, fail) {
         var onF = p.onFulfilled;
-        if (passed)
-            p.onFulfilled = function (x) {
-                if (onF)
-                    onF(x);
+        p.onFulfilled = function (x) {
+            if (onF)
+                onF(x);
+            if (passed)
                 handleCallback(p, passed, pass, fail);
-            };
+            else
+                pass(x);
+        };
         var onR = p.onRejected;
-        if (failed)
-            p.onRejected = function (r) {
-                if (onR)
-                    onR(r);
+        p.onRejected = function (r) {
+            if (onR)
+                onR(r);
+            if (failed)
                 handleCallback(p, failed, pass, fail);
-            };
+            else
+                fail(r);
+        };
     };
     var fulfilled = function (p, passed, failed, pass, fail) {
-        setTimeout(handleCallback, 0, p, passed, pass, fail);
+        if (passed)
+            setTimeout(handleCallback, 0, p, passed, pass, fail);
     };
     var rejected = function (p, passed, failed, pass, fail) {
-        setTimeout(handleCallback, 0, p, failed, pass, fail);
+        if (failed)
+            setTimeout(handleCallback, 0, p, failed, pass, fail);
     };
     var handleCallback = function (p, f, pass, fail) {
         try {

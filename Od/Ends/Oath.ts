@@ -104,14 +104,16 @@
         fail: (r: any) => void
     ): void => {
         var onF = p.onFulfilled;
-        if (passed) p.onFulfilled = x => {
+        p.onFulfilled = x => {
             if (onF) onF(x);
-            handleCallback(p, passed, pass, fail);
+            if (passed) handleCallback(p, passed, pass, fail);
+            else pass(x as any);
         };
         var onR = p.onRejected;
-        if (failed) p.onRejected = r => {
+        p.onRejected = r => {
             if (onR) onR(r);
-            handleCallback(p, failed, pass, fail);
+            if (failed) handleCallback(p, failed, pass, fail);
+            else fail(r);
         };
     };
 
@@ -122,7 +124,7 @@
         pass: (x: U) => void,
         fail: (r: any) => void
     ): void => {
-        setTimeout(handleCallback, 0, p, passed, pass, fail);
+        if (passed) setTimeout(handleCallback, 0, p, passed, pass, fail);
     };
 
     const rejected = <T, U>(
@@ -132,7 +134,7 @@
         pass: (x: U) => void,
         fail: (r: any) => void
     ): void => {
-        setTimeout(handleCallback, 0, p, failed, pass, fail);
+        if (failed) setTimeout(handleCallback, 0, p, failed, pass, fail);
     };
 
     const handleCallback =
