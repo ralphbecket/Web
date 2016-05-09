@@ -4,7 +4,7 @@
 namespace Od {
 
     export interface IInputComponentArgs<T> {
-        name?: ComponentName;
+        componentName?: ComponentName;
         obs: Obs.IObservable<T>;
         props?: Obs.IObservablish<IProps>;
         type?: string; // Default is "text".
@@ -15,7 +15,7 @@ namespace Od {
     };
 
     export const inputComponent = <T>(args: IInputComponentArgs<T>): IVdom =>
-        Od.component(name, () => inputComponentVdom(args));
+        Od.component(args.componentName, () => inputComponentVdom(args));
 
     const inputComponentVdom = <T>(args: IInputComponentArgs<T>): IVdom => {
         const obs = args.obs;

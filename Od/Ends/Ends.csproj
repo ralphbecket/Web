@@ -32,14 +32,18 @@
     <Content Include="Xhr.js" />
   </ItemGroup>
   <ItemGroup>
+    <TypeScriptCompile Include="CheckboxComponent.ts" />
+    <TypeScriptCompile Include="DraggingSurface.ts" />
     <TypeScriptCompile Include="Elements.ts" />
     <TypeScriptCompile Include="Ends.ts" />
     <TypeScriptCompile Include="Jigsaw.ts" />
     <TypeScriptCompile Include="MergeProps.ts" />
+    <TypeScriptCompile Include="NumberInputComponent.ts" />
     <TypeScriptCompile Include="Oath.ts" />
     <TypeScriptCompile Include="InputComponent.ts" />
     <TypeScriptCompile Include="SelectComponent.ts" />
     <TypeScriptCompile Include="TabComponent.ts" />
+    <TypeScriptCompile Include="TextInputComponent.ts" />
     <TypeScriptCompile Include="WithClassName.ts" />
     <TypeScriptCompile Include="Xhr.ts" />
   </ItemGroup>

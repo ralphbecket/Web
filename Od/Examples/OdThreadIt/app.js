@@ -1593,12 +1593,8 @@ var Xhr;
 })(Xhr || (Xhr = {}));
 // Od version of ThreadIt.
 //
-// This is about thirty lines longer than the Mithril implementation, but,
-// unlike the Mithril version (as of 2016-03-15) this has full asynchronous
-// activity reporting and error handling.
-//
-// What's interesting about Od is that view components update independently
-// without requiring a complete rebuild of the entire vDOM.
+// Od's view components update independently without requiring a complete
+// rebuild of the entire vDOM or patching the entire DOM.
 /// <reference path="../../Ends/Elements.ts"/>
 /// <reference path="../../Ends/Jigsaw.ts"/>
 /// <reference path="../../Ends/Xhr.ts"/>
@@ -1664,17 +1660,18 @@ var viewThreads = function (threads) {
     var iTop = threads.length;
     for (var i = 0; i < iTop; i++) {
         var thread = threads[i];
-        vdoms.push(Od.A({ href: "#thread/" + thread.id }, Od.fromHtml(thread.text)));
+        vdoms.push(Od.A({ href: "#thread/" + thread.id }, T.trimTitle(thread.text)));
         vdoms.push(Od.P({ className: "comment_count" }, plural(thread.comment_count, "comment")));
         vdoms.push(Od.HR());
     }
     // XXX Add new thread post box.
+    vdoms.push(commentReply("post", true, ""));
     return vdoms;
 };
 var viewCommentTree = function (comment) {
     return Od.DIV({ className: "comment" }, [
         Od.fromHtml(comment.text),
-        Od.DIV({ className: "reply" }, commentReply(comment.id)),
+        Od.DIV({ className: "reply" }, commentReply("reply", false, comment.id)),
         Od.DIV({ className: "children" }, comment.child_comments().map(viewCommentTree))
     ]);
 };
@@ -1685,9 +1682,10 @@ var ReplyState;
     ReplyState[ReplyState["SendingReply"] = 2] = "SendingReply";
     ReplyState[ReplyState["ReplyFailed"] = 3] = "ReplyFailed";
 })(ReplyState || (ReplyState = {}));
-var commentReply = function (parentID) {
+var commentReply = function (what, editing, parentID) {
     var replyText = Obs.of("");
-    var replyState = Obs.of(ReplyState.NotReplying);
+    var replyState = Obs.of(editing ? ReplyState.EditingReply : ReplyState.NotReplying);
+    var What = what[0].toUpperCase() + what.slice(1) + "!";
     // Named components persist across re-evaluations of their parent
     // components, saving quite a lot of work.  Anonymous components
     // would be recreated each time their parent components were
@@ -1696,22 +1694,22 @@ var commentReply = function (parentID) {
         switch (replyState()) {
             case ReplyState.NotReplying: return (Od.A({
                 onclick: function () { replyState(ReplyState.EditingReply); }
-            }, "Reply!"));
+            }, What));
             case ReplyState.EditingReply: return (Od.FORM([
                 Od.TEXTAREA({
                     oninput: function (e) { replyText(e.target.value); }
                 }),
                 Od.INPUT({
                     type: "submit",
-                    value: "Reply!",
+                    value: What,
                     onclick: function () {
                         submitReply(parentID, replyText, replyState);
                     }
                 }),
-                Od.DIV({ className: "preview" }, replyText())
+                Od.DIV({ className: "preview" }, Od.fromHtml(T.previewComment(replyText())))
             ]));
             case ReplyState.SendingReply: return (Od.DIV([
-                Od.A("Sending reply..."),
+                Od.A("Sending " + what + "..."),
                 Od.DIV({ className: "preview" }, replyText())
             ]));
             case ReplyState.ReplyFailed: return (Od.DIV([
@@ -1719,7 +1717,7 @@ var commentReply = function (parentID) {
                     onclick: function () {
                         submitReply(parentID, replyText, replyState);
                     }
-                }, "Sending reply failed...  Retry"),
+                }, "Sending " + what + " failed...  Retry"),
                 Od.DIV({ className: "preview" }, replyText())
             ]));
         }
@@ -1730,7 +1728,6 @@ var submitReply = function (parentID, replyText, replyState) {
     var body = "text=" + encodeURIComponent(replyText());
     if (parentID)
         body += "&parent=" + encodeURIComponent(parentID);
-    //sendTestReply(parentID, replyText(),
     Xhr.send("http://api.threaditjs.com/comments/create", {
         method: "POST",
         requestHeaders: { "Content-type": "application/x-www-form-urlencoded" },
@@ -1748,7 +1745,6 @@ var plural = function (n, singular, plural) {
         (n === 1 ? singular : (plural || singular + "s"));
 };
 var fetchThreads = function () {
-    // Testing code for now.
     currentState(State.LoadingThreads);
     Xhr.send("http://api.threaditjs.com/threads").then(function (xhr) {
         threads = parseResponseText(xhr);
@@ -1758,7 +1754,6 @@ var fetchThreads = function () {
     });
 };
 var fetchComments = function (id) {
-    // Testing code for now.
     currentThreadID = id;
     currentState(State.LoadingComments);
     Xhr.send("http://api.threaditjs.com/comments/" + id).then(function (xhr) {
