@@ -4,19 +4,18 @@ namespace Od {
 
     namespace Drag {
 
-        var startX = 0;
-        var startY = 0;
+        export var startX = 0;
+        export var startY = 0;
         export var onDragCallback = null as OnDragCallback;
         export var onDragEndCallback = null as () => void;
-        var draggingSurface = document.createElement("DIV");
+        export const draggingSurface = document.createElement("DIV");
 
         const stopDragging = (): void => {
             const callback = onDragEndCallback;
             onDragCallback = null;
             onDragEndCallback = null;
-            const docBody = document.body;
-            if (draggingSurface.parentNode === docBody) {
-                docBody.removeChild(draggingSurface);
+            if (draggingSurface.parentNode) {
+                draggingSurface.parentNode.removeChild(draggingSurface);
             }
             if (callback) callback();
         };
@@ -67,10 +66,14 @@ namespace Od {
                 const top = startTop + dy;
                 elt.style.left = left.toString() + "px";
                 elt.style.top = top.toString() + "px";
+                if (args.onDrag) args.onDrag(x, y, dx, dy);
             };
         }
         Drag.onDragCallback = onDrag;
         Drag.onDragEndCallback = args.onDragEnd;
+        Drag.startX = v.pageX;
+        Drag.startY = v.pageY;
+        document.body.appendChild(Drag.draggingSurface);
     };
 
 }

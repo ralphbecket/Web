@@ -1,0 +1,27 @@
+﻿body {
+    font-family: 'Segoe UI', sans-serif;
+}
+
+.OdDialogueBox {
+}
+
+.OdDialogueBoxHeader {
+    background: red;
+    border-top-left-radius: 0.3em;
+    border-top-right-radius: 0.3em;
+    padding-top: 0.3em;
+}
+
+.OdDialogueBoxBody {
+    background: #444;
+    color: white;
+    padding: 0.5em;
+    padding-right: 1em;
+}
+
+.OdDialogueBoxFooter {
+    background: green;
+    border-bottom-left-radius: 0.3em;
+    border-bottom-right-radius: 0.3em;
+    padding-bottom: 0.3em;
+}
