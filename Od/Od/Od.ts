@@ -671,6 +671,7 @@ namespace Od {
             stripNode(dom);
             var dom = nodesPendingStripping.pop();
         }
+        stripNodesID = 0;
     };
 
     const stripNode = (dom: Node): void => {

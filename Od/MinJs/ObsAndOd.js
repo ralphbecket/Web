@@ -1001,6 +1001,7 @@ var Od;
             stripNode(dom);
             var dom = nodesPendingStripping.pop();
         }
+        stripNodesID = 0;
     };
     var stripNode = function (dom) {
         // We don't want to strip anything owned by a sub-component.
