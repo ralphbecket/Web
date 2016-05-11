@@ -98,7 +98,11 @@ Returns `true` iff `x` is a computed observable.
 ```
 Obs.subscribe(obss: IObservableAny[], action: () => void): ISubscription
 ```
-Returns a subscription on the observables in `obss`.  If any observable in `obss` changes, `action` will be re-evaluated.  Note that a subscription is essentially a special kind of computed observable.
+Returns a subscription on the observables in `obss`.  If any observable in `obss` changes, `action` will be re-evaluated.  
+
+Subscriptions are useful when you need to associate a side effect with a change in one or more observables.  Be careful that `action` does not update other observables in such a way as to create an infinite loop.  It is a good idea to use subscriptions sparingly.
+
+Note that a subscription is essentially just a special kind of computed observable.
 
 ## Disposal
 
@@ -109,6 +113,18 @@ Disposes of `obs` by breaking any dependencies it has on other observables and s
 
 ## Order of evaluation
 
+An observable may have any number of dependents, hence a change to an observable can trigger an update in several other observables.  These, in turn, may trigger updates of further observables.
 
+When multiple observables are to be updated, they are always updated in increasing order of dependency count.  That is, an observable with fewer dependencies will always be re-evaluated before an observable with more dependencies.  This ensures that, in the absence of circular dependencies (do not create such things!), each observable will be re-evaluated at most once after a single update to a "root" observable.
 
-XXX WRITE MOOOOORE!
+There is one exception to this rule: subscriptions are always re-evaluated after all non-subscription observables have been re-evaluated.
+
+## Atomic group-update regions
+
+```
+Obs.startUpdate(): void
+Obs.endUpdate(): void
+```
+Any dependent observable updates after a call to `Obs.startUpdate()` are deferred until the corresponding call to `Obs.endUpdate()`.  In this way you can udpate several mutable observables in one go, but only trigger one round of updates to their dependents.
+
+Atomic update regions (i.e., between calls to `Obs.startUpdate()` and `Obs.endUpdate()`) may be nested; any pending dependent updates will be deferred until the outermost atomic update region is finished.
