@@ -19,6 +19,8 @@ interface IObservable<T> extends IObservableAny {
 type EqualityTest<T> = (oldX: T, newX: T) => boolean;
 
 type IObservablish<T> = T | IObservable<T>;
+
+interface ISubscription extends IObservable<void> { };
 ```
 Observables are typed and each has a unique identity.  `IObservableAny` is primarily useful for TypeScript development where inhomogeneous collections of observables are involved.
 
@@ -90,6 +92,22 @@ Returns `true` iff `x` is an observable.
 Obs.isComputed(x: any): boolean
 ```
 Returns `true` iff `x` is a computed observable.
+
+## Subscriptions
+
+```
+Obs.subscribe(obss: IObservableAny[], action: () => void): ISubscription
+```
+Returns a subscription on the observables in `obss`.  If any observable in `obss` changes, `action` will be re-evaluated.  Note that a subscription is essentially a special kind of computed observable.
+
+## Disposal
+
+```
+Obs.dispose(obs: IObservableAny): void
+```
+Disposes of `obs` by breaking any dependencies it has on other observables and setting its value to `null`.  This is occasionally needed to avoid garbage retention -- whenever a dependency relationship exists between two observables, neither can be garbage collected while the other is still live.
+
+## Order of evaluation
 
 
 
