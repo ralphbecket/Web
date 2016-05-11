@@ -17,12 +17,14 @@ interface IObservable<T> extends IObservableAny {
 }
 
 type EqualityTest<T> = (oldX: T, newX: T) => boolean;
+
+type IObservablish<T> = T | IObservable<T>;
 ```
 Observables are typed and each has a unique identity.  `IObservableAny` is primarily useful for TypeScript development where inhomogeneous collections of observables are involved.
 
 Each observable that is created carries an equality test to decide whether an updated value constitutes a change or not.  The default test simply compares the old and new values with `===`.  This means that, by default, changes to the contents of an array or object field will not be visible to any observable containing that array or object.
 
-## Reading and writing observables.
+## Reading and writing observables
 
 The current value of an observable `x` may be obtained via `x()`.
 
@@ -62,5 +64,33 @@ Similar to the default equality constructor, but it uses `valueOf` to obtain the
 alwaysUpdate = <T>(x: T, y: T) => false;
 ```
 Always registers a change on any update to an observable.  Be careful with this one, it is possible to end up in infinite loops...
+
+## Peeking at an observable's value
+
+```
+Obs.peek<T>(obs: IObservable<T>): T
+```
+Returns the current value of `obs` _without_ establishing a dependency on `obs`.  This is occasionally useful for computed observables.
+
+## "Observablish" values
+
+It is sometimes convenient to freely mix observable and unobservable (ordinary) values.
+
+```
+Obs.value<T>(x: IObservablish<T>): T
+```
+Returns `x` if `x` is not an observable, `x()` otherwise.
+
+```
+Obs.isObservable(x: any): boolean
+```
+Returns `true` iff `x` is an observable.
+
+```
+Obs.isComputed(x: any): boolean
+```
+Returns `true` iff `x` is a computed observable.
+
+
 
 XXX WRITE MOOOOORE!
