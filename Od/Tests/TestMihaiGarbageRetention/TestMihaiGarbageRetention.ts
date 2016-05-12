@@ -1,5 +1,12 @@
 ﻿/// <reference path="../../Ends/Elements.ts"/>
 
+// Mihai found that frequent DOM changes were consuming increasing amounts
+// of memory that weren't being collected.  It turns out that the Od stripper
+// (ironically the part responsible for protecting against memory leaks) had
+// omitted a single line allowing it to be run repeatedly.  This caused Od to
+// save up every removed DOM subtree and never let go of it.  This is now fixed,
+// of course.
+
 const N = 10; // Number of top-level DIVs.
 const M = 100; // Number of second-level DIVs.
 const K = Obs.of(0);

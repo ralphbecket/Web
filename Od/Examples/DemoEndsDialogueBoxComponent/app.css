@@ -3,9 +3,11 @@
 }
 
 .OdDialogueBoxHeader {
-    background: red;
+    background: #444;
+    color: white;
     border-top-left-radius: 0.3em;
     border-top-right-radius: 0.3em;
+    border-bottom: 1px solid grey;
     padding-top: 0.3em;
 }
 
@@ -17,7 +19,9 @@
 }
 
 .OdDialogueBoxFooter {
-    background: green;
+    background: #444;
+    color: white;
+    border-top: 1px solid grey;
     border-bottom-left-radius: 0.3em;
     border-bottom-right-radius: 0.3em;
     padding-bottom: 0.3em;
