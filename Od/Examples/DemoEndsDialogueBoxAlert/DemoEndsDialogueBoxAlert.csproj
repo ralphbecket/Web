@@ -3,7 +3,7 @@
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\TypeScript\Microsoft.TypeScript.Default.props" Condition="Exists('$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\TypeScript\Microsoft.TypeScript.Default.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <ProjectGuid>{DAB692CD-606B-410D-A414-728F4ED04F33}</ProjectGuid>
+    <ProjectGuid>{D184F4A0-205E-4B6A-8D6E-334D4E5521A7}</ProjectGuid>
     <ProjectTypeGuids>{349c5851-65df-11da-9384-00065b846f21};{fae04ec0-301f-11d3-bf4b-00c04f79efbc}</ProjectTypeGuids>
     <OutputType>Library</OutputType>
     <OutputPath>bin</OutputPath>
@@ -22,41 +22,26 @@
     <Service Include="{4A0DDDB5-7A95-4FBF-97CC-616D07737A77}" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Elements.js" />
-    <Content Include="Jigsaw.js" />
-    <Content Include="Oath.js" />
-    <Content Include="SelectComponent.js" />
-    <Content Include="TabComponent.css" />
-    <Content Include="TabComponent.js" />
-    <Content Include="WithClassName.js" />
-    <Content Include="Xhr.js" />
+    <Content Include="app.css" />
+    <Content Include="index.html" />
+    <Content Include="web.config" />
   </ItemGroup>
   <ItemGroup>
-    <TypeScriptCompile Include="CheckboxComponent.ts" />
-    <TypeScriptCompile Include="DialogueBoxAlert.ts" />
-    <TypeScriptCompile Include="DialogueBox.ts" />
-    <TypeScriptCompile Include="Dragging.ts" />
-    <TypeScriptCompile Include="Elements.ts" />
-    <TypeScriptCompile Include="Ends.ts" />
-    <TypeScriptCompile Include="Jigsaw.ts" />
-    <TypeScriptCompile Include="MergeProps.ts" />
-    <TypeScriptCompile Include="NumberInputComponent.ts" />
-    <TypeScriptCompile Include="Oath.ts" />
-    <TypeScriptCompile Include="InputComponent.ts" />
-    <TypeScriptCompile Include="SelectComponent.ts" />
-    <TypeScriptCompile Include="TabComponent.ts" />
-    <TypeScriptCompile Include="TextInputComponent.ts" />
-    <TypeScriptCompile Include="WithClassName.ts" />
-    <TypeScriptCompile Include="Xhr.ts" />
+    <TypeScriptCompile Include="DemoEndsDialogueBoxAlert.ts" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Oath.js.map" />
+    <None Include="web.Debug.config">
+      <DependentUpon>web.config</DependentUpon>
+    </None>
+    <None Include="web.Release.config">
+      <DependentUpon>web.config</DependentUpon>
+    </None>
   </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">12.0</VisualStudioVersion>
   </PropertyGroup>
   <PropertyGroup>
-    <RootNamespace>Ends</RootNamespace>
+    <RootNamespace>DemoEndsDialogueBoxAlert</RootNamespace>
   </PropertyGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\WebApplications\Microsoft.WebApplication.targets" Condition="Exists('$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\WebApplications\Microsoft.WebApplication.targets')" />
@@ -66,9 +51,9 @@
         <WebProjectProperties>
           <UseIIS>True</UseIIS>
           <AutoAssignPort>True</AutoAssignPort>
-          <DevelopmentServerPort>24258</DevelopmentServerPort>
+          <DevelopmentServerPort>14912</DevelopmentServerPort>
           <DevelopmentServerVPath>/</DevelopmentServerVPath>
-          <IISUrl>http://localhost:24258/</IISUrl>
+          <IISUrl>http://localhost:14912/</IISUrl>
           <NTLMAuthentication>False</NTLMAuthentication>
           <UseCustomServer>False</UseCustomServer>
           <CustomServerUrl>
@@ -84,12 +69,11 @@
     <TypeScriptTarget>ES5</TypeScriptTarget>
     <TypeScriptJSXEmit>None</TypeScriptJSXEmit>
     <TypeScriptCompileOnSaveEnabled>True</TypeScriptCompileOnSaveEnabled>
-    <TypeScriptNoImplicitAny>True</TypeScriptNoImplicitAny>
-    <TypeScriptModuleKind>CommonJS</TypeScriptModuleKind>
-    <TypeScriptOutFile>
-    </TypeScriptOutFile>
+    <TypeScriptNoImplicitAny>False</TypeScriptNoImplicitAny>
+    <TypeScriptModuleKind />
+    <TypeScriptOutFile>app.js</TypeScriptOutFile>
     <TypeScriptOutDir />
-    <TypeScriptGeneratesDeclarations>True</TypeScriptGeneratesDeclarations>
+    <TypeScriptGeneratesDeclarations>False</TypeScriptGeneratesDeclarations>
     <TypeScriptNoEmitOnError>True</TypeScriptNoEmitOnError>
     <TypeScriptMapRoot />
     <TypeScriptSourceRoot />

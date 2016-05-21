@@ -898,6 +898,8 @@ var Od;
     var disposeSubcomponents = function (subcomponents) {
         for (var name in subcomponents) {
             var subcomponent = subcomponents[name];
+            if (!subcomponent)
+                continue;
             if (name === anonymousSubcomponentsKey) {
                 // These are anonymous subcomponents, kept in an list.
                 subcomponent.forEach(Od.dispose);

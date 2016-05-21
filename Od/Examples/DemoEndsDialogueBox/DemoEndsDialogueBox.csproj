@@ -27,7 +27,7 @@
     <Content Include="web.config" />
   </ItemGroup>
   <ItemGroup>
-    <TypeScriptCompile Include="DemoEndsDialogueBoxComponent.ts" />
+    <TypeScriptCompile Include="DemoEndsDialogueBox.ts" />
   </ItemGroup>
   <ItemGroup>
     <None Include="web.Debug.config">

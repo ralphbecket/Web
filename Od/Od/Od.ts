@@ -563,6 +563,7 @@ namespace Od {
     const disposeSubcomponents = (subcomponents: ISubComponents): void => {
         for (var name in subcomponents) {
             const subcomponent = subcomponents[name];
+            if (!subcomponent) continue;
             if (name === anonymousSubcomponentsKey) {
                 // These are anonymous subcomponents, kept in an list.
                 (subcomponent as IVdom[]).forEach(dispose);

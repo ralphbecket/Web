@@ -24,6 +24,9 @@
   <ItemGroup>
     <Content Include="app.css" />
     <Content Include="app.js" />
+    <Content Include="app.min.js">
+      <DependentUpon>app.js</DependentUpon>
+    </Content>
     <Content Include="index.html" />
     <Content Include="web.config" />
   </ItemGroup>

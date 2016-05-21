@@ -16,7 +16,7 @@ namespace Od {
         startDragging({ elt: elt }, v);
     };
 
-    export const dialogueBoxComponent = (
+    export const dialogueBox = (
         header: Vdom,
         body: Vdom,
         footer: Vdom,
