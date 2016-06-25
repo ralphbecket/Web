@@ -47,6 +47,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DemoEndsDialogueBox", "Exam
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DemoEndsDialogueBoxAlert", "Examples\DemoEndsDialogueBoxAlert\DemoEndsDialogueBoxAlert.csproj", "{D184F4A0-205E-4B6A-8D6E-334D4E5521A7}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ToDoMvcOd", "Examples\ToDoMvcOd\ToDoMvcOd.csproj", "{501FA52D-9186-423B-A5A7-50FD0D35ED15}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -133,6 +135,10 @@ Global
 		{D184F4A0-205E-4B6A-8D6E-334D4E5521A7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D184F4A0-205E-4B6A-8D6E-334D4E5521A7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D184F4A0-205E-4B6A-8D6E-334D4E5521A7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{501FA52D-9186-423B-A5A7-50FD0D35ED15}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{501FA52D-9186-423B-A5A7-50FD0D35ED15}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{501FA52D-9186-423B-A5A7-50FD0D35ED15}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{501FA52D-9186-423B-A5A7-50FD0D35ED15}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -155,5 +161,6 @@ Global
 		{69735DE0-6197-4100-AE9B-ED6069140363} = {6F033F29-A7C1-423F-9E61-FBAD500B1DBA}
 		{BB074892-16A3-4A9C-9836-9B9B0C384E07} = {98502A32-DE7E-42E3-859F-BB4B1077942B}
 		{D184F4A0-205E-4B6A-8D6E-334D4E5521A7} = {98502A32-DE7E-42E3-859F-BB4B1077942B}
+		{501FA52D-9186-423B-A5A7-50FD0D35ED15} = {98502A32-DE7E-42E3-859F-BB4B1077942B}
 	EndGlobalSection
 EndGlobal
