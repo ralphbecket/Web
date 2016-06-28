@@ -107,6 +107,10 @@ const toDoComponent = (toDo: IToDo): Od.Vdom => Od.component(toDo.id, () =>
                 ondblclick: (v: Event): void => {
                     uneditedToDoWhat = toDo.what;
                     toDoBeingEdited(toDo);
+                    const focusEditInput = () => {
+                        (v.target as any).parentElement.nextElementSibling.focus();
+                    };
+                    setTimeout(focusEditInput, 20);
                 }
             }, toDo.what),
             Od.BUTTON({
@@ -123,9 +127,6 @@ const toDoComponent = (toDo: IToDo): Od.Vdom => Od.component(toDo.id, () =>
             onkeyup: editToDoKeyHandler,
             oninput: (v: Event): void => {
                 toDo.what = ((v.target as HTMLInputElement).value);
-            },
-            onodevent: (v: string, dom: HTMLElement): void => {
-                if (toDoBeingEdited() === toDo) dom.focus();
             },
             onblur: (v: Event): void => {
                 toDoBeingEdited(null);
