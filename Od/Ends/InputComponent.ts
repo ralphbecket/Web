@@ -5,8 +5,8 @@ namespace Od {
 
     export interface IInputComponentArgs<T> {
         componentName?: ComponentName;
-        obs: Obs.IObservable<T>;
-        props?: Obs.IObservablish<IProps>;
+        obs: Obs.Observable<T>;
+        props?: Obs.Observableish<Props>;
         type?: string; // Default is "text".
         bindTo?: string; // Default is "value".
         updateOn?: string; // Default is "onchange".
@@ -14,10 +14,10 @@ namespace Od {
         parseText?: (text: string) => T;
     };
 
-    export const inputComponent = <T>(args: IInputComponentArgs<T>): IVdom =>
+    export const inputComponent = <T>(args: IInputComponentArgs<T>): Vdom =>
         Od.component(args.componentName, () => inputComponentVdom(args));
 
-    const inputComponentVdom = <T>(args: IInputComponentArgs<T>): IVdom => {
+    const inputComponentVdom = <T>(args: IInputComponentArgs<T>): Vdom => {
         const obs = args.obs;
         const props = Obs.value(args.props);
         const type = args.type || "text";
@@ -25,7 +25,7 @@ namespace Od {
         const updateOn = args.updateOn || "onchange";
         const formatObs = args.formatObs;
         const parseText = args.parseText;
-        const obsProps = { type: type } as IProps;
+        const obsProps = { type: type } as Props;
         obsProps[bindTo] = (formatObs ? formatObs(obs()) : obs());
         obsProps[updateOn] = (v: Event) => {
             const value = (v.target as any)[bindTo];

@@ -1,37 +1,25 @@
 /// <reference path="Obs.d.ts" />
 declare namespace Od {
     var processPendingOdEventsDelay: number;
-    interface IVdom {
+    type Vdom = number | string | VdomPatcher;
+    interface VdomPatcher {
+        (dom: Node, parent: Node): Node;
+        key?: string | number;
+        dispose?: () => void;
     }
-    type Vdom = string | IVdom;
+    type LifecycleFn = (what: string, dom: Node) => void;
     type Vdoms = Vdom | Vdom[];
-    interface IProps {
+    const flattenVdoms: (xs: number | string | VdomPatcher | (number | string | VdomPatcher)[]) => (number | string | VdomPatcher)[];
+    interface Props {
         [prop: string]: any;
     }
-    const text: (text: string) => IVdom;
-    const element: (tag: string, props?: IProps, childOrChildren?: string | IVdom | (string | IVdom)[]) => IVdom;
+    const element: (tag: string, props?: Props, children?: number | string | VdomPatcher | (number | string | VdomPatcher)[]) => number | string | VdomPatcher;
     type ComponentName = string | number;
-    const component: <T>(name: string | number, fn: () => string | IVdom) => IVdom;
-    const fromHtml: (html: string) => IVdom;
-    const fromDom: (dom: Node) => IVdom;
-    const bind: (vdom: string | IVdom, dom: Node) => Node;
-    const appendChild: (vdom: string | IVdom, domParent: Node) => Node;
-    const dispose: (component: IVdom) => void;
     var deferComponentUpdates: boolean;
-    interface ISubComponents {
-        [name: string]: (IVdom | IVdom[]);
-    }
-    interface IVdom {
-        isIVdom: boolean;
-        text?: string;
-        tag?: string;
-        props?: IProps;
-        children?: Vdom[];
-        obs?: Obs.IObservable<Vdom>;
-        subscription?: Obs.ISubscription;
-        subcomponents?: ISubComponents;
-        dom?: Node;
-    }
-    const patchDom: (vdomOrString: string | IVdom, dom: Node, domParent?: Node) => Node;
-    type PropAssocList = any[];
+    const component: (name: string | number, fn: () => number | string | VdomPatcher) => number | string | VdomPatcher;
+    const dispose: (vdom: number | string | VdomPatcher) => void;
+    const fromHtml: (html: string) => number | string | VdomPatcher;
+    const fromDom: (srcDom: Node) => number | string | VdomPatcher;
+    const bind: (vdom: number | string | VdomPatcher, dom: Node) => Node;
+    const appendChild: (vdom: number | string | VdomPatcher, parent: Node) => Node;
 }

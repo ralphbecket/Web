@@ -7,9 +7,9 @@ namespace Od {
 
     export const dialogueBoxAlert = (args: {
         header?: Vdom;
-        body: Vdom;
+        body: Vdoms;
         ondismiss?: () => void;
-        dismissText?: Vdom; // Default "Dismiss".
+        dismissText?: Vdoms; // Default "Dismiss".
     }): void => {
 
         var elt = null as HTMLElement;
@@ -17,7 +17,7 @@ namespace Od {
         const dismiss = () => {
             // Just to be safe...
             if (elt && elt.parentElement) elt.parentElement.removeChild(elt);
-            Od.dispose(vdom);
+            dispose(vdom);
         };
 
         const vdom = Od.component(null, () => Od.dialogueBox(

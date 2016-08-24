@@ -153,7 +153,7 @@ var Obs;
     // Decide if an object is observable or not.
     // This just tests whether the object is a function with an 'obsid' property.
     Obs.isObservable = function (obs) {
-        return obs && obs.obsid && (typeof (obs) === "function");
+        return obs && obs.obsid && (obs instanceof Function);
     };
     // Decide if an observable is computed or not.
     // This just tests whether the object has a 'fn' property.

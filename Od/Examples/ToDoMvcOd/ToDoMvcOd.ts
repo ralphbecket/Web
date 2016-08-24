@@ -3,7 +3,7 @@
 interface IToDo {
     id: number;
     what: string;
-    done: Obs.IObservable<boolean>;
+    done: Obs.Observable<boolean>;
 }
 
 interface IRawToDo {

@@ -54,7 +54,23 @@
 // and React.  I'd also like to mention the reactive school, but in the end
 // I find the observables-based approach more natural.  For today, at least.
 //
+//
+//
+// Experiment, 2016-07-24: closures, not structures.
+//
+// I've been thinking on remarks made by J.A.Forbes on the Mithril discussion
+// list (https://gitter.im/lhorie/mithril.js).  The initial version of Od
+// had functions to construct vDOM structures, which would then be traversed
+// by the patching function to update the DOM.  It occurs to me that we could
+// profitably cut out a step here by simply making vDOM structures patching
+// functions in their own right.  I'm going to try that experiment now.
+//
+// The experiment was a draw... except I did something truly stupid and
+// created a new closure for simple text elements.  This is, of course,
+// an absurd waste of resources.  Fixing that now...
+//
 /// <reference path="./Obs.ts"/>
+
 namespace Od {
 
     // XXX This is to help diagnose Mihai's bug.
@@ -66,143 +82,175 @@ namespace Od {
 
     // ---- Public interface. ----
 
-    export interface IVdom { }
+    // A vDOM node is just a patching function with an optional ordering key.
+    export type Vdom = number | string | VdomPatcher;
 
-    export type Vdom = string | IVdom;
+    export interface VdomPatcher {
+        (dom: Node, parent: Node): Node;
+        key?: string | number; // For the keyed-children optimisation.
+        dispose?: () => void; // For components.
+    }
 
+    // Lifecycle events on elements are
+    // "created" when the element is created,
+    // "updated" when the element is patched, and
+    // "removed" when the element is about to be stripped.
+    export type LifecycleFn = (what: string, dom: Node) => void;
+
+    // We also support nested arrays, but TypeScript can't express that.
     export type Vdoms = Vdom | Vdom[];
+
+    export const flattenVdoms = (xs: Vdoms): Vdom[] => {
+        if (xs == null) return null;
+        if (!(xs instanceof Array)) return [xs as Vdom];
+        // Otherwise xs should be an array.
+        const ys = xs as any[];
+        const n = ys.length;
+        var hasNestedArray = false;
+        for (var i = 0; i < n; i++) {
+            if (!(ys[i] instanceof Array)) continue;
+            hasNestedArray = true;
+            break;
+        }
+        if (!hasNestedArray) return xs as Vdom[];
+        // The array is inhomogeneous.  Let's flatten it.
+        const zs = [] as Vdom[];
+        flattenNestedVdoms(xs as any[], zs);
+        return zs;
+    };
+
+    const flattenNestedVdoms = (xs: any[], zs: Vdom[]): void => {
+        const n = xs.length;
+        for (var i = 0; i < n; i++) {
+            var x = xs[i];
+            if (x instanceof Array) flattenNestedVdoms(x, zs); else zs.push(x);
+        }
+    };
 
     // Properties are used to set attributes, event handlers, and so forth.
     // There are two special property names: "class" is allowed as a synonym
     // for "className"; and "style" can be either a string of the form
     // "color: red; width: 2em;" or an object of the form { color: "red",
     // width: "2em" }.
-    export interface IProps { [prop: string]: any };
+    export interface Props { [prop: string]: any };
 
-    export const text = (text: string): IVdom =>
-        ({ isIVdom: true, text: isNully(text) ? "" : text.toString() });
+    // We don't have a special representation for text nodes, we simply
+    // represent them as strings or numbers.
+    const patchText =
+        (content: number | string, dom: Node, parent: Node): Node => {
+            var txt = content.toString();
+            if (dom == null || dom.nodeName !== "#text" || isComponentDom(dom)) {
+                const newDom = document.createTextNode(txt);
+                patchNode(newDom, dom, parent);
+                return newDom;
+            }
+            if (dom.nodeValue !== txt) dom.nodeValue = txt;
+            return dom;
+        };
 
-    // Construct a vDOM node.
-    export const element =
-    (tag: string, props?: IProps, childOrChildren?: Vdoms): IVdom => {
-        tag = tag.toUpperCase();
-        const children =
-            ( !childOrChildren
-            ? null
-            : isArray(childOrChildren)
-            ? childOrChildren
-            : [childOrChildren]
-            ) as Vdom[];
-        return { isIVdom: true, tag: tag, props: props, children: children };
+    // Patch from an arbitrary Vdom node.
+    const patchFromVdom = (vdom: Vdom, dom: Node, parent: Node): Node => {
+        return (vdom instanceof Function
+            ? (vdom as VdomPatcher)(dom, parent)
+            : patchText(vdom as string, dom, parent)
+        );
     };
 
-    // A named component persists within the scope of the component within
-    // which it is defined.  That is, the immediate parent component can
-    // be re- evaluated, but any named child components will persist from
-    // the original construction of the parent, rather than being
-    // recreated.  Names need only be unique within the scope of the
-    // immediate parent component.
+    // Create an element node.
+    export const element =
+    (tag: string, props?: Props, children?: Vdoms): Vdom => {
+
+        tag = tag.toUpperCase();
+        const vchildren = flattenVdoms(children);
+
+        const vdom: Vdom = (dom, parent) => {
+            const elt = dom as HTMLElement;
+            const newDom =
+                ((dom == null || elt.tagName !== tag || isComponentDom(dom))
+                    ? document.createElement(tag)
+                    : elt
+                );
+            patchNode(newDom, dom, parent);
+            patchProps(newDom, props);
+            patchChildren(newDom, vchildren);
+            handleElementLifecycleFn(props, newDom, elt);
+            return newDom;
+        };
+
+        const key = props && props["key"];
+        if (key != null) (vdom as VdomPatcher).key = key;
+
+        return vdom;
+    };
+
+    const handleElementLifecycleFn =
+    (props: Props, newDom: Node, oldDom: Node) => {
+        const lifecycleFn = props && props["onodevent"];
+        if (lifecycleFn == null) return;
+        if (newDom !== oldDom) {
+            lifecycleFn("created", newDom);
+            return;
+        }
+        lifecycleFn("updated", newDom);
+    };
+
+    // Patch a DOM node.
+    // Do nothing if the replacement is identical.
+    // Otherwise enqueue the old node for stripping.
+    // Replace the old node or add the new node as a child accordingly.
+    const patchNode = (newDom: Node, oldDom: Node, parent: Node): void => {
+        if (newDom === oldDom) return;
+        enqueueNodeForStripping(oldDom);
+        if (parent == null) return;
+        if (newDom == null) {
+            if (oldDom != null) parent.removeChild(oldDom);
+        }
+        else if (oldDom == null) {
+            parent.appendChild(newDom);
+        }
+        else {
+            parent.replaceChild(newDom, oldDom);
+        }
+    };
+
+    // A DOM node corresponding to the root of a component has an
+    // __Od__componentID property with a non-zero value.
     //
-    // Passing a null name creates an anonymous 'component', which is
-    // ephemeral (i.e., it will be re-created every time the parent component
-    // updates).  Typically you do not want this!
-    //
-    // Component vDOM functions may optionally take an argument.  This is
-    // convenient when constructing components that depend on external state. 
-    //
+    const isComponentDom = (dom: Node): boolean =>
+        !!domComponentID(dom);
+
+    const domComponentID = (dom: Node): number =>
+        (dom as any).__Od__componentID;
+
+    const setDomComponentID = (dom: Node, componentID: number): void => {
+        (dom as any).__Od__componentID = componentID;
+    };
+
+    const clearDomComponentID = (dom: Node): void => {
+        setDomComponentID(dom, 0);
+    };
+
     export type ComponentName = string | number;
 
-    export const component = <T>(name: ComponentName, fn: () => Vdom): IVdom => {
-        const existingVdom = existingNamedComponentInstance(name);
-        if (existingVdom) return existingVdom;
-        const component = {
-            isIVdom: true,
-            obs: null,
-            subcomponents: null,
-            dom: null
-        } as IVdom;
-        component.obs = Obs.fn(() => updateComponent(component, fn));
-        // Attach this component as a subcomponent of the parent context.
-        addAsSubcomponentOfParent(name, component);
-        return component;
-    };
+    interface ComponentInfo {
+        componentID: number;
+        dom: Node;
+        obs: Obs.Observable<Vdom>;
+        subs: Obs.Subscription;
+        anonymousSubcomponents: Vdom[];
+        namedSubcomponents: { [name: string]: Vdom };
+        updateIsPending: boolean;
+    }
 
-    // Construct a static DOM subtree from an HTML string.
-    // Note: this vDOM node can, like DOM nodes, only appear
-    // in one place in the resulting DOM!  If you need copies,
-    // you need duplicate fromHtml instances.
-    export const fromHtml = (html: string): IVdom => {
-        // First, turn the HTML into a DOM tree.
-        const tmp = document.createElement("DIV");
-        tmp.innerHTML = html;
-        // If this is a bunch of nodes, return the whole DIV.
-        const dom = ( tmp.childNodes.length === 1 ? tmp.firstChild : tmp );
-        // We create a pretend component to host the HTML.
-        const vdom = {
-            isIVdom: true,
-            obs: staticHtmlObs,
-            subscription: staticHtmlSubs,
-            dom: dom
-        } as IVdom;
-        return vdom;
-    };
+    var nextComponentID = 1; // Name supply.
 
-    // Take a DOM subtree directly.
-    // Note: this vDOM node can, like DOM nodes, only appear
-    // in one place in the resulting DOM!  If you need copies,
-    // you need duplicate fromDom instances.
-    export const fromDom = (dom: Node): IVdom => {
-        // We create a pretend component to host the HTML.
-        const vdom = {
-            isIVdom: true,
-            obs: staticHtmlObs,
-            subscription: staticHtmlSubs,
-            dom: dom
-        } as IVdom;
-        return vdom;
-    };
+    var parentComponentInfo = null as ComponentInfo; // Used for scoping.
 
-    // Bind a vDOM node to a DOM node.  For example,
-    // Od.bind(myVdom, document.body.getElementById("foo"));
-    // This will either update or replace the DOM node in question.
-    export const bind = (vdom: Vdom, dom: Node): Node => {
-        const domParent = dom.parentNode;
-        const node = patchDom(vdom, dom, domParent);
-        return node;
-    };
-
-    // Bind a vDOM node to a DOM node as new child.  For example,
-    // Od.appendChild(myVdom, document.body);
-    export const appendChild = (vdom: Vdom, domParent: Node): Node => {
-        const dom = null as Node;
-        const node = patchDom(vdom, dom, domParent);
-        return node;
-    };
-
-    // Dispose of a component, removing any observable dependencies
-    // it may have.  This also removes the component's DOM from the
-    // DOM tree.
-    export const dispose = (component: IVdom): void => {
-        if (!component) return;
-        const obs = component.obs;
-        if (obs) {
-            Obs.dispose(obs);
-            component.obs = null;
-        }
-        const dom = component.dom;
-        if (dom) {
-            enqueueOdEventCallback(null, "removed", dom);
-            // We have to remove the component reference before stripping.
-            setDomComponent(dom, null);
-            enqueueNodeForStripping(dom);
-            component.dom = null;
-        }
-        const subcomponents = component.subcomponents;
-        if (subcomponents) {
-            disposeSubcomponents(subcomponents);
-            component.subcomponents = null;
-        }
-    };
+    const existingNamedComponent = (name: ComponentName): Vdom =>
+        (name != null && parentComponentInfo != null
+            ? parentComponentInfo.namedSubcomponents[name as string] as Vdom
+            : null
+        );
 
     // Normally, component updates will be batched via requestAnimationFrame
     // (i.e., they will occur at most once per display frame).  Setting this
@@ -210,148 +258,255 @@ namespace Od {
     // deferred).
     export var deferComponentUpdates = true;
 
-    // ---- Implementation detail. ----
+    // Create a component, which represents a DOM subtree that updates
+    // entirely independently of all other components.
+    //
+    // A named component persists within the scope of the component within
+    // which it is defined.  That is, the immediate parent component can
+    // be re-evaluated, but any named child components will persist from
+    // the original construction of the parent, rather than being
+    // recreated.  Names need only be unique within the scope of the
+    // immediate parent component.
+    //
+    // Passing a null name creates an anonymous component, which will be
+    // re-created every time the parent component updates.  Typically you
+    // do not want this!
+    //
+    // XXX THIS IS WHERE WE WANT TO ADD THE NEW LIFECYCLE STUFF
+    // AS AN OPTIONAL PARAMETER ON THE COMPONENT FUNCTION.
+
+    export const component =
+        (name: ComponentName, fn: () => Vdom): Vdom => {
+            // If this component already exists in this scope, return that.
+            const existingCmpt = existingNamedComponent(name);
+            if (existingCmpt != null) return existingCmpt;
+            // Okay, we need to create a new component.
+            const cmptID = nextComponentID++;
+            const cmptInfo = {
+                componentID: cmptID,
+                dom: null as Node,
+                obs: null as Obs.Observable<Vdom>,
+                subs: null as Obs.Subscription,
+                anonymousSubcomponents: [] as Vdom[],
+                namedSubcomponents: {} as { [name: string]: Vdom },
+                updateIsPending: false
+            };
+            // A component, like any vDOM, is a patching function.
+            const cmpt: VdomPatcher = (dom: Node, parent: Node) => {
+                const cmptDom = cmptInfo.dom;
+                patchNode(cmptDom, dom, parent);
+                return cmptDom;
+            };
+            // Register this component with the parent component (if any).
+            if (parentComponentInfo != null) {
+                if (name == null)
+                    parentComponentInfo.anonymousSubcomponents.push(cmpt);
+                else
+                    parentComponentInfo.namedSubcomponents[name] = cmpt;
+            }
+            // Establish the observable in the context of this new component
+            // so any sub-components will be registered with this component.
+            const oldParentComponentInfo = parentComponentInfo;
+            parentComponentInfo = cmptInfo;
+            const obs =
+                (Obs.isObservable(fn)
+                    ? fn as Obs.Observable<Vdom>
+                    : Obs.fn(fn)
+                );
+            // Create the initial DOM node for this component.
+            const dom = patchFromVdom(obs(), null, null);
+            setDomComponentID(dom, cmptID);
+            // Restore the parent component context.
+            parentComponentInfo = oldParentComponentInfo;
+            // Set up the update subscription.
+            const subs = Obs.subscribe([obs], () => {
+                if (deferComponentUpdates)
+                    deferComponentUpdate(cmptInfo);
+                else
+                    updateComponent(cmptInfo);
+            });
+            // Set up the disposal method.
+            cmpt.dispose = () => { disposeComponent(cmptInfo); };
+            // Fill in the ComponentInfo.
+            cmptInfo.dom = dom;
+            cmptInfo.obs = obs;
+            cmptInfo.subs = subs;
+            // Set the key, if we have one.
+            cmpt.key = (dom as any).key;
+            // And we're done!
+            return cmpt;
+        }
+
+    const updateComponent = (cmptInfo: ComponentInfo): void => {
+        const cmptID = cmptInfo.componentID;
+        const dom = cmptInfo.dom;
+        const obs = cmptInfo.obs;
+        const parent = dom && dom.parentNode;
+        disposeAnonymousSubcomponents(cmptInfo);
+        clearDomComponentID(dom); // So patching will apply internally.
+        const newDom = patchFromVdom(obs(), dom, parent);
+        setDomComponentID(newDom, cmptID); // Restore DOM ownership.
+        cmptInfo.dom = newDom;
+        cmptInfo.updateIsPending = false;
+    };
+
+    const disposeComponent = (cmptInfo: ComponentInfo): void => {
+        disposeAnonymousSubcomponents(cmptInfo);
+        disposeNamedSubcomponents(cmptInfo);
+        Obs.dispose(cmptInfo.subs);
+        Obs.dispose(cmptInfo.obs);
+        const dom = cmptInfo.dom;
+        clearDomComponentID(dom);
+        enqueueNodeForStripping(dom);
+    };
+
+    const disposeAnonymousSubcomponents = (cmptInfo: ComponentInfo): void => {
+        const cmpts = cmptInfo.anonymousSubcomponents;
+        for (var cmpt = cmpts.pop(); cmpt != null; cmpt = cmpts.pop()) {
+            dispose(cmpt);
+        }
+    };
+
+    const disposeNamedSubcomponents = (cmptInfo: ComponentInfo): void => {
+        var cmpts = cmptInfo.namedSubcomponents;
+        for (var name in cmpts) {
+            const cmpt = cmpts[name];
+            dispose(cmpt);
+            cmpts[name] = null;
+        }
+    };
+
+    export const dispose = (vdom: Vdom): void => {
+        const dispose = vdom && (vdom as VdomPatcher).dispose;
+        if (dispose != null) dispose();
+    };
+
+    const componentInfosPendingUpdate = [] as ComponentInfo[];
+
+    var deferredComponentUpdatesID = 0;
+
+    const deferComponentUpdate = (cmptInfo: ComponentInfo): void => {
+        if (cmptInfo.updateIsPending) return;
+        cmptInfo.updateIsPending = true;
+        componentInfosPendingUpdate.push(cmptInfo);
+        if (deferredComponentUpdatesID !== 0) return;
+        deferredComponentUpdatesID = raf(
+            updateDeferredComponents
+        );
+    };
+
+    const updateDeferredComponents = (): void => {
+        var cmptInfos = componentInfosPendingUpdate;
+        for (
+            var cmptInfo = cmptInfos.pop();
+            cmptInfo != null;
+            cmptInfo = cmptInfos.pop()
+        ) {
+            updateComponent(cmptInfo);
+        }
+        deferredComponentUpdatesID = 0;
+    };
+
+    // Construct a static DOM subtree from an HTML string.
+    export const fromHtml =
+        (html: string): Vdom => {
+            // First, turn the HTML into a DOM tree.
+            const tmp = document.createElement("DIV");
+            tmp.innerHTML = html;
+            // If this is a bunch of nodes, return the whole DIV.
+            const newDom = (tmp.childNodes.length === 1 ? tmp.firstChild : tmp);
+            // Prevent this DOM subtree from being patched.
+            setDomComponentID(newDom, Infinity);
+            const vdom = (dom: Node, parent: Node) => {
+                patchNode(newDom, dom, parent);
+                return newDom;
+            };
+            return vdom;
+        };
+
+    // Take a DOM subtree directly.  The patching algorithm will not
+    // touch the contents of this subtree.
+    export const fromDom =
+        (srcDom: Node): Vdom => {
+            setDomComponentID(srcDom, Infinity);
+            const vdom = (dom: Node, parent: Node) => {
+                patchNode(srcDom, dom, parent);
+                return srcDom;
+            };
+            return vdom;
+        };
+
+    // Bind a vDOM node to a DOM node.  For example,
+    // Od.bind(myVdom, document.body.getElementById("foo"));
+    // This will either update or replace the DOM node in question.
+    export const bind = (vdom: Vdom, dom: Node): Node => {
+        const domParent = dom && dom.parentNode;
+        const newDom = patchFromVdom(vdom, dom, domParent);
+        return newDom;
+    };
+
+    // Bind a vDOM node to a DOM node as new child.  For example,
+    // Od.appendChild(myVdom, document.body);
+    export const appendChild = (vdom: Vdom, parent: Node): Node => {
+        const newDom = patchFromVdom(vdom, null, parent);
+        return newDom;
+    };
 
     const isArray = (x: any): boolean => x instanceof Array;
-    const isNully = (x: any): boolean => x == null;
-
-    // Components need to track their immediate sub-components
-    // for two reasons: one, so named components can have
-    // persistence (i.e., a named component is reused, never
-    // recreated); two, so components can implement a sensible
-    // disposal strategy.
-    export interface ISubComponents { [name: string]: (IVdom | IVdom[]) }
-
-    export interface IVdom {
-
-        // One of us.
-        isIVdom: boolean;
-
-        // For text nodes.
-        text?: string;
-
-        // For non-text nodes.
-        tag?: string; // This MUST be in upper case!
-        props?: IProps;
-        children?: Vdom[];
-
-        // For component ("dynamic") nodes.
-        obs?: Obs.IObservable<Vdom>;
-        subscription?: Obs.ISubscription;
-        subcomponents?: ISubComponents;
-        dom?: Node;
-
-    }
-
-    export const patchDom =
-    (vdomOrString: Vdom, dom: Node, domParent?: Node): Node => {
-        const vdom =
-            ( typeof (vdomOrString) === "string"
-            ? text(vdomOrString as string)
-            : vdomOrString as IVdom
-            );
-        if (vdom.tag) return patchElement(vdom, dom, domParent);
-        if (vdom.obs) return patchComponent(vdom, dom, domParent);
-        return patchText(vdom, dom, domParent);
-    };
-
-    const patchText =
-    (vdom: IVdom, dom: Node, domParent?: Node): Node => {
-        const newText = vdom.text;
-        const newDom =
-            ( !dom || dom.nodeName !== "#text"
-            ? document.createTextNode(newText)
-            : dom
-            );
-        if (newDom.nodeValue !== newText) newDom.nodeValue = newText;
-        replaceNode(newDom, dom, domParent);
-        return newDom;
-    };
-
-    const patchComponent =
-    (component: IVdom, dom: Node, domParent?: Node): Node => {
-        // The rule is: the DOM node in the component is always up-to-date
-        // with respect to the underlying observable.
-        //
-        // When patching, therefore, there are the following possibilities:
-        //
-        // (1) The component's DOM node is the same as the node to be patched
-        // and nothing needs to be done.
-        //
-        // (2) The node to be patched is null, in which case we append the
-        // component's DOM node to the patch parent node.
-        //
-        // (3) The node to be patched is different, in which case we replace
-        // it with the component's DOM node.
-        const newDom = component.dom;
-        if (newDom !== dom) replaceNode(newDom, dom, domParent);
-        return newDom;
-    };
-
-    const patchElement =
-    (vdom: IVdom, dom: Node, domParent?: Node): Node => {
-        const tag = vdom.tag;
-        const vdomProps = vdom.props;
-        const vdomChildren = vdom.children;
-        const elt = dom as HTMLElement;
-        const newElt =
-            ( !elt || elt.tagName !== tag || domBelongsToComponent(elt)
-            ? document.createElement(tag)
-            : elt
-            );
-        if (newElt !== elt) trace("  Created", tag);
-        patchProps(newElt, vdomProps);
-        patchChildren(newElt, vdomChildren);
-        replaceNode(newElt, dom, domParent);
-        return newElt;
-    };
 
     const patchProps =
-    (elt: HTMLElement, newProps: IProps): void => {
-        const oldProps = getEltOdProps(elt);
-        if (newProps)
-            for (var prop in newProps)
-                if (prop !== "style") setDomProp(elt, prop, newProps[prop]);
-        if (oldProps)
-            for (var prop in oldProps)
-                if (!newProps || !(prop in newProps)) removeDomProp(elt, prop);
-        // Style properties are special.
-        const eltStyleProps = oldProps && oldProps["style"];
-        const vdomStyleProps = newProps && newProps["style"];
-        patchStyleProps(elt, eltStyleProps, vdomStyleProps);
-        const eltAttrProps = oldProps && oldProps["attrs"];
-        const vdomAttrProps = newProps && newProps["attrs"];
-        patchAttrProps(elt, eltAttrProps, vdomAttrProps);
-        setEltOdProps(elt, newProps);
-    };
+        (elt: HTMLElement, newProps: Props): void => {
+            const oldProps = getEltOdProps(elt);
+            if (newProps)
+                for (var prop in newProps)
+                    if (prop !== "style") setDomProp(elt, prop, newProps[prop]);
+            if (oldProps)
+                for (var prop in oldProps)
+                    if (!newProps || !(prop in newProps)) removeDomProp(elt, prop);
+            // Style properties are special.
+            const eltStyleProps = oldProps && oldProps["style"];
+            const vdomStyleProps = newProps && newProps["style"];
+            patchStyleProps(elt, eltStyleProps, vdomStyleProps);
+            const eltAttrProps = oldProps && oldProps["attrs"];
+            const vdomAttrProps = newProps && newProps["attrs"];
+            patchAttrProps(elt, eltAttrProps, vdomAttrProps);
+            setEltOdProps(elt, newProps);
+        };
 
     const patchStyleProps =
-    (elt: HTMLElement, oldStyleProps: IProps, newStyleProps: IProps): void => {
-        if (typeof (newStyleProps) === "string") {
-            (elt as any).style = newStyleProps;
-            return;
-        }
-        if (!newStyleProps) {
-            // Don't reset all style properties unless there were some before.
-            if (oldStyleProps) elt.style = null;
-            return;
-        }
-        const eltStyle = elt.style as IProps;
-        for (var prop in newStyleProps) eltStyle[prop] = newStyleProps[prop];
-        if (!oldStyleProps) return;
-        for (var prop in oldStyleProps) if (!(prop in newStyleProps))
-            eltStyle[prop] = null;
-    };
+        (elt: HTMLElement, oldStyleProps: Props, newStyleProps: Props): void => {
+            if (typeof (newStyleProps) === "string") {
+                (elt as any).style = newStyleProps;
+                return;
+            }
+            if (!newStyleProps) {
+                // Don't reset all style properties unless there were some before.
+                if (oldStyleProps) elt.style = null;
+                return;
+            }
+            const eltStyle = elt.style as Props;
+            for (var prop in newStyleProps) eltStyle[prop] = newStyleProps[prop];
+            if (!oldStyleProps) return;
+            for (var prop in oldStyleProps) if (!(prop in newStyleProps))
+                eltStyle[prop] = null;
+        };
 
     const patchAttrProps =
-    (elt: HTMLElement, oldAttrProps: IProps, newAttrProps: IProps): void => {
-        if (newAttrProps) for (var attr in newAttrProps) {
-            elt.setAttribute(attr, newAttrProps[attr]);
-        }
-        if (oldAttrProps) for (var attr in oldAttrProps) {
-            if (newAttrProps && (attr in newAttrProps)) continue;
-            elt.removeAttribute(attr);
-        }
+        (elt: HTMLElement, oldAttrProps: Props, newAttrProps: Props): void => {
+            if (newAttrProps) for (var attr in newAttrProps) {
+                elt.setAttribute(attr, newAttrProps[attr]);
+            }
+            if (oldAttrProps) for (var attr in oldAttrProps) {
+                if (newAttrProps && (attr in newAttrProps)) continue;
+                elt.removeAttribute(attr);
+            }
+        };
+
+    const getEltOdProps = (elt: Node): Props =>
+        (elt as any).__Od__props;
+
+    const setEltOdProps = (elt: Node, props: Props): void => {
+        (elt as any).__Od__props = props;
     };
 
     const removeDomProp = (dom: Node, prop: string): void => {
@@ -365,27 +520,24 @@ namespace Od {
     };
 
     const patchChildren =
-    (elt: HTMLElement, vdomChildren: Vdom[]): void => {
-        if (!vdomChildren) vdomChildren = [];
-        if ((elt as any).keyed) reorderKeyedChildren(vdomChildren, elt);
-        var eltChild = elt.firstChild;
-        const numVdomChildren = vdomChildren.length;
-        // Patch or add the number of required children.
-        for (var i = 0; i < numVdomChildren; i++) {
-            trace("Patching child", i + 1);
-            const vdomChild = vdomChildren[i];
-            const nextChild = patchDom(vdomChild, eltChild, elt).nextSibling;
-            eltChild = nextChild;
-            trace("Patched child", i + 1);
-        }
-        // Remove any extraneous children.
-        while (eltChild) {
-            const nextSibling = eltChild.nextSibling;
-            replaceNode(null, eltChild, elt);
-            eltChild = nextSibling;
-            trace("Removed child", ++i);
-        }
-    };
+        (parent: HTMLElement, vchildren: Vdom[]): void => {
+            if (vchildren == null) vchildren = [];
+            if ((parent as any).keyed) reorderKeyedChildren(vchildren, parent);
+            var echild = parent.firstChild;
+            const numVdomChildren = vchildren.length;
+            // Patch or add the number of required children.
+            for (var i = 0; i < numVdomChildren; i++) {
+                const vchild = vchildren[i];
+                const patchedEChild = patchFromVdom(vchild, echild, parent);
+                echild = patchedEChild.nextSibling;
+            }
+            // Remove any extraneous children.
+            while (echild) {
+                const nextEChild = echild.nextSibling;
+                patchNode(null, echild, parent);
+                echild = nextEChild;
+            }
+        };
 
     // A common vDOM optimisation for supporting lists is to associate
     // each list item with a key property.  Keyed child nodes are reordered
@@ -394,259 +546,53 @@ namespace Od {
     // is removed.  In Od we further insist that the parent element have
     // the property 'keyed: true'.
     const reorderKeyedChildren =
-    (vdomChildren: Vdom[], dom: Node): void => {
+        (vchildren: Vdom[], parent: Node): void => {
 
-        trace("  Reordering keyed children.");
+            const firstChild = parent.firstChild;
+            const numVChildren = vchildren.length;
+            if (numVChildren === 0 || !firstChild) return;
 
-        const vChildren = vdomChildren as IVdom[]; // This is safe.
-        const domFirstChild = dom.firstChild;
-        const numVChildren = vChildren.length;
-        if (numVChildren === 0 || !domFirstChild) return;
+            // Construct a mapping from keys to DOM nodes.
+            const keyToChild = {} as { [key: string]: Node };
+            for (var child = firstChild; child; child = child.nextSibling) {
+                const key = (child as any).key;
+                if (key == null) return; // We insist that all children have keys.
+                keyToChild[key] = child;
+            }
 
-        // Construct a mapping from keys to DOM nodes.
-        const keyToDom = {} as { [key: string]: Node };
-        for (var domI = dom.firstChild; domI; domI = domI.nextSibling) {
-            const keyI = (domI as any).key;
-            if (isNully(keyI)) return; // We insist that all children have keys.
-            keyToDom[keyI] = domI;
-        }
-
-        // Reorder the DOM nodes to match the vDOM order, unless
-        // we need to insert a new node.
-        var domI = dom.firstChild;
-        for (var i = 0; i < numVChildren; i++) {
-            var vdomI = vChildren[i];
-            var vTagI = vdomI.tag;
-            if (isNully(vTagI) && vdomI.dom) vTagI = vdomI.dom.nodeName;
-            if (!vTagI) return; // This only works for ordinary elements.
-            const vKeyI = vdomPropsKey(vdomI.props);
-            if (isNully(vKeyI)) return;
-            const dKeyI = domI && (domI as any).key;
-            const domVKeyI = keyToDom[vKeyI];
-            if (domI) {
-                if (dKeyI === vKeyI) {
-                    domI = domI.nextSibling;
-                } else if (domVKeyI) {
-                    dom.insertBefore(domVKeyI, domI);
+            // Reorder the DOM nodes to match the vDOM order, unless
+            // we need to insert a new node.
+            var child = firstChild;
+            for (var i = 0; i < numVChildren; i++) {
+                var vchild = vchildren[i];
+                const vkey = (vchild as VdomPatcher).key;
+                if (vkey == null) return;
+                const ckey = child && (child as any).key;
+                const requiredChild = keyToChild[vkey];
+                if (child) {
+                    if (ckey === vkey) {
+                        child = child.nextSibling;
+                    } else if (requiredChild) {
+                        parent.insertBefore(requiredChild, child);
+                    } else {
+                        parent.insertBefore(document.createElement("DIV"), child);
+                    }
+                } else if (requiredChild) {
+                    parent.appendChild(requiredChild);
                 } else {
-                    dom.insertBefore(document.createElement(vTagI), domI);
+                    parent.appendChild(document.createElement("DIV"));
                 }
-            } else if (domVKeyI) {
-                dom.appendChild(domVKeyI);
-            } else {
-                dom.appendChild(document.createElement(vTagI));
             }
-        }
-    };
-
-    // This is used for the static HTML constructors to pretend they're
-    // derived from observables.
-
-    const staticHtmlObs = Obs.of(null as IVdom);
-    const staticHtmlSubs = null as Obs.ISubscription;
-
-    // This is always of even length and consists of consecutive
-    // property-name (string) property-value (any) pairs, in ascending
-    // property-name order.  The reason for this is it allows us to
-    // do property patching in O(n) time.
-    export type PropAssocList = any[];
-
-    const propsToPropAssocList = (props: IProps): PropAssocList => {
-        if (!props) return null;
-        const propAssocList = [] as PropAssocList;
-        var keys = Object.keys(props).sort();
-        var iTop = keys.length;
-        for (var i = 0; i < iTop; i++) {
-            const key = keys[i];
-            propAssocList.push(key, props[key]);
-        }
-        return propAssocList;
-    };
-
-    type PropList = string[];
-
-    const emptyPropList = [] as PropList;
-
-    // We attach lists of (ordered) property names to elements so we can
-    // perform property updates in O(n) time.
-
-    const getEltOdProps = (elt: Node): IProps =>
-        (elt as any).__Od__props;
-
-    const setEltOdProps = (elt: Node, props: IProps): void => {
-        (elt as any).__Od__props = props;
-    };
-
-    const vdomPropsKey = (props: IProps): string =>
-        props && props["key"];
-
-    const getDomComponent = (dom: Node): IVdom =>
-        (dom as any).__Od__component;
-
-    const setDomComponent = (dom: Node, component: IVdom): void => {
-        if (dom) (dom as any).__Od__component = component;
-    };
-
-    const domBelongsToComponent = (dom: Node): boolean =>
-        !!getDomComponent(dom);
-
-    const updateComponent = <T>(component: IVdom, fn: () => Vdom): Vdom => {
-
-        // If the component has anonymous subcomponents, we should dispose
-        // of them now -- they will be recreated by fn if needed.  Named
-        // subcomponents will persist.
-        disposeAnonymousSubcomponents(component);
-
-        // Evaluate the vDOM function with this component as the parent for
-        // any sub-components it generates.
-        const tmp = parentComponent;
-        parentComponent = component;
-        const vdom = fn();
-        parentComponent = tmp;
-
-        // If a DOM node is already associated with the component, we
-        // can defer the patching operation (which is nicer for the
-        // web browser).
-        if (!component.dom) {
-            const dom = Od.patchDom(vdom, null, null);
-            setDomComponent(dom, component);
-            component.dom = dom;
-            enqueueOdEventCallback(vdom, "created", dom);
-        } else {
-            // The updated lifecycle hooks will be invoked here.
-            enqueueComponentForPatching(component, vdom);
-        }
-        return vdom;
-    }
-
-    // The current parent component scope, if any.
-    var parentComponent = null as IVdom;
-
-    const existingNamedComponentInstance = (name: ComponentName): IVdom =>
-        (name != null) &&
-        parentComponent &&
-        parentComponent.subcomponents &&
-        parentComponent.subcomponents[name as string] as IVdom;
-
-    const anonymousSubcomponentsKey = "__OdAnonymousSubcomponents__";
-
-    const addAsSubcomponentOfParent =
-    (name: ComponentName, child: IVdom): void => {
-        if (!parentComponent) return;
-        if (!parentComponent.subcomponents) parentComponent.subcomponents = {};
-        const subcomponents = parentComponent.subcomponents;
-        if (name != null) {
-            // This is a named sub-component which will persist for the
-            // lifetime of the parent component.
-            subcomponents[name as string] = child;
-        } else {
-            // This child has no name.  Aww.  In this case we store a list
-            // of these nameless children under a special name.
-            const anonSubcomponents = subcomponents[anonymousSubcomponentsKey];
-            if (!anonSubcomponents) {
-                subcomponents[anonymousSubcomponentsKey] = [child];
-            } else {
-                (anonSubcomponents as IVdom[]).push(child);
-            }
-        }
-    }
-
-    const disposeAnonymousSubcomponents = (component: IVdom): void => {
-        const anonymousSubcomponents =
-            component.subcomponents &&
-            component.subcomponents[anonymousSubcomponentsKey] as IVdom[];
-        if (!anonymousSubcomponents) return;
-        anonymousSubcomponents.forEach(dispose);
-        component.subcomponents[anonymousSubcomponentsKey] = null;
-    };
-
-    const disposeSubcomponents = (subcomponents: ISubComponents): void => {
-        for (var name in subcomponents) {
-            const subcomponent = subcomponents[name];
-            if (!subcomponent) continue;
-            if (name === anonymousSubcomponentsKey) {
-                // These are anonymous subcomponents, kept in an list.
-                (subcomponent as IVdom[]).forEach(dispose);
-            } else {
-                dispose(subcomponent as IVdom);
-            }
-        }
-    };
+        };
 
     // We defer DOM updates using requestAnimationFrame.  It's better to
     // batch DOM updates where possible.
 
     const requestAnimationFrameSubstitute = (callback: () => void): number => {
-        return setTimeout(callback, processPendingOdEventsDelay); // 16 ms = 1/60 s.
+        return setTimeout(callback, 16); // 16 ms = 1/60 s.
     };
 
-    const requestAnimationFrame =
-        window.requestAnimationFrame || requestAnimationFrameSubstitute;
-
-    var componentsAwaitingUpdate = [] as IVdom[];
-
-    var requestAnimationFrameID = 0;
-
-    const enqueueComponentForPatching =
-    (component: IVdom, vdom: Vdom): void => {
-        if (!deferComponentUpdates) {
-            patchUpdatedComponent(component, vdom);
-            return;
-        }
-        componentsAwaitingUpdate.push(component);
-        if (requestAnimationFrameID) return;
-        requestAnimationFrameID = requestAnimationFrame(patchQueuedComponents);
-    };
-
-    const patchQueuedComponents = (): void => {
-        // Ensure we don't patch the same component twice, should it have
-        // been updated more than once.
-        const patchedComponents = {} as { [id: number]: boolean };
-        const iTop = componentsAwaitingUpdate.length;
-        for (var i = 0; i < iTop; i++) {
-            const component = componentsAwaitingUpdate[i];
-            const id = component.obs.obsid;
-            if (patchedComponents[id]) continue;
-            trace("Patching queued component #", id);
-            patchUpdatedComponent(component);
-            patchedComponents[id] = true;
-        }
-        // Clear the queue.
-        componentsAwaitingUpdate = [];
-        // Tell enqueueComponentForPatching that it needs to make a
-        // new RAF request on the next update.
-        requestAnimationFrameID = 0;
-
-        // Any pending Od events are also processed here.
-        if (processPendingOdEventsDelay < 0) processPendingOdEventCallbacks();
-        if (processPendingOdEventsDelay >= 0) setTimeout(processPendingOdEventCallbacks, 0);
-    };
-
-    const patchUpdatedComponent = (component: IVdom, vdom?: Vdom): void => {
-        vdom = (vdom != null ? vdom : component.obs());
-        const dom = component.dom;
-        const domParent = dom && dom.parentNode;
-        if (domWillBeReplaced(vdom, dom)) {
-            // Component DOM nodes don't get stripped by default.
-            setDomComponent(dom, null);
-            enqueueNodeForStripping(dom);
-        } else {
-            // Component DOM nodes don't get patched by default.
-            setDomComponent(dom, null);
-        }
-        const newDom = patchDom(vdom, dom, domParent);
-        setDomComponent(newDom, component);
-        enqueueOdEventCallback(vdom, "updated", newDom);
-        component.dom = newDom;
-    };
-
-    // A DOM node will be replaced by a new DOM structure if it
-    // cannot be adjusted to match the corresponding vDOM node.
-    const domWillBeReplaced = (vdom: Vdom, dom: Node): boolean => {
-        if (!dom) return false;
-        if (typeof (vdom) === "string") return dom.nodeType !== Node.TEXT_NODE;
-        return (dom as HTMLElement).nodeName !== (vdom as IVdom).tag;
-    }
+    const raf = window.requestAnimationFrame || requestAnimationFrameSubstitute;
 
     // We track DOM nodes we've discarded so we can clean them up, remove
     // dangling event handlers and that sort of thing.  We do this in
@@ -657,29 +603,29 @@ namespace Od {
 
     const enqueueNodeForStripping = (dom: Node): void => {
         if (!dom) return;
-        if (domBelongsToComponent(dom)) return; // Can't touch this!
-        trace("  Discarded", dom.nodeName || "#text");
+        if (isComponentDom(dom)) return; // Can't touch this!
         nodesPendingStripping.push(dom);
-        if (stripNodesID) return;
-        stripNodesID = setTimeout(stripNodes, 100);
+        if (stripNodesID !== 0) return;
+        stripNodesID = setTimeout(stripNodes, 0);
     };
 
     var stripNodesID = 0;
 
     const stripNodes = (): void => {
-        var dom = nodesPendingStripping.pop();
-        while (dom) {
+        const nodes = nodesPendingStripping;
+        for (var dom = nodes.pop(); dom != null; dom = nodes.pop()) {
             stripNode(dom);
-            var dom = nodesPendingStripping.pop();
         }
         stripNodesID = 0;
     };
 
     const stripNode = (dom: Node): void => {
-        // We don't want to strip anything owned by a sub-component.
-        if (domBelongsToComponent(dom)) return; // Can't touch this!
+        // We don't want to strip anything owned by a component.
+        if (isComponentDom(dom)) return;
         // Strip any properties...
         const props = getEltOdProps(dom);
+        const lifecycleFn = props && props["onodevent"];
+        if (lifecycleFn) lifecycleFn("removed", dom);
         for (var prop in props) (dom as any)[prop] = null;
         // Recursively strip any child nodes.
         const children = dom.childNodes;
@@ -687,64 +633,4 @@ namespace Od {
         for (var i = 0; i < numChildren; i++) stripNode(children[i]);
     };
 
-    // Decide how a DOM node should be replaced.
-    const replaceNode =
-    (newDom: Node, oldDom: Node, domParent?: Node): void => {
-        if (!newDom) {
-            if (!oldDom) return;
-            enqueueNodeForStripping(oldDom);
-            if (domParent) domParent.removeChild(oldDom);
-        } else {
-            if (!oldDom) {
-                trace("  Inserted", newDom.nodeName || "#text");
-                if (domParent) domParent.appendChild(newDom);
-            } else {
-                if (newDom === oldDom) return;
-                enqueueNodeForStripping(oldDom);
-                if (!domParent) return;
-                trace("  Inserted", newDom.nodeName || "#text");
-                if (domParent) domParent.replaceChild(newDom, oldDom);
-            }
-        }
-    };
-
-    // Some component nodes will have life-cycle hooks to call.
-    const enqueueOdEventCallback =
-    (vdom: Vdom, what: string, dom: Node): void => {
-        // Od events only apply to top-level DOM elements of components.
-        // If the source vDOM is itself a component (i.e., this is a component
-        // that has another component as it's top-level) this means the Od
-        // event will have already been queued, so we shouldn't do it twice here.
-        if (vdom && (vdom as IVdom).obs) return;
-        const props = getEltOdProps(dom);
-        const hook = props && props["onodevent"];
-        if (!hook) return;
-        pendingOdEventCallbacks.push(() => { hook(what, dom); });
-        if (pendingOdEventsID) return;
-        // Either there will be a requestAnimationFrame call due in
-        // 16ms or this will fire in 20ms.  We would prefer the RAF
-        // call to handle the pending Od events because then the
-        // callbacks will see the corresponding events in their proper
-        // DOM contexts.
-        pendingOdEventsID = setTimeout(processPendingOdEventCallbacks, 20);
-    };
-
-    var pendingOdEventsID = 0;
-    var pendingOdEventCallbacks = [] as (() => void)[];
-
-    // We process Od lifecycle events after the DOM has had a chance to
-    // rearrange itself.
-    const processPendingOdEventCallbacks = (): void => {
-        for (var i = 0; i < pendingOdEventCallbacks.length; i++)
-            pendingOdEventCallbacks[i]();
-        pendingOdEventCallbacks = [];
-        pendingOdEventsID = 0;
-    };
-
-    // Debugging.
-    const trace: any = function() {
-        if (!debug) return;
-        if (!window.console || !window.console.log) return;
-        console.log.apply(console, arguments);
-    }
 }

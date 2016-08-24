@@ -1,6 +1,6 @@
 /// <reference path="../Od/Od.d.ts" />
 declare namespace Od {
-    type ElementConstructor = (fst?: IProps | Vdoms, snd?: Vdoms) => IVdom;
+    type ElementConstructor = (fst?: Props | Vdoms, snd?: Vdoms) => Vdom;
     const A: ElementConstructor;
     const ABBR: ElementConstructor;
     const ACRONYM: ElementConstructor;

@@ -111,12 +111,12 @@ module Obs {
 
     const debug = false;
 
-    export interface IObservableAny {
+    export interface ObservableAny {
         // Every observable has a unique identity.
         obsid: number;
     }
 
-    export interface IObservable<T> extends IObservableAny {
+    export interface Observable<T> extends ObservableAny {
         (x?: T): T; // Attempting to update a computed observable is an error.
     }
 
@@ -137,7 +137,7 @@ module Obs {
     // This, of course, cannot spot changes to the contents of objects
     // and arrays.  In those cases, you may need Obs.updateDependents.
     export const of =
-    <T>(x: T, eq: EqualityTest<T> = null): IObservable<T> => {
+    <T>(x: T, eq: EqualityTest<T> = null): Observable<T> => {
 
         eq = eq || defaultEq;
         var obs = null as Obs<T>;
@@ -154,7 +154,7 @@ module Obs {
 
     // Create a computed observable.
     export const fn =
-    <T>(f: () => T, eq: EqualityTest<T> = defaultEq): IObservable<T> => {
+    <T>(f: () => T, eq: EqualityTest<T> = defaultEq): Observable<T> => {
 
         var obs = null as Obs<T>;
         // We need 'function' so we can use 'arguments'.  Sorry.
@@ -171,25 +171,25 @@ module Obs {
     };
 
     // Peek at the value of an observable without establishing a dependency.
-    export const peek = <T>(obs: IObservable<T>): T => (obs as Obs<T>).value;
+    export const peek = <T>(obs: Observable<T>): T => (obs as Obs<T>).value;
 
     // Decide if an object is observable or not.
     // This just tests whether the object is a function with an 'obsid' property.
     export const isObservable = (obs: any): boolean =>
-        obs && (obs as ObsAny).obsid && (typeof (obs) === "function");
+        obs && (obs as ObsAny).obsid && (obs instanceof Function);
 
     // Decide if an observable is computed or not.
     // This just tests whether the object has a 'fn' property.
     export const isComputed = (obs: any): boolean =>
         !!(obs as ObsAny).fn;
 
-    export interface ISubscription extends IObservable<void> { }
+    export interface Subscription extends Observable<void> { }
 
     // Create a subscription on a set of observables.  The action can read
     // any observables without establishing a dependency.  Subscriptions
     // run after all other affected computed observables have run.
     export const subscribe =
-    (obss: IObservableAny[], action: () => void): ISubscription => {
+    (obss: ObservableAny[], action: () => void): Subscription => {
 
         const subsAction = () => {
             var tmp = currentDependencies;
@@ -217,10 +217,10 @@ module Obs {
     };
 
     // This is occasionally useful.
-    export type IObservablish<T> = T | IObservable<T>;
+    export type Observableish<T> = T | Observable<T>;
 
-    export const value = <T>(ish: IObservablish<T>): T =>
-        isObservable(ish) ? (ish as IObservable<T>)() : (ish as T);
+    export const value = <T>(ish: Observableish<T>): T =>
+        isObservable(ish) ? (ish as Observable<T>)() : (ish as T);
 
     // Implementation detail.
 
@@ -236,7 +236,7 @@ module Obs {
     };
 
     // Break the connection between an observable and its dependencies.
-    export const dispose = (obs: IObservableAny): void => {
+    export const dispose = (obs: ObservableAny): void => {
         const obsAny = obs as Obs<void>;
         obsAny.value = null;
         breakDependencies(obsAny);
@@ -279,7 +279,7 @@ module Obs {
         return !eq(oldX, newX); // True iff the new result is different.
     };
 
-    interface ObsAny extends IObservableAny {
+    interface ObsAny extends ObservableAny {
 
         // A level 0 observable has no dependencies.
         // The level of an observable with dependencies is one greater than
@@ -307,7 +307,7 @@ module Obs {
 
     }
 
-    interface Obs<T> extends ObsAny, IObservable<T> {
+    interface Obs<T> extends ObsAny, Observable<T> {
 
         // Referring directly to this will not establish dependency, unlike ().
         value: T;
@@ -458,7 +458,7 @@ module Obs {
 
     // After an observable has been updated, we need to also update its
     // dependents in level order.
-    export const updateDependents = (obs: IObservableAny): void => {
+    export const updateDependents = (obs: ObservableAny): void => {
         const dependents = (obs as ObsAny).dependents;
         if (!dependents) return;
         startUpdate();

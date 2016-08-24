@@ -15,7 +15,7 @@ interface IComment {
     text: string;
     comment_count: number;
     children: string[];
-    child_comments?: Obs.IObservable<IComment[]>;
+    child_comments?: Obs.Observable<IComment[]>;
 }
 
 var threads = [] as IComment[];
@@ -52,7 +52,7 @@ enum State {
 const currentState = Obs.of(State.LoadingThreads);
 
 const view = Od.component("main", (): Od.Vdom => {
-    var vdom = null as Od.Vdom | Od.Vdom[];
+    var vdom = null as Od.Vdoms;
     switch (currentState()) {
         case State.LoadingThreads:
             vdom = "Loading threads...";
@@ -123,7 +123,7 @@ const commentReply =
 (   what: string,
     editing: boolean,
     parentID: string
-): Od.IVdom => {
+): Od.Vdom => {
     const replyText = Obs.of("");
     const replyState = Obs.of(
         editing ? ReplyState.EditingReply : ReplyState.NotReplying
@@ -184,8 +184,8 @@ const commentReply =
 
 const submitReply =
 (   parentID: string,
-    replyText: Obs.IObservable<string>,
-    replyState: Obs.IObservable<ReplyState>
+    replyText: Obs.Observable<string>,
+    replyState: Obs.Observable<ReplyState>
 ): void => {
     replyState(ReplyState.SendingReply);
     var body = "text=" + encodeURIComponent(replyText());

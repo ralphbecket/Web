@@ -18,18 +18,10 @@
 /// <reference path="../Od/Od.ts"/>
 var Od;
 (function (Od) {
-    var isVdoms = function (x) {
-        return (x != null) && ((x.isIVdom) ||
-            (x instanceof Array) ||
-            (typeof (x) === "string"));
-    };
     var elt = function (tag, fst, snd) {
-        var fstIsVdoms = isVdoms(fst);
-        if (fstIsVdoms && snd != null)
-            throw new Error("Od." + tag + ": given two args, but first arg is not props.");
-        return (fstIsVdoms
-            ? Od.element(tag, null, fst)
-            : Od.element(tag, fst, snd));
+        return (typeof (fst) === "object" && !(fst instanceof Array)
+            ? Od.element(tag, fst, Od.flattenVdoms(snd))
+            : Od.element(tag, null, Od.flattenVdoms(fst)));
     };
     // This approach is short, but sweet.
     ["A",

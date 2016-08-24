@@ -50,7 +50,7 @@
         });
 
     const isFunction = (x: any): boolean =>
-        typeof (x) === "function";
+        x instanceof Function;
 
     const isThenable = (x: any): boolean =>
         x && isFunction(x.then);

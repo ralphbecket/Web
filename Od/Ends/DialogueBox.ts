@@ -1,4 +1,5 @@
-﻿/// <reference path="Dragging.ts"/>
+﻿/// <reference path="Elements.ts"/>
+/// <reference path="Dragging.ts"/>
 /// <reference path="MergeProps.ts"/>
 
 namespace Od {
@@ -8,20 +9,25 @@ namespace Od {
     const OdDialogueBoxBodyCssClass = "OdDialogueBoxBody";
     const OdDialogueBoxFooterCssClass = "OdDialogueBoxFooter";
 
-    const startDraggingDialogueBox = (v: MouseEvent): void => {
+    const startDraggingDialogueBox = (v: MouseEvent | TouchEvent): void => {
+        const touches = (v as TouchEvent).touches;
+        if (touches) {
+            if (touches.length !== 1) return;
+            v = touches[0] as any as MouseEvent;
+        }
         var elt = v.target as HTMLElement;
         while (elt && !elt.classList.contains(OdDialogueBoxCssClass))
             elt = elt.parentElement;
         if (!elt) return;
-        startDragging({ elt: elt }, v);
+        startDragging({ elt: elt }, v as MouseEvent);
     };
 
     export const dialogueBox = (
         header: Vdom,
         body: Vdom,
         footer: Vdom,
-        props = null as IProps
-    ): IVdom => {
+        props = null as Props
+    ): Vdom => {
 
         const vdom = Od.DIV(
             mergeProps(props, {
@@ -37,7 +43,8 @@ namespace Od {
                         width: "100%",
                         cursor: "move"
                     },
-                    onmousedown: startDraggingDialogueBox
+                    onmousedown: startDraggingDialogueBox,
+                    ontouchstart: startDraggingDialogueBox
                 }, header || ""),
                 Od.DIV({
                     className: OdDialogueBoxBodyCssClass

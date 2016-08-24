@@ -1,4 +1,4 @@
-﻿/// <reference path="Elements.ts"/>
+﻿// <reference path="Elements.ts"/>
 
 namespace Od {
 
@@ -38,6 +38,7 @@ namespace Od {
         draggingSurface.onmousemove = drag;
         draggingSurface.onmouseup = stopDragging;
         draggingSurface.onmouseleave = stopDragging;
+        draggingSurface.ontouchend = stopDragging;
 
     }
 

@@ -4,12 +4,12 @@ namespace Od {
 
     export const selectComponent = <T>(args: {
         name?: ComponentName;
-        options: Obs.IObservablish<T[]>;
+        options: Obs.Observableish<T[]>;
         optionView?: (option: T) => string;
-        selection: Obs.IObservable<T>;
-        props?: Od.IProps;
-    }): IVdom => {
-        const props = args.props || {} as IProps;
+        selection: Obs.Observable<T>;
+        props?: Od.Props;
+    }): Vdom => {
+        const props = args.props || {} as Props;
         props["onchange"] = (v: any) => {
             updateSelection(
                 Obs.value(args.options),
@@ -19,7 +19,7 @@ namespace Od {
         const optionView = args.optionView || defaultOptionView;
         const e = Od.element;
         const vdom = Od.component(args.name, () => {
-            const props = Obs.value(args.props) || {} as IProps;
+            const props = Obs.value(args.props) || {} as Props;
             const options = Obs.value(args.options);
             const selection = args.selection();
             const iTop = options.length;
@@ -38,7 +38,7 @@ namespace Od {
     };
 
     const updateSelection =
-    <T>(options: T[], selection: Obs.IObservable<T>, i: number): void => {
+    <T>(options: T[], selection: Obs.Observable<T>, i: number): void => {
         if (i == null) return;
         selection(options[i]);
     };

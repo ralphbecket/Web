@@ -15,7 +15,7 @@ window.onload = () => {
     // ---- A simple incrementing counter component.
 
     const counter =
-    (name: Od.ComponentName, x: Obs.IObservable<number>, style?: string): Od.Vdom => {
+    (name: Od.ComponentName, x: Obs.Observable<number>, style?: string): Od.Vdom => {
         console.log("-- Creating counter.");
         const inc = () => {
             x(x() + 1);
@@ -87,9 +87,9 @@ window.onload = () => {
     // ---- Simple inputs.
 
     const bindValueOnChange = <T>(
-        x: Obs.IObservable<T>,
-        props: Od.IProps = {}
-    ): Od.IProps => {
+        x: Obs.Observable<T>,
+        props: Od.Props = {}
+    ): Od.Props => {
         props["value"] = x();
         props["onchange"] = (v: Event) => {
             x((v.target as any).value);
@@ -98,9 +98,9 @@ window.onload = () => {
     }
 
     const bindValue = <T>(
-        x: Obs.IObservable<T>,
-        props: Od.IProps = {}
-    ): Od.IProps => {
+        x: Obs.Observable<T>,
+        props: Od.Props = {}
+    ): Od.Props => {
         props["value"] = x();
         return props;
     };
@@ -109,14 +109,14 @@ window.onload = () => {
         const X = Obs.of(2);
         const Y = Obs.of(2);
         const Z = Obs.fn(() => +X() + +Y());
-        const props = { style: "width: 2em; text-align: right;" } as Od.IProps;
+        const props = { style: "width: 2em; text-align: right;" } as Od.Props;
         
         return Od.DIV([
             Od.INPUT(bindValueOnChange(X, props)),
             " + ",
             Od.INPUT(bindValueOnChange(Y, props)),
             " = ",
-            Od.component("D", () => Z().toString())
+            Od.component("D", () => Z())
         ]);
     });
 

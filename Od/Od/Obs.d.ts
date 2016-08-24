@@ -1,27 +1,27 @@
 declare module Obs {
-    interface IObservableAny {
+    interface ObservableAny {
         obsid: number;
     }
-    interface IObservable<T> extends IObservableAny {
+    interface Observable<T> extends ObservableAny {
         (x?: T): T;
     }
     const defaultEq: <T>(x: T, y: T) => boolean;
     const valueOfEq: <T>(x: T, y: T) => boolean;
     const alwaysUpdate: <T>(x: T, y: T) => boolean;
-    const of: <T>(x: T, eq?: (oldX: T, newX: T) => boolean) => IObservable<T>;
-    const fn: <T>(f: () => T, eq?: (oldX: T, newX: T) => boolean) => IObservable<T>;
-    const peek: <T>(obs: IObservable<T>) => T;
+    const of: <T>(x: T, eq?: (oldX: T, newX: T) => boolean) => Observable<T>;
+    const fn: <T>(f: () => T, eq?: (oldX: T, newX: T) => boolean) => Observable<T>;
+    const peek: <T>(obs: Observable<T>) => T;
     const isObservable: (obs: any) => boolean;
     const isComputed: (obs: any) => boolean;
-    interface ISubscription extends IObservable<void> {
+    interface Subscription extends Observable<void> {
     }
-    const subscribe: (obss: IObservableAny[], action: () => void) => ISubscription;
-    type IObservablish<T> = T | IObservable<T>;
-    const value: <T>(ish: T | IObservable<T>) => T;
+    const subscribe: (obss: ObservableAny[], action: () => void) => Subscription;
+    type Observableish<T> = T | Observable<T>;
+    const value: <T>(ish: T | Observable<T>) => T;
     var toStringMaxValueLength: number;
-    const dispose: (obs: IObservableAny) => void;
+    const dispose: (obs: ObservableAny) => void;
     const startUpdate: () => void;
     const endUpdate: () => void;
-    const updateDependents: (obs: IObservableAny) => void;
+    const updateDependents: (obs: ObservableAny) => void;
     var exceptionReporter: (e: any) => void;
 }

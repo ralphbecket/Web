@@ -26,7 +26,7 @@
         msText.innerHTML = 'Repaint rate: 0/sec';
         msDiv.appendChild(msText);
 
-        var bucketSize = 20;
+        var bucketSize = 200;
         var bucket = [];
         var lastTime = Date.now();
         return {

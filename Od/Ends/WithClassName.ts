@@ -2,7 +2,7 @@
 
 namespace Od {
     export const withClassName =
-    (name: string, props: Od.IProps): Od.IProps => {
+    (name: string, props: Od.Props): Od.Props => {
         props = props || {};
         const className = props["className"] || "";
 	name = " " + name + " ";

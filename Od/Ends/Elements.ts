@@ -19,22 +19,11 @@
 
 namespace Od {
 
-    const isVdoms = (x: any): boolean =>
-        (x != null) && (
-            (x.isIVdom) ||
-            (x instanceof Array) ||
-            (typeof (x) === "string")
+    const elt = (tag: string, fst: Props | Vdoms, snd?: Vdoms): Vdom => {
+        return ( typeof(fst) === "object" && !(fst instanceof Array)
+            ? Od.element(tag, fst as Props, flattenVdoms(snd))
+            : Od.element(tag, null, flattenVdoms(fst as Vdoms))
         );
-
-    const elt = (tag: string, fst: IProps | Vdoms, snd?: Vdoms): IVdom => {
-        const fstIsVdoms = isVdoms(fst);
-        if (fstIsVdoms && snd != null) throw new Error(
-            "Od." + tag + ": given two args, but first arg is not props."
-        );
-        return ( fstIsVdoms
-               ? Od.element(tag, null, fst as Vdoms)
-               : Od.element(tag, fst as IProps, snd)
-               );
     };
 
     // This approach is short, but sweet.
@@ -185,7 +174,7 @@ namespace Od {
     });
 
     export type ElementConstructor =
-        (fst?: IProps | Vdoms, snd?: Vdoms) => IVdom;
+        (fst?: Props | Vdoms, snd?: Vdoms) => Vdom;
 
     export declare const A: ElementConstructor;
     export declare const ABBR: ElementConstructor;

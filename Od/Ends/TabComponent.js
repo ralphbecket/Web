@@ -3,7 +3,6 @@
 var Od;
 (function (Od) {
     Od.tabComponent = function (args) {
-        var e = Od.element;
         var selection = args.selection || Obs.of(null);
         var vdom = Od.component(args.name, function () {
             var tabs = Obs.value(args.tabs);

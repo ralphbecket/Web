@@ -7,8 +7,7 @@ window.onload = () => {
     // Od.processPendingOdEventsDelay = 1;
 
     const e = Od.element;
-    const t = Od.text;
-    const d = (v: Od.Vdom): Node => Od.patchDom(v, null, null);
+    const d = (v: Od.Vdom): Node => Od.bind(v, null);
 
     const nav = (dom: Node, path: number[]): Node => {
         var iTop = path.length;
@@ -65,14 +64,14 @@ window.onload = () => {
     Test.run("Patch xyz vs null", () => {
         var A = "xyz";
         var B = null as Node;
-        var C = Od.patchDom(A, B, null);
+        var C = Od.bind(A, B);
         chk(C, [], "#xyz");
     });
 
     Test.run("Patch xyz vs pqr", () => {
         var A = "xyz";
         var B = d("pqr");
-        var C = Od.patchDom(A, B, null);
+        var C = Od.bind(A, B);
         chk(C, [], "#xyz");
         same(B, C);
     });
@@ -80,7 +79,7 @@ window.onload = () => {
     Test.run("Patch xyz vs xyz", () => {
         var A = "xyz";
         var B = d("xyz");
-        var C = Od.patchDom(A, B, null);
+        var C = Od.bind(A, B);
         chk(C, [], "#xyz");
         same(B, C);
     });
@@ -88,41 +87,41 @@ window.onload = () => {
     Test.run("Patch xyz vs DIV", () => {
         var A = "xyz";
         var B = d(e("DIV"));
-        var C = Od.patchDom(A, B, null);
+        var C = Od.bind(A, B);
         chk(C, [], "#xyz");
         diff(B, C);
     });
 
     Test.run("Patch DIV(xyz) vs null", () => {
-        var A = e("DIV", null, "xyz");
+        var A = e("DIV", null, ["xyz"]);
         var B = null;
-        var C = Od.patchDom(A, B, null);
+        var C = Od.bind(A, B);
         chk(C, [], "DIV", 1);
         chk(C, [0], "#xyz");
     });
 
     Test.run("Patch DIV(xyz) vs pqr", () => {
-        var A = e("DIV", null, "xyz");
+        var A = e("DIV", null, ["xyz"]);
         var B = d("pqr");
-        var C = Od.patchDom(A, B, null);
+        var C = Od.bind(A, B);
         chk(C, [], "DIV", 1);
         chk(C, [0], "#xyz");
         diff(B, C);
     });
 
     Test.run("Patch DIV(xyz) vs DIV(pqr)", () => {
-        var A = e("DIV", null, "xyz");
-        var B = d(e("DIV", null, "pqr"));
-        var C = Od.patchDom(A, B, null);
+        var A = e("DIV", null, ["xyz"]);
+        var B = d(e("DIV", null, ["pqr"]));
+        var C = Od.bind(A, B);
         chk(C, [], "DIV", 1);
         chk(C, [0], "#xyz");
         same(B, C);
     });
 
     Test.run("Patch DIV(xyz) vs P", () => {
-        var A = e("DIV", null, "xyz");
+        var A = e("DIV", null, ["xyz"]);
         var B = d(e("P"));
-        var C = Od.patchDom(A, B, null);
+        var C = Od.bind(A, B);
         chk(C, [], "DIV", 1);
         chk(C, [0], "#xyz");
         diff(B, C);
@@ -131,15 +130,15 @@ window.onload = () => {
     Test.run("Patch DIV vs DIV(pqr, qrs)", () => {
         var A = e("DIV");
         var B = d(e("DIV", null, ["pqr", "qrs"]));
-        var C = Od.patchDom(A, B, null);
+        var C = Od.bind(A, B);
         chk(C, [], "DIV", 0);
         same(B, C);
     });
 
     Test.run("Patch DIV(xyz) vs DIV(pqr, qrs)", () => {
-        var A = e("DIV", null, "xyz");
+        var A = e("DIV", null, ["xyz"]);
         var B = d(e("DIV", null, ["pqr", "qrs"]));
-        var C = Od.patchDom(A, B, null);
+        var C = Od.bind(A, B);
         chk(C, [], "DIV", 1);
         chk(C, [0], "#xyz");
         same(B, C);
@@ -147,8 +146,8 @@ window.onload = () => {
 
     Test.run("Patch DIV(xyz, wxy) vs DIV(pqr)", () => {
         var A = e("DIV", null, ["xyz", "wxy"]);
-        var B = d(e("DIV", null, "pqr"));
-        var C = Od.patchDom(A, B, null);
+        var B = d(e("DIV", null, ["pqr"]));
+        var C = Od.bind(A, B);
         chk(C, [], "DIV", 2);
         chk(C, [0], "#xyz");
         chk(C, [1], "#wxy");
@@ -157,10 +156,10 @@ window.onload = () => {
 
     Test.run("Patch Cmpt(DIV(xyz) -> DIV(wxy)) vs null", () => {
         const text = Obs.of("xyz");
-        const cmpt = Od.component(null, () => e("DIV", null, text()));
+        const cmpt = Od.component(null, () => e("DIV", null, [text()]));
         const A = cmpt;
         const B = null;
-        var C = Od.patchDom(A, B, null);
+        var C = Od.bind(A, B);
         chk(C, [], "DIV", 1);
         chk(C, [0], "#xyz");
         text("wxy");
@@ -174,14 +173,14 @@ window.onload = () => {
         const Y = Od.component(null, () => e("P"));
         const A1 = e("DIV", null, [X, Y]);
         const B = null;
-        const C1 = Od.patchDom(A1, B, null);
+        const C1 = Od.bind(A1, B);
         chk(C1, [], "DIV", 2);
         const C10 = nav(C1, [0]);
         const C11 = nav(C1, [1]);
         chk(C10, [], "DIV", 0);
         chk(C11, [], "P", 0);
         const A2 = e("DIV", null, [Y, X]);
-        const C2 = Od.patchDom(A2, C1, null);
+        const C2 = Od.bind(A2, C1);
         chk(C2, [], "DIV", 2);
         const C20 = nav(C2, [0]);
         const C21 = nav(C2, [1]);
@@ -192,11 +191,11 @@ window.onload = () => {
     });
 
     Test.run("Patch Cmpt(DIV(P(xyz) -> pqr)) vs null", () => {
-        const X = e("P", null, "xyz");
+        const X = e("P", null, ["xyz"]);
         const T = Obs.of(true);
-        const A = Od.component(null, () => e("DIV", null, T() ? X : "pqr"));
+        const A = Od.component(null, () => e("DIV", null, [T() ? X : "pqr"]));
         const B = null;
-        const C = Od.patchDom(A, B, null);
+        const C = Od.bind(A, B);
         chk(C, [], "DIV", 1);
         chk(C, [0], "P", 1);
         chk(C, [0, 0], "#xyz");
@@ -205,19 +204,20 @@ window.onload = () => {
         chk(C, [0], "#pqr");
     });
 
-    Test.run("Deleting the DOM of a live component.", () => {
-        const X = Obs.of("Hi!");
-        const A = Od.component(null, () => e("DIV", null, X()));
-        const B = null;
-        const C = Od.patchDom(A, B, null);
-        chk(C, [], "DIV", 1);
-        chk(C, [0], "#Hi!");
-        A.dom = null;
-        X("Bye.");
-        const D = Od.patchDom(A, B, null);
-        chk(D, [], "DIV", 1);
-        chk(D, [0], "#Bye.");
-    });
+    // This test no longer makes sense.
+//    Test.run("Deleting the DOM of a live component.", () => {
+//        const X = Obs.of("Hi!");
+//        const A = Od.component(null, () => e("DIV", null, [Od.text(X())]));
+//        const B = null;
+//        const C = Od.bind(A, B);
+//        chk(C, [], "DIV", 1);
+//        chk(C, [0], "#Hi!");
+//        A.dom = null;
+//        X("Bye.");
+//        const D = Od.bind(A, B);
+//        chk(D, [], "DIV", 1);
+//        chk(D, [0], "#Bye.");
+//    });
 
     Test.run("Keyed lists.", () => {
         const x = e("P", { key: "x" });
@@ -225,7 +225,7 @@ window.onload = () => {
         const z = e("TABLE", { key: "z" });
         const A1 = e("DIV", { keyed: true }, [x, y, z]);
         const B = null;
-        const C = Od.patchDom(A1, B, null);
+        const C = Od.bind(A1, B);
         chk(C, [], "DIV", 3);
         chk(C, [0], "P");
         chk(C, [1], "SPAN");
@@ -234,7 +234,7 @@ window.onload = () => {
         const C1 = nav(C, [1]);
         const C2 = nav(C, [2]);
         const A2 = e("DIV", { keyed: true }, [y, z, x]);
-        const D = Od.patchDom(A2, C, null);
+        const D = Od.bind(A2, C);
         chk(D, [], "DIV", 3);
         chk(D, [0], "SPAN");
         chk(D, [1], "TABLE");
@@ -249,9 +249,9 @@ window.onload = () => {
 
     Test.run("Dom from HTML strings.", () => {
         const X = Od.fromHtml("<H4>xyz<SPAN>pqr</SPAN></H4>");
-        const A = e("DIV", null, X);
+        const A = e("DIV", null, [X]);
         const B = null;
-        const C = Od.patchDom(A, B, null);
+        const C = Od.bind(A, B);
         chk(C, [], "DIV", 1);
         chk(C, [0], "H4", 2);
         chk(C, [0, 0], "#xyz");
@@ -260,30 +260,30 @@ window.onload = () => {
     });
 
     Test.run("Style properties.", () => {
-        const A1 = e("DIV", null, "xyz");
+        const A1 = e("DIV", null, ["xyz"]);
         const B = null;
-        const C = Od.patchDom(A1, B, null) as HTMLElement;
+        const C = Od.bind(A1, B) as HTMLElement;
         chk(C, [], "DIV", 1);
         chk(C, [0], "#xyz");
         Test.expect("Initial colour is not set.", C.style.color === "");
         const A2 = e("DIV", {
             style: { color: "red" }
         });
-        Od.patchDom(A2, C, null);
+        Od.bind(A2, C);
         Test.expect("Colour is now red.", C.style.color === "red");
         const A3 = e("DIV", {
             style: { color: "blue" }
         });
-        Od.patchDom(A3, C, null);
+        Od.bind(A3, C);
         Test.expect("Colour is now blue.", C.style.color === "blue");
         const A4 = e("DIV", {
             style: null
         });
-        Od.patchDom(A4, C, null);
+        Od.bind(A4, C);
         Test.expect("Colour is not set again.", C.style.color === "");
     });
 
-    Test.runDeferred(1000, "Anonymous components", (pass, expect) => {
+    Test.runDeferred(1000, "Anonymous components and odevents", (pass, expect) => {
         const X = Obs.of(false);
         var nCreated = 0;
         var nUpdated = 0;
@@ -295,12 +295,11 @@ window.onload = () => {
                 case "removed": nDeleted++; break;
             }
         };
-        const A1 = Od.component("A1", () =>
-            X() ? Od.component(null, () => e("DIV", { onodevent: handler }))
-                : Od.component(null, () => e("P", { onodevent: handler }))
+        const A1 = Od.component("A1",
+            () => e(X() ? "DIV" : "P", { onodevent: handler })
         );
         const B = null;
-        const C = Od.patchDom(A1, B, null);
+        const C = Od.bind(A1, B);
         X(true);
         X(false);
         setTimeout(() => {
@@ -315,14 +314,14 @@ window.onload = () => {
             attrs: { "data-bind": "foo", "ng-xyz": "bar" }
         });
         const B = null;
-        const C1 = Od.patchDom(A1, B, null) as HTMLElement;
+        const C1 = Od.bind(A1, B) as HTMLElement;
         chk(C1, [], "DIV", 0);
         Test.expect("Has data-bind", C1.getAttribute("data-bind") === "foo");
         Test.expect("Has ng-xyz", C1.getAttribute("ng-xyz") === "bar");
         const A2 = e("DIV", {
             attrs: { "ng-xyz": "baz" }
         });
-        const C2 = Od.patchDom(A2, C1, null) as HTMLElement;
+        const C2 = Od.bind(A2, C1) as HTMLElement;
         chk(C1, [], "DIV", 0);
         Test.expect("Has no data-bind", C1.getAttribute("data-bind") == null);
         Test.expect("Has ng-xyz", C1.getAttribute("ng-xyz") === "baz");

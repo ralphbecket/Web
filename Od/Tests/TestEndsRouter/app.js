@@ -186,7 +186,7 @@ var Oath;
         });
     };
     var isFunction = function (x) {
-        return typeof (x) === "function";
+        return x instanceof Function;
     };
     var isThenable = function (x) {
         return x && isFunction(x.then);

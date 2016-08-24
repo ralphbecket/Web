@@ -10,7 +10,7 @@ window.onload = () => {
             updateOn: "oninput",
             props: { style: { width: "4em" } }
         }),
-        "'", Od.component(null, () => x().toString()), "'",
+        "'", Od.component(null, () => x()), "'",
         Od.BUTTON({
             onclick: () => { if (typeof(x()) === "number") x(-x()); }
         }, "Negate!"

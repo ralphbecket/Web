@@ -4,35 +4,33 @@
 namespace Od {
 
     export interface ITab {
-        heading: Obs.IObservablish<string>;
-        body: Obs.IObservablish<Od.Vdoms>;
+        heading: Obs.Observableish<string>;
+        body: Obs.Observableish<Vdoms>;
     }
 
     export const tabComponent = (args: {
         name?: ComponentName;
-        tabs: Obs.IObservablish<ITab[]>;
-        selection?: Obs.IObservable<ITab>;
-        props?: Obs.IObservablish<Od.IProps>;
-    }): Od.IVdom => {
-
-        const e = Od.element;
+        tabs: Obs.Observableish<ITab[]>;
+        selection?: Obs.Observable<ITab>;
+        props?: Obs.Observableish<Props>;
+    }): Vdom => {
 
         var selection = args.selection || Obs.of(null as ITab);
 
-        const vdom = Od.component(args.name, () => {
+        const vdom = component(args.name, () => {
             const tabs = Obs.value(args.tabs);
             const vdom =
-                Od.DIV(
+                DIV(
                     mergeProps(
                         Obs.value(args.props),
                         { className: "OdTabComponent" }
                     ),
                     [
-                        Od.DIV(
+                        DIV(
                             { className: "OdTabHeadings" },
                             tabs.map(tab => tabHeading(selection, tab))
                         ),
-                        Od.DIV(
+                        DIV(
                             { className: "OdTabBody" },
                             tabBody(selection())
                         )
@@ -45,7 +43,7 @@ namespace Od {
     };
 
     const tabHeading =
-    (selection: Obs.IObservable<ITab>, tab: ITab): Od.IVdom => {
+    (selection: Obs.Observable<ITab>, tab: ITab): Vdom => {
         const heading = Obs.value(tab.heading);
         const seln = Obs.value(selection);
         const className =
@@ -53,7 +51,7 @@ namespace Od {
             ? "OdTabHeading OdTabSelection"
             : "OdTabHeading"
             );
-        const vdom = Od.DIV(
+        const vdom = DIV(
             {
                 className: className,
                 onclick: () => {
@@ -65,6 +63,6 @@ namespace Od {
         return vdom;
     };
 
-    const tabBody = (tab: ITab): Od.Vdoms =>
-        Obs.value(tab && tab.body) || "";
+    const tabBody = (tab: ITab): Vdoms =>
+        Obs.value<Vdoms>(tab && tab.body) || "";
 }

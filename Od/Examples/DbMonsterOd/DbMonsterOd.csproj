@@ -34,7 +34,6 @@
     <TypeScriptCompile Include="Monitoring.ts" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="bootstrap.min.css" />
     <None Include="web.Debug.config">
       <DependentUpon>web.config</DependentUpon>
     </None>

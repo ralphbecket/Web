@@ -33,12 +33,10 @@ namespace DemoEndsSelectComponent {
             selection(opts[(n * Math.random()) | 0]);
         };
 
-        const e = Od.element;
-
-        const vdom = e("DIV", null, [
-            e("BUTTON", { onclick: changeOptions }, "Randomize options"),
-            e("BUTTON", { onclick: changeSelection }, "Randomize selection"),
-            e("HR"),
+        const vdom = Od.DIV([
+            Od.BUTTON({ onclick: changeOptions }, "Randomize options"),
+            Od.BUTTON({ onclick: changeSelection }, "Randomize selection"),
+            Od.HR(),
             Od.selectComponent({
                 options: options,
                 optionView: optionView,

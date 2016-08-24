@@ -4,15 +4,15 @@ namespace Od {
 
     export interface ICheckboxComponentArgs {
         componentName?: string;
-        obs: Obs.IObservable<boolean>;
-        props?: IProps;
+        obs: Obs.Observable<boolean>;
+        props?: Props;
     }
 
-    export const checkboxComponent = (args: ICheckboxComponentArgs): IVdom =>
+    export const checkboxComponent = (args: ICheckboxComponentArgs): Vdom =>
         Od.component(args.componentName, () => checkboxComponentView(args));
 
 
-    const checkboxComponentView = (args: ICheckboxComponentArgs): IVdom => {
+    const checkboxComponentView = (args: ICheckboxComponentArgs): Vdom => {
         const obs = args.obs;
         const props = args.props;
         var checkboxProps = {
@@ -21,7 +21,7 @@ namespace Od {
             onchange: (v: Event) => {
                 obs((v.target as HTMLInputElement).checked);
             }
-        } as IProps;
+        } as Props;
         if (props) checkboxProps = mergeProps(props, checkboxProps);
         return Od.INPUT(checkboxProps);
     };

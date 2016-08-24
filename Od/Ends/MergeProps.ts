@@ -6,8 +6,8 @@ namespace Od {
     // later in the list.  "className" and "style" properties are merged
     // in the way you'd expect, as a biased union.  Null property sets
     // are ignored.
-    export const mergeProps = (...propsList: IProps[]): IProps => {
-        const resultProps = {} as IProps;
+    export const mergeProps = (...propsList: Props[]): Props => {
+        const resultProps = {} as Props;
         for (var i = 0; i < propsList.length; i++) {
             const inputProps = propsList[i];
             if (!inputProps) continue;
@@ -29,7 +29,7 @@ namespace Od {
         return resultProps;
     };
 
-    const mergeClassName = (newClassNames: string, props: IProps): void => {
+    const mergeClassName = (newClassNames: string, props: Props): void => {
         const currClassNames = props["className"];
         if (!currClassNames) {
             props["className"] = newClassNames;
@@ -47,7 +47,7 @@ namespace Od {
         props["className"] = currClasses.join(" ");
     };
 
-    const mergeStyle = (newStyle: IProps, props: IProps): void => {
+    const mergeStyle = (newStyle: Props, props: Props): void => {
         const currStyle = props["style"];
         if (!currStyle) {
             props["style"] = newStyle;
