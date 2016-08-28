@@ -1,12 +1,12 @@
 ﻿/// <reference path="../../Ends/Elements.ts"/>
 
-interface IToDo {
+interface ToDo {
     id: number;
     what: string;
     done: Obs.Observable<boolean>;
 }
 
-interface IRawToDo {
+interface RawToDo {
     id: number;
     what: string;
     done: boolean;
@@ -14,17 +14,17 @@ interface IRawToDo {
 
 var nextToDoId = 1; // A name supply.
 
-const loadToDos = (): IToDo[] =>
-    JSON.parse(localStorage.getItem("todos") || "[]").map((x: IRawToDo) => ({
+const loadToDos = (): ToDo[] =>
+    JSON.parse(localStorage.getItem("todos") || "[]").map((x: RawToDo) => ({
         id: x.id, what: x.what, done: Obs.of(x.done)
-    }) as IToDo);
+    }) as ToDo);
 
 const toDos = Obs.of(loadToDos());
 
 const saveToDos = () => {
     localStorage.setItem("todos", JSON.stringify(toDos().map(x => ({
         id: x.id, what: x.what, done: x.done()
-    }) as IRawToDo)));
+    }) as RawToDo)));
 }
 
 const numTotal = Obs.fn(() => toDos().length);
@@ -37,7 +37,7 @@ const haveSomeCompletedToDos = Obs.fn(() => toDos().some(x => x.done()));
 
 const allDone = Obs.fn(() => numNotDone() === 0);
 
-const toDoBeingEdited = Obs.of(null as IToDo);
+const toDoBeingEdited = Obs.of(null as ToDo);
 
 var uneditedToDoWhat = "";
 
@@ -86,7 +86,7 @@ const editToDoKeyHandler = keyHandler({
 
 const hideUnless = (x: boolean) => ({ display: x ? "" : "none" }) as any;
 
-const toDoComponent = (toDo: IToDo): Od.Vdom => Od.component(toDo.id, () =>
+const toDoComponent = (toDo: ToDo): Od.Vdom => Od.component(toDo.id, () =>
     Od.LI({
         className:
             (toDoBeingEdited() === toDo ? "editing " : "") +

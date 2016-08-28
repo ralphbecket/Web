@@ -2,7 +2,7 @@
 
 namespace Xhr {
 
-    export interface IXhrOptions {
+    export interface XhrOptions {
         method?: string; // Default GET.
         async?: boolean; // Default true.
         user?: string;
@@ -27,8 +27,8 @@ namespace Xhr {
     // 
     export const send = (
         url: string,
-        opts = {} as IXhrOptions
-    ): Oath.IThenable<XMLHttpRequest> => {
+        opts = {} as XhrOptions
+    ): Oath.Promise<XMLHttpRequest> => {
 
         const xhr = new XMLHttpRequest();
 

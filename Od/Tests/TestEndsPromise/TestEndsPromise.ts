@@ -8,7 +8,7 @@ namespace TestEndsPromise {
 
         const deferred = () => {
             var d = {
-                promise: null as Oath.IThenable<number>,
+                promise: null as Oath.Promise<number>,
                 resolve: null as (x: number) => void,
                 reject: null as (x: any) => void
             };

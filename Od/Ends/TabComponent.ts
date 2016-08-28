@@ -3,19 +3,19 @@
 
 namespace Od {
 
-    export interface ITab {
+    export interface Tab {
         heading: Obs.Observableish<string>;
         body: Obs.Observableish<Vdoms>;
     }
 
     export const tabComponent = (args: {
         name?: ComponentName;
-        tabs: Obs.Observableish<ITab[]>;
-        selection?: Obs.Observable<ITab>;
+        tabs: Obs.Observableish<Tab[]>;
+        selection?: Obs.Observable<Tab>;
         props?: Obs.Observableish<Props>;
     }): Vdom => {
 
-        var selection = args.selection || Obs.of(null as ITab);
+        var selection = args.selection || Obs.of(null as Tab);
 
         const vdom = component(args.name, () => {
             const tabs = Obs.value(args.tabs);
@@ -43,7 +43,7 @@ namespace Od {
     };
 
     const tabHeading =
-    (selection: Obs.Observable<ITab>, tab: ITab): Vdom => {
+    (selection: Obs.Observable<Tab>, tab: Tab): Vdom => {
         const heading = Obs.value(tab.heading);
         const seln = Obs.value(selection);
         const className =
@@ -63,6 +63,6 @@ namespace Od {
         return vdom;
     };
 
-    const tabBody = (tab: ITab): Vdoms =>
+    const tabBody = (tab: Tab): Vdoms =>
         Obs.value<Vdoms>(tab && tab.body) || "";
 }

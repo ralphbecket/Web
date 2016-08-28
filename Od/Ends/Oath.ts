@@ -1,13 +1,13 @@
 ﻿namespace Oath {
 
-    export interface IThenable<T> {
-        then<U>(passed: (x: T) => U, failed?: (r: any) => any): IThenable<U>;
+    export interface Promise<T> {
+        then<U>(passed: (x: T) => U, failed?: (r: any) => any): Promise<U>;
     }
 
-    interface IPromise<T> extends IThenable<T> {
+    interface _Promise<T> extends Promise<T> {
         value: T;
         state: <T, U>(
-            p: IPromise<T>,
+            p: _Promise<T>,
             passed: (x: T) => U,
             failed: (r: any) => any,
             pass: (x: U) => void,
@@ -20,13 +20,13 @@
 
     var nextID = 1;
 
-    export const resolve = <T>(x: T): IThenable<T> =>
+    export const resolve = <T>(x: T): Promise<T> =>
         make<T>((pass, fail) => pass(x));
 
-    export const reject = <T>(r: any): IThenable<T> =>
+    export const reject = <T>(r: any): Promise<T> =>
         make<T>((pass, fail) => fail(r));
 
-    export const all = <T>(ps: IThenable<T>[]): IThenable<T[]> =>
+    export const all = <T>(ps: Promise<T>[]): Promise<T[]> =>
         make<T[]>((pass, fail) => {
             var xs = [] as T[];
             var n = ps.length;
@@ -35,14 +35,14 @@
             });
         });
 
-    export const race = <T>(ps: IThenable<T>[]): IThenable<T> =>
+    export const race = <T>(ps: Promise<T>[]): Promise<T> =>
         make<T>((pass, fail) => {
             ps.forEach((p, i) => {
                 p.then(x => { pass(x); });
             });
         });
 
-    export const delay = <T>(t: number, f: (T | (() => T))): IThenable<T> =>
+    export const delay = <T>(t: number, f: (T | (() => T))): Promise<T> =>
         make<T>((pass, fail) => {
             setTimeout(() => {
                 pass(isFunction(f) ? (f as () => T)() : (f as T));
@@ -57,7 +57,7 @@
 
     export const make = <T>(
         setup: (pass: (x: T) => void, fail: (r: any) => void) => void
-    ): IThenable<T> => {
+    ): Promise<T> => {
         const p = {
             value: null,
             state: pending,
@@ -65,20 +65,20 @@
             onRejected: null,
             then: null,
             id: nextID++
-        } as IPromise<T>;
+        } as _Promise<T>;
         // console.log("Oath: created", p.id);
         const pass = (x: T): void => resolveOath(p, x);
         const fail = (r: any): void => rejectOath(p, r);
         setup(pass, fail);
         p.then =
-            <U>(passed: (x: T) => U, failed?: (r: any) => any): IThenable<U> =>
+            <U>(passed: (x: T) => U, failed?: (r: any) => any): Promise<U> =>
                 make((pass, fail) => {
                     p.state(p, passed, failed, pass, fail);
                 });
         return p;
     }
 
-    const resolveOath = <T>(p: IPromise<T>, x: T): void => {
+    const resolveOath = <T>(p: _Promise<T>, x: T): void => {
         if (p.state !== pending) return;
         p.state = fulfilled;
         p.value = x;
@@ -87,7 +87,7 @@
         // console.log("Oath: resolved", p.id);
     };
 
-    const rejectOath = <T>(p: IPromise<T>, r: any): void => {
+    const rejectOath = <T>(p: _Promise<T>, r: any): void => {
         if (p.state !== pending) return;
         p.state = rejected;
         p.value = r;
@@ -97,7 +97,7 @@
     };
 
     const pending = <T, U>(
-        p: IPromise<T>,
+        p: _Promise<T>,
         passed: (x: T) => U,
         failed: (r: any) => any,
         pass: (x: U) => void,
@@ -118,7 +118,7 @@
     };
 
     const fulfilled = <T, U>(
-        p: IPromise<T>,
+        p: _Promise<T>,
         passed: (x: T) => U,
         failed: (r: any) => any,
         pass: (x: U) => void,
@@ -128,7 +128,7 @@
     };
 
     const rejected = <T, U>(
-        p: IPromise<T>,
+        p: _Promise<T>,
         passed: (x: T) => U,
         failed: (r: any) => any,
         pass: (x: U) => void,
@@ -139,8 +139,8 @@
 
     const handleCallback =
     <T, U>(
-        p: IPromise<T>,
-        f: (x: T) => U | IThenable<U>,
+        p: _Promise<T>,
+        f: (x: T) => U | Promise<U>,
         pass: (y: U) => void,
         fail: (r: any) => void
     ): void => {
@@ -150,7 +150,7 @@
             const x = p.value;
             const y = f(x);
             if (y as any === p) throw new TypeError("Cyclic promise.");
-            if (isThenable(y)) (y as IPromise<U>).then(pass, fail);
+            if (isThenable(y)) (y as _Promise<U>).then(pass, fail);
             else pass(y as U);
         }
         catch (r) {

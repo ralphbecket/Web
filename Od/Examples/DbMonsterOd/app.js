@@ -1189,16 +1189,17 @@ var DbMonsterOd;
         Od.TBODY(rows().map(function (row) {
             return Od.TR([
                 Od.TD({ className: "dbname" }, row.dbname),
-                Od.TD({ className: "query-count" }, Od.SPAN({ className: row.lastSample.countClassName }, row.lastSample.nbQueries))
-            ].concat(row.lastSample.topFiveQueries.map(function (col) {
-                return Od.TD({ className: col.elapsedClassName }, [
-                    Od.SPAN(col.formatElapsed),
-                    Od.DIV({ className: "popover left" }, [
-                        Od.DIV({ className: "popover-content" }, col.query),
-                        Od.DIV({ className: "arrow" })
-                    ])
-                ]);
-            })));
+                Od.TD({ className: "query-count" }, Od.SPAN({ className: row.lastSample.countClassName }, row.lastSample.nbQueries)),
+                row.lastSample.topFiveQueries.map(function (col) {
+                    return Od.TD({ className: col.elapsedClassName }, [
+                        Od.SPAN(col.formatElapsed),
+                        Od.DIV({ className: "popover left" }, [
+                            Od.DIV({ className: "popover-content" }, col.query),
+                            Od.DIV({ className: "arrow" })
+                        ])
+                    ]);
+                })
+            ]);
         })));
     });
     var update = function () {

@@ -1,6 +1,6 @@
 /// <reference path="Oath.d.ts" />
 declare namespace Xhr {
-    interface IXhrOptions {
+    interface XhrOptions {
         method?: string;
         async?: boolean;
         user?: string;
@@ -14,5 +14,5 @@ declare namespace Xhr {
         overrideMimeType?: string;
         data?: any;
     }
-    const send: (url: string, opts?: IXhrOptions) => Oath.IThenable<XMLHttpRequest>;
+    const send: (url: string, opts?: XhrOptions) => Oath.Promise<XMLHttpRequest>;
 }

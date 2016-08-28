@@ -2,17 +2,17 @@
 
 namespace Od {
 
-    export interface ICheckboxComponentArgs {
+    export interface CheckboxComponentArgs {
         componentName?: string;
         obs: Obs.Observable<boolean>;
         props?: Props;
     }
 
-    export const checkboxComponent = (args: ICheckboxComponentArgs): Vdom =>
+    export const checkboxComponent = (args: CheckboxComponentArgs): Vdom =>
         Od.component(args.componentName, () => checkboxComponentView(args));
 
 
-    const checkboxComponentView = (args: ICheckboxComponentArgs): Vdom => {
+    const checkboxComponentView = (args: CheckboxComponentArgs): Vdom => {
         const obs = args.obs;
         const props = args.props;
         var checkboxProps = {

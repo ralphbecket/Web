@@ -9,22 +9,22 @@
 
 declare var T: any; // This is the ThreadIt API.  Should give it a type...
 
-interface IComment {
+interface ThreadComment {
     id: string;
     parent_id?: string;
     text: string;
     comment_count: number;
     children: string[];
-    child_comments?: Obs.Observable<IComment[]>;
+    child_comments?: Obs.Observable<ThreadComment[]>;
 }
 
-var threads = [] as IComment[];
+var threads = [] as ThreadComment[];
 
-var commentDict = {} as { [id: string]: IComment };
+var commentDict = {} as { [id: string]: ThreadComment };
 
 var currentThreadID = null as string; // Set if viewing comments for a thread.
 
-const addNewComment = (newComment: IComment): void => {
+const addNewComment = (newComment: ThreadComment): void => {
     const id = newComment.id;
     const parentID = newComment.parent_id;
     commentDict[id] = newComment;
@@ -36,7 +36,7 @@ const addNewComment = (newComment: IComment): void => {
     }
 };
 
-const updateCommentDict = (newComments: IComment[]): void => {
+const updateCommentDict = (newComments: ThreadComment[]): void => {
     newComments.forEach(addNewComment);
 };
 
@@ -87,7 +87,7 @@ const view = Od.component("main", (): Od.Vdom => {
     return Od.DIV({ className: "main" }, vdom);
 });
 
-const viewThreads = (threads: IComment[]): Od.Vdom[] => {
+const viewThreads = (threads: ThreadComment[]): Od.Vdom[] => {
     const vdoms = [] as Od.Vdom[];
     const iTop = threads.length;
     for (var i = 0; i < iTop; i++) {
@@ -103,7 +103,7 @@ const viewThreads = (threads: IComment[]): Od.Vdom[] => {
     return vdoms;
 };
 
-const viewCommentTree = (comment: IComment): Od.Vdom =>
+const viewCommentTree = (comment: ThreadComment): Od.Vdom =>
     Od.DIV({ className: "comment" }, [
         Od.fromHtml(comment.text),
         Od.DIV({ className: "reply" }, commentReply("reply", false, comment.id) ),

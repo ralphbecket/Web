@@ -15,9 +15,9 @@ namespace DemoEndsTabComponent {
                     Od.LI("tab.")
                 ])
             }
-        ] as Od.ITab[]);
+        ] as Od.Tab[]);
 
-        const selection = Obs.of(null as Od.ITab);
+        const selection = Obs.of(null as Od.Tab);
 
         const rotateTabs = (): void => {
             const xs = tabs();

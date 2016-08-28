@@ -3,7 +3,7 @@
 
 namespace Od {
 
-    export interface IInputComponentArgs<T> {
+    export interface InputComponentArgs<T> {
         componentName?: ComponentName;
         obs: Obs.Observable<T>;
         props?: Obs.Observableish<Props>;
@@ -14,10 +14,10 @@ namespace Od {
         parseText?: (text: string) => T;
     };
 
-    export const inputComponent = <T>(args: IInputComponentArgs<T>): Vdom =>
+    export const inputComponent = <T>(args: InputComponentArgs<T>): Vdom =>
         Od.component(args.componentName, () => inputComponentVdom(args));
 
-    const inputComponentVdom = <T>(args: IInputComponentArgs<T>): Vdom => {
+    const inputComponentVdom = <T>(args: InputComponentArgs<T>): Vdom => {
         const obs = args.obs;
         const props = Obs.value(args.props);
         const type = args.type || "text";

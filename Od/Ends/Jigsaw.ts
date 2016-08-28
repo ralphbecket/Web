@@ -4,9 +4,9 @@ namespace Jigsaw {
 
     // ---- Public interface. ----
 
-    export type RouteHandler = (args: IRouteArgs) => void;
+    export type RouteHandler = (args: RouteArgs) => void;
 
-    export interface IRouteArgs {
+    export interface RouteArgs {
         [key: string]: (string | string[]);
     }
 
@@ -118,12 +118,12 @@ namespace Jigsaw {
         previousHash = hash;
     };
 
-    type Matcher = (parts: string[], i: number, args: IRouteArgs) => IRouteArgs;
+    type Matcher = (parts: string[], i: number, args: RouteArgs) => RouteArgs;
 
-    interface ICompiledRoute {
+    interface CompiledRoute {
         route: string;
         matcher: Matcher;
-        handler: (args: IRouteArgs) => void;
+        handler: (args: RouteArgs) => void;
     }
 
     const matchEnd: Matcher = (parts, i, args) => (parts[i] == null) && args;
@@ -173,5 +173,5 @@ namespace Jigsaw {
         return matcher;
     };
 
-    var compiledRoutes = [] as ICompiledRoute[];
+    var compiledRoutes = [] as CompiledRoute[];
 }

@@ -38,16 +38,17 @@ namespace DbMonsterOd {
                         Od.SPAN({ className: row.lastSample.countClassName },
                             row.lastSample.nbQueries
                         )
-                    )
-                ].concat(row.lastSample.topFiveQueries.map(col =>
-                    Od.TD({ className: col.elapsedClassName }, [
-                        Od.SPAN(col.formatElapsed),
-                        Od.DIV({ className: "popover left" }, [
-                            Od.DIV({ className: "popover-content" }, col.query),
-                            Od.DIV({ className: "arrow" })
+                    ),
+                    row.lastSample.topFiveQueries.map(col =>
+                        Od.TD({ className: col.elapsedClassName }, [
+                            Od.SPAN(col.formatElapsed),
+                            Od.DIV({ className: "popover left" }, [
+                                Od.DIV({ className: "popover-content" }, col.query),
+                                Od.DIV({ className: "arrow" })
+                            ])
                         ])
-                    ])
-                )))
+                    )
+                ])
             ))
         )
     );

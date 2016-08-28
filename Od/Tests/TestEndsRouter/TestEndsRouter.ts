@@ -5,7 +5,7 @@
 window.onload = () => {
 
     var n = 0;
-    var args = {} as Jigsaw.IRouteArgs;
+    var args = {} as Jigsaw.RouteArgs;
 
     Jigsaw.addRoute("", (a) => { n = 0; args = a; });
 

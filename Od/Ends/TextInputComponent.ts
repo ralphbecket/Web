@@ -3,7 +3,7 @@
 namespace Od {
 
     export const textInputComponent =
-    (args: IInputComponentArgs<string>): Vdom =>
+    (args: InputComponentArgs<string>): Vdom =>
         inputComponent(args);
 
 }

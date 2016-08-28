@@ -1,9 +1,9 @@
 declare namespace Jigsaw {
-    type RouteHandler = (args: IRouteArgs) => void;
-    interface IRouteArgs {
+    type RouteHandler = (args: RouteArgs) => void;
+    interface RouteArgs {
         [key: string]: (string | string[]);
     }
-    const addRoute: (route: string, handler: (args: IRouteArgs) => void) => void;
+    const addRoute: (route: string, handler: (args: RouteArgs) => void) => void;
     const removeRoute: (route: string) => void;
     const clearRoutes: () => void;
     var defaultRouteHandler: (route: string) => void;
