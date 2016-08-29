@@ -240,7 +240,7 @@ module Obs {
         const obsAny = obs as Obs<void>;
         obsAny.value = null;
         breakDependencies(obsAny);
-        obsAny.dependents = null;
+        obsAny.dependents = {};
         // Break any dependencies if this is a subscription.
         const id = obsAny.obsid;
         const subscriptions = obsAny.subscriptions;

@@ -334,7 +334,7 @@ var Obs;
         var obsAny = obs;
         obsAny.value = null;
         breakDependencies(obsAny);
-        obsAny.dependents = null;
+        obsAny.dependents = {};
         // Break any dependencies if this is a subscription.
         var id = obsAny.obsid;
         var subscriptions = obsAny.subscriptions;
