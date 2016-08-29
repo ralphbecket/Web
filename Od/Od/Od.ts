@@ -306,18 +306,16 @@ namespace Od {
             }
             // Establish the observable in the context of this new component
             // so any sub-components will be registered with this component.
-            const oldParentComponentInfo = parentComponentInfo;
-            parentComponentInfo = cmptInfo;
-            const obs =
-                (Obs.isObservable(fn)
-                    ? fn as Obs.Observable<Vdom>
-                    : Obs.fn(fn)
-                );
+            const obs = Obs.fn(() => {
+                const oldParentComponentInfo = parentComponentInfo;
+                parentComponentInfo = cmptInfo;
+                const vdom = fn();
+                parentComponentInfo = oldParentComponentInfo;
+                return vdom;
+            });
             // Create the initial DOM node for this component.
             const dom = patchFromVdom(obs(), null, null);
             setDomComponentID(dom, cmptID);
-            // Restore the parent component context.
-            parentComponentInfo = oldParentComponentInfo;
             // Set up the update subscription.
             const subs = Obs.subscribe([obs], () => {
                 if (deferComponentUpdates)

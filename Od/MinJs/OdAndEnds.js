@@ -681,16 +681,16 @@ var Od;
         }
         // Establish the observable in the context of this new component
         // so any sub-components will be registered with this component.
-        var oldParentComponentInfo = parentComponentInfo;
-        parentComponentInfo = cmptInfo;
-        var obs = (Obs.isObservable(fn)
-            ? fn
-            : Obs.fn(fn));
+        var obs = Obs.fn(function () {
+            var oldParentComponentInfo = parentComponentInfo;
+            parentComponentInfo = cmptInfo;
+            var vdom = fn();
+            parentComponentInfo = oldParentComponentInfo;
+            return vdom;
+        });
         // Create the initial DOM node for this component.
         var dom = patchFromVdom(obs(), null, null);
         setDomComponentID(dom, cmptID);
-        // Restore the parent component context.
-        parentComponentInfo = oldParentComponentInfo;
         // Set up the update subscription.
         var subs = Obs.subscribe([obs], function () {
             if (Od.deferComponentUpdates)
