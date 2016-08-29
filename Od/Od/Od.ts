@@ -338,6 +338,8 @@ namespace Od {
         }
 
     const updateComponent = (cmptInfo: ComponentInfo): void => {
+        const oldParentComponentInfo = parentComponentInfo;
+        parentComponentInfo = cmptInfo;
         const cmptID = cmptInfo.componentID;
         const dom = cmptInfo.dom;
         const obs = cmptInfo.obs;
@@ -348,6 +350,7 @@ namespace Od {
         setDomComponentID(newDom, cmptID); // Restore DOM ownership.
         cmptInfo.dom = newDom;
         cmptInfo.updateIsPending = false;
+        parentComponentInfo = oldParentComponentInfo;
     };
 
     const disposeComponent = (cmptInfo: ComponentInfo): void => {

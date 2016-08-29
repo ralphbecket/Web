@@ -709,6 +709,8 @@ var Od;
         return cmpt;
     };
     var updateComponent = function (cmptInfo) {
+        var oldParentComponentInfo = parentComponentInfo;
+        parentComponentInfo = cmptInfo;
         var cmptID = cmptInfo.componentID;
         var dom = cmptInfo.dom;
         var obs = cmptInfo.obs;
@@ -719,6 +721,7 @@ var Od;
         setDomComponentID(newDom, cmptID); // Restore DOM ownership.
         cmptInfo.dom = newDom;
         cmptInfo.updateIsPending = false;
+        parentComponentInfo = oldParentComponentInfo;
     };
     var disposeComponent = function (cmptInfo) {
         disposeAnonymousSubcomponents(cmptInfo);
