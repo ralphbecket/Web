@@ -257,12 +257,15 @@ var Od;
         var obs = Obs.fn(function () {
             var oldParentComponentInfo = parentComponentInfo;
             parentComponentInfo = cmptInfo;
+            disposeAnonymousSubcomponents(cmptInfo);
             var vdom = fn();
             parentComponentInfo = oldParentComponentInfo;
             return vdom;
         });
         // Create the initial DOM node for this component.
-        var dom = patchFromVdom(obs(), null, null);
+        // Peek here, because we don't want any parent component
+        // acquiring a dependency on this component's private observable.
+        var dom = patchFromVdom(Obs.peek(obs), null, null);
         setDomComponentID(dom, cmptID);
         // Set up the update subscription.
         var subs = Obs.subscribe([obs], function () {
@@ -289,7 +292,6 @@ var Od;
         var dom = cmptInfo.dom;
         var obs = cmptInfo.obs;
         var parent = dom && dom.parentNode;
-        disposeAnonymousSubcomponents(cmptInfo);
         clearDomComponentID(dom); // So patching will apply internally.
         var newDom = patchFromVdom(obs(), dom, parent);
         setDomComponentID(newDom, cmptID); // Restore DOM ownership.
@@ -304,7 +306,6 @@ var Od;
         Obs.dispose(cmptInfo.obs);
         var dom = cmptInfo.dom;
         clearDomComponentID(dom);
-        enqueueNodeForStripping(dom);
     };
     var disposeAnonymousSubcomponents = function (cmptInfo) {
         var cmpts = cmptInfo.anonymousSubcomponents;

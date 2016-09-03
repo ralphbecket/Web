@@ -309,12 +309,15 @@ namespace Od {
             const obs = Obs.fn(() => {
                 const oldParentComponentInfo = parentComponentInfo;
                 parentComponentInfo = cmptInfo;
+                disposeAnonymousSubcomponents(cmptInfo);
                 const vdom = fn();
                 parentComponentInfo = oldParentComponentInfo;
                 return vdom;
             });
             // Create the initial DOM node for this component.
-            const dom = patchFromVdom(obs(), null, null);
+            // Peek here, because we don't want any parent component
+            // acquiring a dependency on this component's private observable.
+            const dom = patchFromVdom(Obs.peek(obs), null, null);
             setDomComponentID(dom, cmptID);
             // Set up the update subscription.
             const subs = Obs.subscribe([obs], () => {
@@ -342,7 +345,6 @@ namespace Od {
         const dom = cmptInfo.dom;
         const obs = cmptInfo.obs;
         const parent = dom && dom.parentNode;
-        disposeAnonymousSubcomponents(cmptInfo);
         clearDomComponentID(dom); // So patching will apply internally.
         const newDom = patchFromVdom(obs(), dom, parent);
         setDomComponentID(newDom, cmptID); // Restore DOM ownership.
@@ -358,7 +360,6 @@ namespace Od {
         Obs.dispose(cmptInfo.obs);
         const dom = cmptInfo.dom;
         clearDomComponentID(dom);
-        enqueueNodeForStripping(dom);
     };
 
     const disposeAnonymousSubcomponents = (cmptInfo: ComponentInfo): void => {
