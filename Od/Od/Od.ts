@@ -271,9 +271,6 @@ namespace Od {
     // Passing a null name creates an anonymous component, which will be
     // re-created every time the parent component updates.  Typically you
     // do not want this!
-    //
-    // XXX THIS IS WHERE WE WANT TO ADD THE NEW LIFECYCLE STUFF
-    // AS AN OPTIONAL PARAMETER ON THE COMPONENT FUNCTION.
 
     export const component =
         (name: ComponentName, fn: () => Vdom): Vdom => {

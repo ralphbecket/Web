@@ -646,9 +646,6 @@ var Od;
     // Passing a null name creates an anonymous component, which will be
     // re-created every time the parent component updates.  Typically you
     // do not want this!
-    //
-    // XXX THIS IS WHERE WE WANT TO ADD THE NEW LIFECYCLE STUFF
-    // AS AN OPTIONAL PARAMETER ON THE COMPONENT FUNCTION.
     Od.component = function (name, fn) {
         // If this component already exists in this scope, return that.
         var existingCmpt = existingNamedComponent(name);
