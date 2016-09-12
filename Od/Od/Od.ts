@@ -188,10 +188,10 @@ namespace Od {
         const lifecycleFn = props && props["onodevent"];
         if (lifecycleFn == null) return;
         if (newDom !== oldDom) {
-            lifecycleFn("created", newDom);
+            pendingCreatedEventCallbacks.push(newDom);
             return;
         }
-        lifecycleFn("updated", newDom);
+        pendingUpdatedEventCallbacks.push(newDom);
     };
 
     // Patch a DOM node.
@@ -318,10 +318,13 @@ namespace Od {
             setDomComponentID(dom, cmptID);
             // Set up the update subscription.
             const subs = Obs.subscribe([obs], () => {
-                if (deferComponentUpdates)
+                if (deferComponentUpdates) {
                     deferComponentUpdate(cmptInfo);
-                else
+                }
+                else {
                     updateComponent(cmptInfo);
+                    runPendingOdEventCallbacks();
+                }
             });
             // Set up the disposal method.
             cmpt.dispose = () => { disposeComponent(cmptInfo); };
@@ -403,6 +406,7 @@ namespace Od {
         ) {
             updateComponent(cmptInfo);
         }
+        runPendingOdEventCallbacks();
         deferredComponentUpdatesID = 0;
     };
 
@@ -630,6 +634,37 @@ namespace Od {
         const children = dom.childNodes;
         const numChildren = children.length;
         for (var i = 0; i < numChildren; i++) stripNode(children[i]);
+    };
+
+    var runningPendingOdEvents = false;
+    var pendingCreatedEventCallbacks = [] as Node[];
+    var pendingUpdatedEventCallbacks = [] as Node[];
+
+    const runPendingOdEventCallbacks = (): void => {
+        // Guard against infinite loops!
+        if (runningPendingOdEvents) return;
+        runningPendingOdEvents = true;
+        runPendingCreatedEventCallbacks();
+        runPendingUpdatedEventCallbacks();
+        runningPendingOdEvents = false;
+    };
+
+    const runPendingCreatedEventCallbacks = (): void => {
+        for (var i = 0; i < pendingCreatedEventCallbacks.length; i++) {
+            var dom = pendingCreatedEventCallbacks[i];
+            var callback = (dom as any).onodevent;
+            if (callback != null) callback("created", dom);
+        }
+        pendingCreatedEventCallbacks = [];
+    };
+
+    const runPendingUpdatedEventCallbacks = (): void => {
+        for (var i = 0; i < pendingUpdatedEventCallbacks.length; i++) {
+            var dom = pendingUpdatedEventCallbacks[i];
+            var callback = (dom as any).onodevent;
+            if (callback != null) callback("updated", dom);
+        }
+        pendingUpdatedEventCallbacks = [];
     };
 
 }

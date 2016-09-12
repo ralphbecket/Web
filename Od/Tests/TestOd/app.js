@@ -580,10 +580,10 @@ var Od;
         if (lifecycleFn == null)
             return;
         if (newDom !== oldDom) {
-            lifecycleFn("created", newDom);
+            pendingCreatedEventCallbacks.push(newDom);
             return;
         }
-        lifecycleFn("updated", newDom);
+        pendingUpdatedEventCallbacks.push(newDom);
     };
     // Patch a DOM node.
     // Do nothing if the replacement is identical.
@@ -692,10 +692,13 @@ var Od;
         setDomComponentID(dom, cmptID);
         // Set up the update subscription.
         var subs = Obs.subscribe([obs], function () {
-            if (Od.deferComponentUpdates)
+            if (Od.deferComponentUpdates) {
                 deferComponentUpdate(cmptInfo);
-            else
+            }
+            else {
                 updateComponent(cmptInfo);
+                runPendingOdEventCallbacks();
+            }
         });
         // Set up the disposal method.
         cmpt.dispose = function () { disposeComponent(cmptInfo); };
@@ -765,6 +768,7 @@ var Od;
         for (var cmptInfo = cmptInfos.pop(); cmptInfo != null; cmptInfo = cmptInfos.pop()) {
             updateComponent(cmptInfo);
         }
+        runPendingOdEventCallbacks();
         deferredComponentUpdatesID = 0;
     };
     // Construct a static DOM subtree from an HTML string.
@@ -987,6 +991,35 @@ var Od;
         var numChildren = children.length;
         for (var i = 0; i < numChildren; i++)
             stripNode(children[i]);
+    };
+    var runningPendingOdEvents = false;
+    var pendingCreatedEventCallbacks = [];
+    var pendingUpdatedEventCallbacks = [];
+    var runPendingOdEventCallbacks = function () {
+        if (runningPendingOdEvents)
+            return;
+        runningPendingOdEvents = true;
+        runPendingCreatedEventCallbacks();
+        runPendingUpdatedEventCallbacks();
+        runningPendingOdEvents = false;
+    };
+    var runPendingCreatedEventCallbacks = function () {
+        for (var i = 0; i < pendingCreatedEventCallbacks.length; i++) {
+            var dom = pendingCreatedEventCallbacks[i];
+            var callback = dom.onodevent;
+            if (callback != null)
+                callback("created", dom);
+        }
+        pendingCreatedEventCallbacks = [];
+    };
+    var runPendingUpdatedEventCallbacks = function () {
+        for (var i = 0; i < pendingUpdatedEventCallbacks.length; i++) {
+            var dom = pendingUpdatedEventCallbacks[i];
+            var callback = dom.onodevent;
+            if (callback != null)
+                callback("updated", dom);
+        }
+        pendingUpdatedEventCallbacks = [];
     };
 })(Od || (Od = {}));
 var Test;
