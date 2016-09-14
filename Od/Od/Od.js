@@ -264,6 +264,7 @@ var Od;
         // acquiring a dependency on this component's private observable.
         var dom = patchFromVdom(Obs.peek(obs), null, null);
         setDomComponentID(dom, cmptID);
+        runPendingOdEventCallbacks();
         // Set up the update subscription.
         var subs = Obs.subscribe([obs], function () {
             if (Od.deferComponentUpdates) {
@@ -570,6 +571,7 @@ var Od;
     var pendingCreatedEventCallbacks = [];
     var pendingUpdatedEventCallbacks = [];
     var runPendingOdEventCallbacks = function () {
+        // Guard against infinite loops!
         if (runningPendingOdEvents)
             return;
         runningPendingOdEvents = true;
@@ -596,3 +598,4 @@ var Od;
         pendingUpdatedEventCallbacks = [];
     };
 })(Od || (Od = {}));
+//# sourceMappingURL=Od.js.map

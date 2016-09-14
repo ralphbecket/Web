@@ -316,6 +316,7 @@ namespace Od {
             // acquiring a dependency on this component's private observable.
             const dom = patchFromVdom(Obs.peek(obs), null, null);
             setDomComponentID(dom, cmptID);
+            runPendingOdEventCallbacks();
             // Set up the update subscription.
             const subs = Obs.subscribe([obs], () => {
                 if (deferComponentUpdates) {
