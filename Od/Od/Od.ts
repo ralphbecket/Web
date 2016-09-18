@@ -74,9 +74,8 @@
 namespace Od {
 
     // XXX This is to help diagnose Mihai's bug.
-    // Set to -ve to process immediately.
-    // Otherwise Od events will be processed with this setTimeout delay.
-    export var processPendingOdEventsDelay = -1;
+    // Od events will be processed with this setTimeout delay.
+    export var processPendingOdEventsDelay = 20;
 
     const debug = false;
 
@@ -645,9 +644,14 @@ namespace Od {
         // Guard against infinite loops!
         if (runningPendingOdEvents) return;
         runningPendingOdEvents = true;
-        runPendingCreatedEventCallbacks();
-        runPendingUpdatedEventCallbacks();
-        runningPendingOdEvents = false;
+        setTimeout(
+            () => {
+                runPendingCreatedEventCallbacks();
+                runPendingUpdatedEventCallbacks();
+                runningPendingOdEvents = false;
+            },
+            processPendingOdEventsDelay
+        );
     };
 
     const runPendingCreatedEventCallbacks = (): void => {

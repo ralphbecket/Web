@@ -73,9 +73,8 @@
 var Od;
 (function (Od) {
     // XXX This is to help diagnose Mihai's bug.
-    // Set to -ve to process immediately.
-    // Otherwise Od events will be processed with this setTimeout delay.
-    Od.processPendingOdEventsDelay = -1;
+    // Od events will be processed with this setTimeout delay.
+    Od.processPendingOdEventsDelay = 20;
     var debug = false;
     Od.flattenVdoms = function (xs) {
         if (xs == null)
@@ -575,9 +574,11 @@ var Od;
         if (runningPendingOdEvents)
             return;
         runningPendingOdEvents = true;
-        runPendingCreatedEventCallbacks();
-        runPendingUpdatedEventCallbacks();
-        runningPendingOdEvents = false;
+        setTimeout(function () {
+            runPendingCreatedEventCallbacks();
+            runPendingUpdatedEventCallbacks();
+            runningPendingOdEvents = false;
+        }, Od.processPendingOdEventsDelay);
     };
     var runPendingCreatedEventCallbacks = function () {
         for (var i = 0; i < pendingCreatedEventCallbacks.length; i++) {
