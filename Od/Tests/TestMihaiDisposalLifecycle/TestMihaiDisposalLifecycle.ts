@@ -14,8 +14,8 @@ homePage = function () {
         page = Od.component('home-page', function () {
             return Od.DIV({
                 onodevent: function (what, dom) {
-                    console.log('home-page', what);
-                    if (what === 'created') {
+                    console.log('home-page', what, (dom as Element).getBoundingClientRect());
+                    if (what === 'attached') {
                         console.log(dom);
                         console.log(dom.offsetWidth);
                         console.log(dom.offsetHeight);
@@ -35,7 +35,7 @@ contactPage = function () {
         page = Od.component('contact-page', function () {
             return Od.DIV({
                 onodevent: function (what, dom) {
-                    return console.log('contact-page', what);
+                    return console.log('contact-page', what, (dom as Element).getBoundingClientRect());
                 }
             }, 'contact page');
         });

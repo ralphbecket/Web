@@ -140,16 +140,22 @@ var Od;
             patchNode(newDom, dom, parent);
             patchProps(newDom, props);
             patchChildren(newDom, vchildren);
-            handleElementLifecycleFn(props, newDom, elt);
+            handleElementLifecycleFn(props, newDom, dom);
             return newDom;
         };
+        // Special-handling of 'keyed' nodes.
         var key = props && props["key"];
         if (key != null)
             vdom.key = key;
+        // Special-handling of 'Od event handler' nodes.
+        if (odEventHandler(props) != null && parentComponentInfo != null) {
+            parentComponentInfo.hasOdEventHandlers = true;
+        }
         return vdom;
     };
+    var odEventHandler = function (x) { return x && x["onodevent"]; };
     var handleElementLifecycleFn = function (props, newDom, oldDom) {
-        var lifecycleFn = props && props["onodevent"];
+        var lifecycleFn = odEventHandler(props);
         if (lifecycleFn == null)
             return;
         if (newDom !== oldDom) {
@@ -194,6 +200,18 @@ var Od;
     var clearDomComponentID = function (dom) {
         setDomComponentID(dom, 0);
     };
+    // A DOM node corresponding to the root of a component has an
+    // optional __Od__isAttached property which is true iff the node
+    // is attached to the document.body.
+    var domIsAttached = function (dom) {
+        return dom.__Od__isAttached;
+    };
+    var setDomIsAttached = function (dom, isAttached) {
+        dom.__Od__isAttached = isAttached;
+    };
+    var clearDomIsAttached = function (dom) {
+        setDomIsAttached(dom, false);
+    };
     var nextComponentID = 1; // Name supply.
     var parentComponentInfo = null; // Used for scoping.
     var existingNamedComponent = function (name) {
@@ -233,12 +251,17 @@ var Od;
             subs: null,
             anonymousSubcomponents: [],
             namedSubcomponents: {},
+            hasOdEventHandlers: false,
             updateIsPending: false
         };
         // A component, like any vDOM, is a patching function.
         var cmpt = function (dom, parent) {
             var cmptDom = cmptInfo.dom;
             patchNode(cmptDom, dom, parent);
+            if (cmptDom !== dom && cmptInfo.hasOdEventHandlers) {
+                var isAttached = domIsAttachedToBody(cmptDom);
+                propagateAttachmentDown(cmptDom, isAttached);
+            }
             return cmptDom;
         };
         // Register this component with the parent component (if any).
@@ -555,7 +578,7 @@ var Od;
             return;
         // Strip any properties...
         var props = getEltOdProps(dom);
-        var lifecycleFn = props && props["onodevent"];
+        var lifecycleFn = odEventHandler(props);
         if (lifecycleFn)
             lifecycleFn("removed", dom);
         for (var prop in props)
@@ -574,11 +597,15 @@ var Od;
         if (runningPendingOdEvents)
             return;
         runningPendingOdEvents = true;
-        setTimeout(function () {
-            runPendingCreatedEventCallbacks();
-            runPendingUpdatedEventCallbacks();
-            runningPendingOdEvents = false;
-        }, Od.processPendingOdEventsDelay);
+        // XXX
+        //setTimeout(
+        //() => {
+        runPendingCreatedEventCallbacks();
+        runPendingUpdatedEventCallbacks();
+        runningPendingOdEvents = false;
+        //},
+        //processPendingOdEventsDelay
+        //);
     };
     var runPendingCreatedEventCallbacks = function () {
         for (var i = 0; i < pendingCreatedEventCallbacks.length; i++) {
@@ -597,5 +624,47 @@ var Od;
                 callback("updated", dom);
         }
         pendingUpdatedEventCallbacks = [];
+    };
+    // We need to support an "attached" Od-event to indicate when a node
+    // has been attached to the live DOM rooted at the document body.
+    // To try to reduce the amount of work involved (and we assume these
+    // Od event handlers will be rare), we use the following logic:
+    // 
+    // (1) When a DOM element with an onodevent handler is created, its parent
+    // component is made aware of the situation.
+    //
+    // (2) Such a component, when patching and replacing its root DOM
+    // element with another, will decide whether it has become attached to the
+    // document.body or not.
+    //
+    // (3) If it is, the component traverses its entire DOM tree looking
+    // for onodevent handlers, whereupon it will execute those handlers with
+    // "attached" events.
+    //
+    // (4) This "attachment" data is cached on component root DOM nodes.  This
+    // means that node stripping must remove such annotations.
+    var domIsAttachedToBody = function (dom) {
+        var body = document.body;
+        for (; dom != null; dom = dom.parentNode) {
+            if (dom === body)
+                return true;
+            if (!isComponentDom(dom))
+                continue;
+            var isAttached = domIsAttached(dom);
+            if (isAttached != null)
+                return isAttached;
+        }
+        return false;
+    };
+    var propagateAttachmentDown = function (dom, isAttached) {
+        for (; dom != null; dom = dom.nextSibling) {
+            if (isComponentDom(dom))
+                setDomIsAttached(dom, isAttached);
+            var lifecycleFn = odEventHandler(dom);
+            // XXX Should we defer this?
+            if (isAttached && lifecycleFn != null)
+                lifecycleFn("attached", dom);
+            propagateAttachmentDown(dom.firstChild, isAttached);
+        }
     };
 })(Od || (Od = {}));
