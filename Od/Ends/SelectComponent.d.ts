@@ -2,9 +2,9 @@
 declare namespace Od {
     const selectComponent: <T>(args: {
         name?: string | number;
-        options: T[] | Obs.Observable<T[]>;
+        options: Obs.Observableish<T[]>;
         optionView?: (option: T) => string;
         selection: Obs.Observable<T>;
         props?: Props;
-    }) => number | string | VdomPatcher;
+    }) => Vdom;
 }

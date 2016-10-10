@@ -513,7 +513,7 @@ namespace Od {
             }
             if (!newStyleProps) {
                 // Don't reset all style properties unless there were some before.
-                if (oldStyleProps) elt.style = null;
+                if (oldStyleProps) elt.removeAttribute("style");
                 return;
             }
             const eltStyle = elt.style as Props;
@@ -734,12 +734,15 @@ namespace Od {
     };
 
     const propagateAttachmentDown = (dom: Node, isAttached: boolean): void => {
-        for (; dom != null; dom = dom.nextSibling) {
+        while (dom != null) {
+            // In case the lifecycle function plays silly buggers...
+            var nextSibling = dom.nextSibling;
             if (isComponentDom(dom)) setDomIsAttached(dom, isAttached);
             const lifecycleFn = odEventHandler(dom);
             // XXX Should we defer this?
             if (isAttached && lifecycleFn != null) lifecycleFn("attached", dom);
             propagateAttachmentDown(dom.firstChild, isAttached);
+            dom = nextSibling;
         }
     };
 

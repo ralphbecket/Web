@@ -7,8 +7,8 @@ declare namespace Od {
     }
     const tabComponent: (args: {
         name?: string | number;
-        tabs: Tab[] | Obs.Observable<Tab[]>;
+        tabs: Obs.Observableish<Tab[]>;
         selection?: Obs.Observable<Tab>;
-        props?: Props | Obs.Observable<Props>;
-    }) => number | string | VdomPatcher;
+        props?: Obs.Observableish<Props>;
+    }) => Vdom;
 }

@@ -9,17 +9,17 @@ declare namespace Od {
     }
     type LifecycleFn = (what: string, dom: Node) => void;
     type Vdoms = Vdom | Vdom[];
-    const flattenVdoms: (xs: number | string | VdomPatcher | (number | string | VdomPatcher)[]) => (number | string | VdomPatcher)[];
+    const flattenVdoms: (xs: Vdoms) => Vdom[];
     interface Props {
         [prop: string]: any;
     }
-    const element: (tag: string, props?: Props, children?: number | string | VdomPatcher | (number | string | VdomPatcher)[]) => number | string | VdomPatcher;
+    const element: (tag: string, props?: Props, children?: Vdoms) => Vdom;
     type ComponentName = string | number;
     var deferComponentUpdates: boolean;
-    const component: (name: string | number, fn: () => number | string | VdomPatcher) => number | string | VdomPatcher;
-    const dispose: (vdom: number | string | VdomPatcher) => void;
-    const fromHtml: (html: string) => number | string | VdomPatcher;
-    const fromDom: (srcDom: Node) => number | string | VdomPatcher;
-    const bind: (vdom: number | string | VdomPatcher, dom: Node) => Node;
-    const appendChild: (vdom: number | string | VdomPatcher, parent: Node) => Node;
+    const component: (name: string | number, fn: () => Vdom) => Vdom;
+    const dispose: (vdom: Vdom) => void;
+    const fromHtml: (html: string) => Vdom;
+    const fromDom: (srcDom: Node) => Vdom;
+    const bind: (vdom: Vdom, dom: Node) => Node;
+    const appendChild: (vdom: Vdom, parent: Node) => Node;
 }

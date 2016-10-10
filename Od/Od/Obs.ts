@@ -120,7 +120,7 @@ module Obs {
         (x?: T): T; // Attempting to update a computed observable is an error.
     }
 
-    type EqualityTest<T> = (oldX: T, newX: T) => boolean;
+    export type EqualityTest<T> = (oldX: T, newX: T) => boolean;
 
     // The default equality test for observables.
     export const defaultEq = <T>(x: T, y: T) => x === y;

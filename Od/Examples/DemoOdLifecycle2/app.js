@@ -424,7 +424,6 @@ var Obs;
         console.log.apply(console, arguments);
     };
 })(Obs || (Obs = {}));
-
 // Od.ts
 // (C) Ralph Becket, 2016
 //
@@ -862,7 +861,7 @@ var Od;
         if (!newStyleProps) {
             // Don't reset all style properties unless there were some before.
             if (oldStyleProps)
-                elt.style = null;
+                elt.removeAttribute("style");
             return;
         }
         var eltStyle = elt.style;
@@ -1084,7 +1083,9 @@ var Od;
         return false;
     };
     var propagateAttachmentDown = function (dom, isAttached) {
-        for (; dom != null; dom = dom.nextSibling) {
+        while (dom != null) {
+            // In case the lifecycle function plays silly buggers...
+            var nextSibling = dom.nextSibling;
             if (isComponentDom(dom))
                 setDomIsAttached(dom, isAttached);
             var lifecycleFn = odEventHandler(dom);
@@ -1092,6 +1093,248 @@ var Od;
             if (isAttached && lifecycleFn != null)
                 lifecycleFn("attached", dom);
             propagateAttachmentDown(dom.firstChild, isAttached);
+            dom = nextSibling;
         }
     };
 })(Od || (Od = {}));
+// Elements.ts
+//
+// This library provides some handy syntactic sugar.  Rather than writing
+// any of
+//
+//  Od.element("HR")
+//  Od.element("DIV", null, [children...])
+//  Od.element("A", { href: "..." }, [children...])
+//  Od.element("INPUT", { type: "text" })
+//
+// you can write the somewhat more perspicuous
+//
+//  Od.HR()
+//  Od.DIV([children...])
+//  Od.A({ href: "..." }, [children...])
+//  Od.INPUT({ type: "text" })
+// 
+/// <reference path="../Od/Od.ts"/>
+var Od;
+(function (Od) {
+    var elt = function (tag, fst, snd) {
+        return (typeof (fst) === "object" && !(fst instanceof Array)
+            ? Od.element(tag, fst, Od.flattenVdoms(snd))
+            : Od.element(tag, null, Od.flattenVdoms(fst)));
+    };
+    // This approach is short, but sweet.
+    ["A",
+        "ABBR",
+        "ACRONYM",
+        "ADDRESS",
+        "APPLET",
+        "AREA",
+        "ARTICLE",
+        "ASIDE",
+        "AUDIO",
+        "B",
+        "BASE",
+        "BASEFONT",
+        "BDI",
+        "BDO",
+        "BGSOUND",
+        "BIG",
+        "BLINK",
+        "BLOCKQUOTE",
+        "BODY",
+        "BR",
+        "BUTTON",
+        "CANVAS",
+        "CAPTION",
+        "CENTER",
+        "CITE",
+        "CODE",
+        "COL",
+        "COLGROUP",
+        "COMMAND",
+        "CONTENT",
+        "DATA",
+        "DATALIST",
+        "DD",
+        "DEL",
+        "DETAILS",
+        "DFN",
+        "DIALOG",
+        "DIR",
+        "DIV",
+        "DL",
+        "DT",
+        "ELEMENT",
+        "EM",
+        "EMBED",
+        "FIELDSET",
+        "FIGCAPTION",
+        "FIGURE",
+        "FONT",
+        "FOOTER",
+        "FORM",
+        "FRAME",
+        "FRAMESET",
+        "H1",
+        "H2",
+        "H3",
+        "H4",
+        "H5",
+        "H6",
+        "HEAD",
+        "HEADER",
+        "HGROUP",
+        "HR",
+        "HTML",
+        "I",
+        "IFRAME",
+        "IMAGE",
+        "IMG",
+        "INPUT",
+        "INS",
+        "ISINDEX",
+        "KBD",
+        "KEYGEN",
+        "LABEL",
+        "LEGEND",
+        "LI",
+        "LINK",
+        "LISTING",
+        "MAIN",
+        "MAP",
+        "MARK",
+        "MARQUEE",
+        "MENU",
+        "MENUITEM",
+        "META",
+        "METER",
+        "MULTICOL",
+        "NAV",
+        "NOBR",
+        "NOEMBED",
+        "NOFRAMES",
+        "NOSCRIPT",
+        "OBJECT",
+        "OL",
+        "OPTGROUP",
+        "OPTION",
+        "OUTPUT",
+        "P",
+        "PARAM",
+        "PICTURE",
+        "PLAINTEXT",
+        "PRE",
+        "PROGRESS",
+        "Q",
+        "RP",
+        "RT",
+        "RTC",
+        "RUBY",
+        "S",
+        "SAMP",
+        "SCRIPT",
+        "SECTION",
+        "SELECT",
+        "SHADOW",
+        "SMALL",
+        "SOURCE",
+        "SPACER",
+        "SPAN",
+        "STRIKE",
+        "STRONG",
+        "STYLE",
+        "SUB",
+        "SUMMARY",
+        "SUP",
+        "TABLE",
+        "TBODY",
+        "TD",
+        "TEMPLATE",
+        "TEXTAREA",
+        "TFOOT",
+        "TH",
+        "THEAD",
+        "TIME",
+        "TITLE",
+        "TR",
+        "TRACK",
+        "TT",
+        "U",
+        "UL",
+        "VAR",
+        "VIDEO",
+        "WBR",
+        "XMP"
+    ].forEach(function (tag) {
+        Od[tag] = function (fst, snd) { return elt(tag, fst, snd); };
+    });
+})(Od || (Od = {}));
+/// <reference path="../../Ends/Elements.ts"/>
+var logMsgs = Obs.of([]);
+var logWhat = function (colour, desc) { return function (what) {
+    var msgs = Obs.peek(logMsgs); // Don't establish a dependency on this!
+    console.log(desc + ": " + what);
+    msgs.push({ colour: colour, text: desc + ": " + what });
+    msgs = msgs.slice(-7); // Keep this manageable.
+    logMsgs(msgs);
+}; };
+var logView = Od.component("logView", function () {
+    return Od.DIV({ class: "LogMessages" }, logMsgs().map(function (x) {
+        return Od.DIV({ style: { color: x.colour } }, x.text);
+    }));
+});
+var inc = function (x) { x(x() + 1); };
+var aOuter = Obs.of(0);
+var aInner = Obs.of(0);
+var aComponent = Od.component("a", function () {
+    return Od.DIV({ onodevent: logWhat("blue", "A outer") }, [
+        "A outer x ", aOuter().toString(),
+        Od.component("nestedNamed", function () {
+            return Od.DIV({ onodevent: logWhat("blue", "- A inner") }, [
+                "A inner x ", aInner().toString()
+            ]);
+        })
+    ]);
+});
+var aDemo = Od.DIV([
+    Od.H3("A: a nested named sub-component"),
+    Od.P("A named sub-component persists across " +
+        "updates of its parent component.  " +
+        "Observe that with named sub-components, parent " +
+        "updates and child updates are completely decoupled.  " +
+        "You almost always want to use named sub-components."),
+    aComponent,
+    Od.BUTTON({ onclick: function () { return inc(aOuter); } }, "A outer"),
+    Od.BUTTON({ onclick: function () { return inc(aInner); } }, "A inner")
+]);
+var bOuter = Obs.of(0);
+var bInner = Obs.of(0);
+var bComponent = Od.component("b", function () {
+    return Od.DIV({ onodevent: logWhat("orange", "B outer") }, [
+        "B outer x ", bOuter(),
+        Od.component(null, function () {
+            return Od.DIV({ onodevent: logWhat("orange", "- B inner") }, [
+                "B inner x ", bInner()
+            ]);
+        })
+    ]);
+});
+var bDemo = Od.DIV([
+    Od.H3("B: a nested unnamed (ephemeral) sub-component"),
+    Od.P("An unnamed sub-component is ephemeral: it is " +
+        "destroyed and re-created whenever its parent component " +
+        "is updated."),
+    bComponent,
+    Od.BUTTON({ onclick: function () { return inc(bOuter); } }, "B outer"),
+    Od.BUTTON({ onclick: function () { return inc(bInner); } }, "B inner")
+]);
+var view = Od.DIV([
+    Od.H3("Event log"),
+    logView,
+    Od.HR(),
+    aDemo,
+    Od.HR(),
+    bDemo
+]);
+Od.deferComponentUpdates = false;
+Od.appendChild(view, document.body);

@@ -861,7 +861,7 @@ var Od;
         if (!newStyleProps) {
             // Don't reset all style properties unless there were some before.
             if (oldStyleProps)
-                elt.style = null;
+                elt.removeAttribute("style");
             return;
         }
         var eltStyle = elt.style;
@@ -1083,7 +1083,9 @@ var Od;
         return false;
     };
     var propagateAttachmentDown = function (dom, isAttached) {
-        for (; dom != null; dom = dom.nextSibling) {
+        while (dom != null) {
+            // In case the lifecycle function plays silly buggers...
+            var nextSibling = dom.nextSibling;
             if (isComponentDom(dom))
                 setDomIsAttached(dom, isAttached);
             var lifecycleFn = odEventHandler(dom);
@@ -1091,6 +1093,7 @@ var Od;
             if (isAttached && lifecycleFn != null)
                 lifecycleFn("attached", dom);
             propagateAttachmentDown(dom.firstChild, isAttached);
+            dom = nextSibling;
         }
     };
 })(Od || (Od = {}));
@@ -1523,10 +1526,10 @@ var ENV = ENV || (function () {
     };
 })();
 /**
-* @author mrdoob / http://mrdoob.com/
-* @author jetienne / http://jetienne.com/
-* @author paulirish / http://paulirish.com/
-*/
+ * @author mrdoob / http://mrdoob.com/
+ * @author jetienne / http://jetienne.com/
+ * @author paulirish / http://paulirish.com/
+ */
 var MemoryStats = function () {
     var msMin = 100;
     var msMax = 0;

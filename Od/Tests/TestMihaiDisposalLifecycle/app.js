@@ -424,7 +424,6 @@ var Obs;
         console.log.apply(console, arguments);
     };
 })(Obs || (Obs = {}));
-
 // Od.ts
 // (C) Ralph Becket, 2016
 //
@@ -862,7 +861,7 @@ var Od;
         if (!newStyleProps) {
             // Don't reset all style properties unless there were some before.
             if (oldStyleProps)
-                elt.style = null;
+                elt.removeAttribute("style");
             return;
         }
         var eltStyle = elt.style;
@@ -1084,7 +1083,9 @@ var Od;
         return false;
     };
     var propagateAttachmentDown = function (dom, isAttached) {
-        for (; dom != null; dom = dom.nextSibling) {
+        while (dom != null) {
+            // In case the lifecycle function plays silly buggers...
+            var nextSibling = dom.nextSibling;
             if (isComponentDom(dom))
                 setDomIsAttached(dom, isAttached);
             var lifecycleFn = odEventHandler(dom);
@@ -1092,10 +1093,10 @@ var Od;
             if (isAttached && lifecycleFn != null)
                 lifecycleFn("attached", dom);
             propagateAttachmentDown(dom.firstChild, isAttached);
+            dom = nextSibling;
         }
     };
 })(Od || (Od = {}));
-
 // Elements.ts
 //
 // This library provides some handy syntactic sugar.  Rather than writing
@@ -1268,3 +1269,217 @@ var Od;
         Od[tag] = function (fst, snd) { return elt(tag, fst, snd); };
     });
 })(Od || (Od = {}));
+// Jigsaw - a simple location-hash router.
+var Jigsaw;
+(function (Jigsaw) {
+    // A route is a possibly-empty set of "parts" separated by '/' slashes.
+    // Each route part is matched against the corresponding part of the
+    // window location hash, stripped of its leading '#' character.
+    //
+    // Parts match as follows:
+    //  xyx     -   Must match the exact string "xyz" (case sensitive);
+    //  :foo    -   Required parameter, matches anything;
+    //  ?bar    -   Optional parameter, matches anything;
+    //  *baz    -   Parameter matching all remaining parts of the hash.
+    //
+    // A successful matching results in the corresponding route handler
+    // being called with a dictionary mapping parameters to argument values.
+    //
+    // Parameter names are exactly as written (i.e., they include the leading
+    // character indicating the parameter kind).  Argument values are all
+    // simple strings (preprocessed via decodeURIComponent), except for
+    // '*' parameters, whose values are arrays of such.
+    //
+    // Two special parameters are added to the dictionary: "#" is the
+    // original location hash and "?" is any query string (which you may
+    // choose to process via parseQuery).
+    //
+    // Routes are tested in the order in which they were added, the first
+    // match taking priority.
+    //
+    Jigsaw.addRoute = function (route, handler) {
+        var compiledRoute = {
+            route: route,
+            matcher: routeMatcher(route),
+            handler: handler
+        };
+        compiledRoutes.push(compiledRoute);
+    };
+    Jigsaw.removeRoute = function (route) {
+        compiledRoutes = compiledRoutes.filter(function (x) { return x.route === route; });
+    };
+    Jigsaw.clearRoutes = function () {
+        compiledRoutes = [];
+    };
+    // If no route matches, the default route handler will be called
+    // if one has been specified.
+    //
+    Jigsaw.defaultRouteHandler = null;
+    Jigsaw.takeRoute = function (hash) {
+        var queryIdx = hash.lastIndexOf("?");
+        var query = "";
+        if (queryIdx !== -1) {
+            query = hash.substr(queryIdx + 1);
+            hash = hash.substr(0, queryIdx);
+        }
+        var parts = (!hash ? [] : hash.split("/").map(decodeURIComponent));
+        for (var i = 0; i < compiledRoutes.length; i++) {
+            var compiledRoute = compiledRoutes[i];
+            var args = compiledRoute.matcher(parts, 0, {});
+            if (args) {
+                // Success!
+                args["#"] = hash;
+                args["?"] = query;
+                if (query != null)
+                    args["?"] = query;
+                compiledRoute.handler(args);
+                return;
+            }
+        }
+        // Nooooo...
+        if (Jigsaw.defaultRouteHandler)
+            Jigsaw.defaultRouteHandler(hash);
+    };
+    Jigsaw.startRouter = function () {
+        window.addEventListener("hashchange", processHash);
+    };
+    Jigsaw.stopRouter = function () {
+        window.removeEventListener("hashchange", processHash);
+    };
+    // A utility function to convert query strings into key/value
+    // dictionaries.
+    Jigsaw.parseQuery = function (query) {
+        var pairs = (query || "").replace(/\+/g, " ").split(/[&;]/);
+        var args = {};
+        pairs.forEach(function (pair) {
+            var i = pair.indexOf("=");
+            if (i === -1)
+                i = pair.length;
+            var key = pair.substr(0, i);
+            var value = decodeURIComponent(pair.substr(i + 1));
+            args[key] = value;
+        });
+        return args;
+    };
+    // ---- Implementation detail. ----
+    var previousHash = null;
+    // Rapid changes to the location hash can cause the application
+    // to receive multiple onhashchange events, but each receiving only
+    // the very latest hash.  We "debounce" that behaviour here.
+    var processHash = function () {
+        var hash = location.hash.substr(1);
+        if (hash === previousHash)
+            return;
+        Jigsaw.takeRoute(hash);
+        previousHash = hash;
+    };
+    var matchEnd = function (parts, i, args) { return (parts[i] == null) && args; };
+    // '.../foo/...'
+    var matchExact = function (word, cont) { return function (parts, i, args) {
+        return (parts[i] === word) && cont(parts, i + 1, args);
+    }; };
+    // '.../:bar/...'
+    var matchParam = function (param, cont) { return function (parts, i, args) {
+        var arg = parts[i];
+        if (arg == null)
+            return null;
+        args[param] = arg;
+        return cont(parts, i + 1, args);
+    }; };
+    // '.../?baz/...'
+    var matchOptParam = function (param, cont) { return function (parts, i, args) {
+        var arg = parts[i];
+        args[param] = arg;
+        return cont(parts, i + 1, args);
+    }; };
+    // '.../*quux'
+    var matchRest = function (param, cont) { return function (parts, i, args) {
+        args[param] = parts.slice(i);
+        return cont(parts, parts.length, args);
+    }; };
+    var routeMatcher = function (route) {
+        if (!route)
+            return matchEnd;
+        var params = route.split("/");
+        var matcher = matchEnd;
+        for (var i = params.length - 1; 0 <= i; i--) {
+            var param = params[i];
+            switch (param[0]) {
+                case ":":
+                    matcher = matchParam(param, matcher);
+                    continue;
+                case "?":
+                    matcher = matchOptParam(param, matcher);
+                    continue;
+                case "*":
+                    matcher = matchRest(param, matcher);
+                    continue;
+                default:
+                    matcher = matchExact(param, matcher);
+                    continue;
+            }
+        }
+        return matcher;
+    };
+    var compiledRoutes = [];
+})(Jigsaw || (Jigsaw = {}));
+/// <reference path="../../Ends/Elements.ts"/>
+/// <reference path="../../Ends/Jigsaw.ts"/>
+var contactPage, currentPage, goTo, homePage, menu;
+currentPage = Obs.of(Od.component('', function () {
+    return Od.DIV();
+}));
+homePage = function () {
+    return function (args) {
+        var page;
+        Od.dispose(currentPage());
+        page = Od.component('home-page', function () {
+            return Od.DIV({
+                onodevent: function (what, dom) {
+                    console.log('home-page', what, dom.getBoundingClientRect());
+                    if (what === 'attached') {
+                        console.log(dom);
+                        console.log(dom.offsetWidth);
+                        console.log(dom.offsetHeight);
+                        console.log("home-page", dom.offsetWidth, dom.offsetHeight);
+                    }
+                }
+            }, 'home page');
+        });
+        return currentPage(page);
+    };
+};
+contactPage = function () {
+    return function (args) {
+        var page;
+        Od.dispose(currentPage());
+        page = Od.component('contact-page', function () {
+            return Od.DIV({
+                onodevent: function (what, dom) {
+                    return console.log('contact-page', what, dom.getBoundingClientRect());
+                }
+            }, 'contact page');
+        });
+        return currentPage(page);
+    };
+};
+goTo = function (routeName) {
+    return location.hash = routeName;
+};
+Jigsaw.addRoute("", homePage());
+Jigsaw.addRoute("contact", contactPage());
+menu = Od.DIV([
+    Od.HR(), Od.DIV(Od.A({
+        href: '#',
+        onclick: goTo('')
+    }, 'Home')), Od.DIV(Od.A({
+        href: '#contact',
+        onclick: goTo('contact')
+    }, 'Contact')), Od.HR(), Od.component('current-page', currentPage)
+]);
+window.onload = function () {
+    Od.appendChild(menu, document.body);
+    Jigsaw.takeRoute(location.hash.substr(1));
+    Jigsaw.startRouter();
+};
+//# sourceMappingURL=data:application/json;base64,ewogICJ2ZXJzaW9uIjogMywKICAiZmlsZSI6ICIiLAogICJzb3VyY2VSb290IjogIiIsCiAgInNvdXJjZXMiOiBbCiAgICAiZW1iZWRkZWQiCiAgXSwKICAibmFtZXMiOiBbXSwKICAibWFwcGluZ3MiOiAiO0FBT0EsSUFBQTs7QUFBQSxXQUFBLEdBQWMsR0FBRyxDQUFDLEVBQUosQ0FBTyxFQUFFLENBQUMsU0FBSCxDQUFhLEVBQWIsRUFBaUIsU0FBQTtTQUFHLEVBQUUsQ0FBQyxHQUFILENBQUE7QUFBSCxDQUFqQixDQUFQOztBQUVkLFFBQUEsR0FBVyxTQUFBO1NBQ1YsU0FBQyxJQUFEO0FBQ0MsUUFBQTtJQUFBLEVBQUUsQ0FBQyxPQUFILENBQVcsV0FBQSxDQUFBLENBQVg7SUFDQSxJQUFBLEdBQU8sRUFBRSxDQUFDLFNBQUgsQ0FBYSxXQUFiLEVBQTBCLFNBQUE7YUFDaEMsRUFBRSxDQUFDLEdBQUgsQ0FDQztRQUNDLFNBQUEsRUFBVyxTQUFDLElBQUQsRUFBTyxHQUFQO1VBQ1YsT0FBTyxDQUFDLEdBQVIsQ0FBWSxXQUFaLEVBQXlCLElBQXpCO1VBQ0EsSUFBRyxJQUFBLEtBQVEsU0FBWDtZQUNDLE9BQU8sQ0FBQyxHQUFSLENBQVksR0FBWjtZQUNBLE9BQU8sQ0FBQyxHQUFSLENBQVksR0FBRyxDQUFDLFdBQWhCO1lBQ0EsT0FBTyxDQUFDLEdBQVIsQ0FBWSxHQUFHLENBQUMsWUFBaEI7WUFDQSxJQUFJLEdBQUcsQ0FBQyxXQUFKLEtBQW1CLENBQW5CLElBQXdCLEdBQUcsQ0FBQyxZQUFKLEtBQW9CLENBQWhEO3FCQUNDLEtBQUEsQ0FBTSxHQUFOLEVBREQ7YUFKRDs7UUFGVSxDQURaO09BREQsRUFXQyxXQVhEO0lBRGdDLENBQTFCO1dBZVAsV0FBQSxDQUFZLElBQVo7RUFqQkQ7QUFEVTs7QUFvQlgsV0FBQSxHQUFjLFNBQUE7U0FDYixTQUFDLElBQUQ7QUFDQyxRQUFBO0lBQUEsRUFBRSxDQUFDLE9BQUgsQ0FBVyxXQUFBLENBQUEsQ0FBWDtJQUNBLElBQUEsR0FBTyxFQUFFLENBQUMsU0FBSCxDQUFhLGNBQWIsRUFBNkIsU0FBQTthQUNuQyxFQUFFLENBQUMsR0FBSCxDQUNDO1FBQ0MsU0FBQSxFQUFXLFNBQUMsSUFBRCxFQUFPLEdBQVA7aUJBQ1YsT0FBTyxDQUFDLEdBQVIsQ0FBWSxjQUFaLEVBQTRCLElBQTVCO1FBRFUsQ0FEWjtPQURELEVBS0MsY0FMRDtJQURtQyxDQUE3QjtXQVNQLFdBQUEsQ0FBWSxJQUFaO0VBWEQ7QUFEYTs7QUFjZCxJQUFBLEdBQU8sU0FBQyxTQUFEO1NBQ04sUUFBUSxDQUFDLElBQVQsR0FBZ0I7QUFEVjs7QUFHUCxNQUFNLENBQUMsUUFBUCxDQUFnQixFQUFoQixFQUFvQixRQUFBLENBQUEsQ0FBcEI7O0FBQ0EsTUFBTSxDQUFDLFFBQVAsQ0FBZ0IsU0FBaEIsRUFBMkIsV0FBQSxDQUFBLENBQTNCOztBQUVBLElBQUEsR0FBTyxFQUFFLENBQUMsR0FBSCxDQUFPO0VBQ2IsRUFBRSxDQUFDLEVBQUgsQ0FBQSxDQURhLEVBRWIsRUFBRSxDQUFDLEdBQUgsQ0FBTyxFQUFFLENBQUMsQ0FBSCxDQUFLO0lBQUMsSUFBQSxFQUFNLEdBQVA7SUFBbUIsT0FBQSxFQUFTLElBQUEsQ0FBSyxFQUFMLENBQTVCO0dBQUwsRUFBb0QsTUFBcEQsQ0FBUCxDQUZhLEVBR2IsRUFBRSxDQUFDLEdBQUgsQ0FBTyxFQUFFLENBQUMsQ0FBSCxDQUFLO0lBQUMsSUFBQSxFQUFNLFVBQVA7SUFBbUIsT0FBQSxFQUFTLElBQUEsQ0FBSyxTQUFMLENBQTVCO0dBQUwsRUFBb0QsU0FBcEQsQ0FBUCxDQUhhLEVBSWIsRUFBRSxDQUFDLEVBQUgsQ0FBQSxDQUphLEVBS2IsRUFBRSxDQUFDLFNBQUgsQ0FBYSxjQUFiLEVBQTZCLFdBQTdCLENBTGE7Q0FBUDs7QUFRUCxFQUFFLENBQUMsV0FBSCxDQUFlLElBQWYsRUFBcUIsUUFBUSxDQUFDLElBQTlCOztBQUNBLE1BQU0sQ0FBQyxTQUFQLENBQWlCLFFBQVEsQ0FBQyxJQUFJLENBQUMsTUFBZCxDQUFxQixDQUFyQixDQUFqQjs7QUFDQSxNQUFNLENBQUMsV0FBUCxDQUFBIiwKICAic291cmNlc0NvbnRlbnQiOiBbCiAgICAiXG5cblxuXG5cblxuXG5jdXJyZW50UGFnZSA9IE9icy5vZihPZC5jb21wb25lbnQoJycsIC0+IE9kLkRJVigpKSlcblxuaG9tZVBhZ2UgPSAtPlxuXHQoYXJncykgLT5cblx0XHRPZC5kaXNwb3NlKGN1cnJlbnRQYWdlKCkpXG5cdFx0cGFnZSA9IE9kLmNvbXBvbmVudCgnaG9tZS1wYWdlJywgLT5cblx0XHRcdE9kLkRJVihcblx0XHRcdFx0e1xuXHRcdFx0XHRcdG9ub2RldmVudDogKHdoYXQsIGRvbSkgLT5cblx0XHRcdFx0XHRcdGNvbnNvbGUubG9nICdob21lLXBhZ2UnLCB3aGF0XG5cdFx0XHRcdFx0XHRpZiB3aGF0ID09ICdjcmVhdGVkJ1xuXHRcdFx0XHRcdFx0XHRjb25zb2xlLmxvZyhkb20pXG5cdFx0XHRcdFx0XHRcdGNvbnNvbGUubG9nKGRvbS5vZmZzZXRXaWR0aClcblx0XHRcdFx0XHRcdFx0Y29uc29sZS5sb2coZG9tLm9mZnNldEhlaWdodClcblx0XHRcdFx0XHRcdFx0aWYgKGRvbS5vZmZzZXRXaWR0aCA9PSAwIHx8IGRvbS5vZmZzZXRIZWlnaHQgPT0gMClcblx0XHRcdFx0XHRcdFx0XHRhbGVydCgnYScpXG5cdFx0XHRcdH0sXG5cdFx0XHRcdCdob21lIHBhZ2UnXG5cdFx0XHQpXG5cdFx0KVxuXHRcdGN1cnJlbnRQYWdlKHBhZ2UpXG5cbmNvbnRhY3RQYWdlID0gLT5cblx0KGFyZ3MpIC0+XG5cdFx0T2QuZGlzcG9zZShjdXJyZW50UGFnZSgpKVxuXHRcdHBhZ2UgPSBPZC5jb21wb25lbnQoJ2NvbnRhY3QtcGFnZScsIC0+XG5cdFx0XHRPZC5ESVYoXG5cdFx0XHRcdHtcblx0XHRcdFx0XHRvbm9kZXZlbnQ6ICh3aGF0LCBkb20pIC0+XG5cdFx0XHRcdFx0XHRjb25zb2xlLmxvZyAnY29udGFjdC1wYWdlJywgd2hhdFxuXHRcdFx0XHR9LFxuXHRcdFx0XHQnY29udGFjdCBwYWdlJ1xuXHRcdFx0KVxuXHRcdClcblx0XHRjdXJyZW50UGFnZShwYWdlKVxuXG5nb1RvID0gKHJvdXRlTmFtZSkgLT5cblx0bG9jYXRpb24uaGFzaCA9IHJvdXRlTmFtZVxuXG5KaWdzYXcuYWRkUm91dGUoXCJcIiwgaG9tZVBhZ2UoKSk7XG5KaWdzYXcuYWRkUm91dGUoXCJjb250YWN0XCIsIGNvbnRhY3RQYWdlKCkpO1xuXG5tZW51ID0gT2QuRElWKFtcblx0T2QuSFIoKVxuXHRPZC5ESVYoT2QuQSh7aHJlZjogJyMnLCAgICAgICAgb25jbGljazogZ29UbygnJyAgICAgICAgKX0sICdIb21lJyAgICApKVxuXHRPZC5ESVYoT2QuQSh7aHJlZjogJyNjb250YWN0Jywgb25jbGljazogZ29UbygnY29udGFjdCcgKX0sICdDb250YWN0JyApKVxuXHRPZC5IUigpXG5cdE9kLmNvbXBvbmVudCgnY3VycmVudC1wYWdlJywgY3VycmVudFBhZ2UpXG5dKVxuXG5PZC5hcHBlbmRDaGlsZChtZW51LCBkb2N1bWVudC5ib2R5KVxuSmlnc2F3LnRha2VSb3V0ZShsb2NhdGlvbi5oYXNoLnN1YnN0cigxKSlcbkppZ3Nhdy5zdGFydFJvdXRlcigpXG5cblxuIgogIF0KfQ==
