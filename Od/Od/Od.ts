@@ -735,13 +735,14 @@ namespace Od {
 
     const propagateAttachmentDown = (dom: Node, isAttached: boolean): void => {
         while (dom != null) {
+            // Propagate bottom-up.
+            propagateAttachmentDown(dom.firstChild, isAttached);
             // In case the lifecycle function plays silly buggers...
             var nextSibling = dom.nextSibling;
             if (isComponentDom(dom)) setDomIsAttached(dom, isAttached);
             const lifecycleFn = odEventHandler(dom);
             // XXX Should we defer this?
             if (isAttached && lifecycleFn != null) lifecycleFn("attached", dom);
-            propagateAttachmentDown(dom.firstChild, isAttached);
             dom = nextSibling;
         }
     };

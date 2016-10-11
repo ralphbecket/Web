@@ -1211,6 +1211,8 @@ var Od;
     };
     var propagateAttachmentDown = function (dom, isAttached) {
         while (dom != null) {
+            // Propagate bottom-up.
+            propagateAttachmentDown(dom.firstChild, isAttached);
             // In case the lifecycle function plays silly buggers...
             var nextSibling = dom.nextSibling;
             if (isComponentDom(dom))
@@ -1219,7 +1221,6 @@ var Od;
             // XXX Should we defer this?
             if (isAttached && lifecycleFn != null)
                 lifecycleFn("attached", dom);
-            propagateAttachmentDown(dom.firstChild, isAttached);
             dom = nextSibling;
         }
     };
