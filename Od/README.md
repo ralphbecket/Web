@@ -16,6 +16,7 @@ Od's compartmentalised approach to UI components brings two benefits you don't o
 * It's simple: updates happen automatically.
 * It's unopinionated: design your application as you will.
 * It includes optional, but useful, elements such as a router ([Ends/Jigsaw](https://github.com/ralphbecket/Web/blob/master/Od/Ends/Jigsaw.ts)), promises ([Ends/Oath](https://github.com/ralphbecket/Web/blob/master/Od/Ends/Oath.ts)), and a convenient AJAX library ([Ends/Xhr](https://github.com/ralphbecket/Web/blob/master/Od/Ends/Xhr.ts)).
+* Unlike (all?) other vDOM libraries, Od doesn't assume it has complete control of the DOM.  You can write perfectly portable components in Od and re-use them in other applications that need know nothing about Od.
 
 ## Demonstrations to whet the appetite
 
