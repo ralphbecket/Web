@@ -65,17 +65,11 @@
 // profitably cut out a step here by simply making vDOM structures patching
 // functions in their own right.  I'm going to try that experiment now.
 //
-// The experiment was a draw... except I did something truly stupid and
-// created a new closure for simple text elements.  This is, of course,
-// an absurd waste of resources.  Fixing that now...
+// The experiment was a success!
 //
 /// <reference path="./Obs.ts"/>
 
 namespace Od {
-
-    // XXX This is to help diagnose Mihai's bug.
-    // Od events will be processed with this setTimeout delay.
-    export var processPendingOdEventsDelay = 20;
 
     const debug = false;
 
@@ -83,6 +77,10 @@ namespace Od {
 
     // A vDOM node is just a patching function with an optional ordering key.
     export type Vdom = number | string | VdomPatcher;
+
+    export interface VdomArray extends Array<Vdom> {}
+
+    export type Vdoms = Vdom | VdomArray;
 
     export interface VdomPatcher {
         (dom: Node, parent: Node): Node;
@@ -92,12 +90,14 @@ namespace Od {
 
     // Lifecycle events on elements are
     // "created" when the element is created,
+    // "attached" when the element is attached to the document.body,
     // "updated" when the element is patched, and
     // "removed" when the element is about to be stripped.
+    //
+    // "attached" events are run bottom-up in the sense that the Od-event
+    // handlers of a parent node's children will receive the "attached"
+    // event before the parent node itself.
     export type LifecycleFn = (what: string, dom: Node) => void;
-
-    // We also support nested arrays, but TypeScript can't express that.
-    export type Vdoms = Vdom | Vdom[];
 
     export const flattenVdoms = (xs: Vdoms): Vdom[] => {
         if (xs == null) return null;
@@ -658,7 +658,8 @@ namespace Od {
         const props = getEltOdProps(dom);
         const lifecycleFn = odEventHandler(props);
         if (lifecycleFn) lifecycleFn("removed", dom);
-        for (var prop in props) (dom as any)[prop] = null;
+        const anyDom = dom as any;
+        for (var prop in props) if (prop !== "src" || anyDom.tagName !== "IMG") anyDom[prop] = null;
         // Recursively strip any child nodes.
         const children = dom.childNodes;
         const numChildren = children.length;
@@ -741,7 +742,6 @@ namespace Od {
             var nextSibling = dom.nextSibling;
             if (isComponentDom(dom)) setDomIsAttached(dom, isAttached);
             const lifecycleFn = odEventHandler(dom);
-            // XXX Should we defer this?
             if (isAttached && lifecycleFn != null) lifecycleFn("attached", dom);
             dom = nextSibling;
         }

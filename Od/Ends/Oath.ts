@@ -37,8 +37,9 @@
 
     export const race = <T>(ps: Promise<T>[]): Promise<T> =>
         make<T>((pass, fail) => {
+            var done = false;
             ps.forEach((p, i) => {
-                p.then(x => { pass(x); });
+                p.then(x => { if (!done) pass(x); done = true; });
             });
         });
 

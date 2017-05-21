@@ -37,11 +37,9 @@ var Xhr;
         xhr.send(opts.data);
         return promise;
     };
-    var readyStateChangeHandler = function (xhr, pass, fail) {
-        return function (v) {
-            if (xhr.readyState !== 4 /* DONE */)
-                return;
-            (200 <= xhr.status && xhr.status < 300 ? pass : fail)(xhr);
-        };
-    };
+    var readyStateChangeHandler = function (xhr, pass, fail) { return function (v) {
+        if (xhr.readyState !== 4 /* DONE */)
+            return;
+        (200 <= xhr.status && xhr.status < 300 ? pass : fail)(xhr);
+    }; };
 })(Xhr || (Xhr = {}));

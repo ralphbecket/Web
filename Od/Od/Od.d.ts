@@ -1,14 +1,15 @@
 /// <reference path="Obs.d.ts" />
 declare namespace Od {
-    var processPendingOdEventsDelay: number;
     type Vdom = number | string | VdomPatcher;
+    interface VdomArray extends Array<Vdom> {
+    }
+    type Vdoms = Vdom | VdomArray;
     interface VdomPatcher {
         (dom: Node, parent: Node): Node;
         key?: string | number;
         dispose?: () => void;
     }
     type LifecycleFn = (what: string, dom: Node) => void;
-    type Vdoms = Vdom | Vdom[];
     const flattenVdoms: (xs: Vdoms) => Vdom[];
     interface Props {
         [prop: string]: any;

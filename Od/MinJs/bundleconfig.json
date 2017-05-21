@@ -1,0 +1,74 @@
+[
+  {
+    "outputFileName": "Obs.js",
+    "inputFiles": [
+      "../Od/Obs.js"
+    ],
+    "includeInProject": true
+  },
+  {
+    "outputFileName": "Od.js",
+    "inputFiles": [
+      "../Od/Od.js"
+    ],
+    "includeInProject": true
+  },
+  {
+    "outputFileName": "ObsAndOd.js",
+    "inputFiles": [
+      "../Od/Obs.js",
+      "../Od/Od.js"
+    ],
+    "includeInProject": true
+  },
+  {
+    "outputFileName": "ObsAndOdAndElements.js",
+    "inputFiles": [
+      "../Od/Obs.js",
+      "../Od/Od.js",
+      "../Ends/Elements.js"
+    ],
+    "includeInProject": true
+  },
+  {
+    "outputFileName": "Jigsaw.js",
+    "inputFiles": [
+      "../Ends/Jigsaw.js"
+    ],
+    "includeInProject": true
+  },
+  {
+    "outputFileName": "Oath.js",
+    "inputFiles": [
+      "../Ends/Oath.js"
+    ],
+    "includeInProject": true
+  },
+  {
+    "outputFileName": "Xhr.js",
+    "inputFiles": [
+      "../Ends/Xhr.js"
+    ],
+    "includeInProject": true
+  },
+  {
+    "outputFileName": "XhrAndOath.js",
+    "inputFiles": [
+      "../Ends/Oath.js",
+      "../Ends/Xhr.js"
+    ],
+    "includeInProject": true
+  },
+  {
+    "outputFileName": "OdAndEnds.js",
+    "inputFiles": [
+      "../Od/Obs.js",
+      "../Od/Od.js",
+      "../Ends/Elements.js",
+      "../Ends/Jigsaw.js",
+      "../Ends/Oath.js",
+      "../Ends/Xhr.js"
+    ],
+    "includeInProject": true
+  }
+]

@@ -19,8 +19,10 @@ var Oath;
     };
     Oath.race = function (ps) {
         return Oath.make(function (pass, fail) {
+            var done = false;
             ps.forEach(function (p, i) {
-                p.then(function (x) { pass(x); });
+                p.then(function (x) { if (!done)
+                    pass(x); done = true; });
             });
         });
     };
@@ -165,11 +167,9 @@ var Xhr;
         xhr.send(opts.data);
         return promise;
     };
-    var readyStateChangeHandler = function (xhr, pass, fail) {
-        return function (v) {
-            if (xhr.readyState !== 4 /* DONE */)
-                return;
-            (200 <= xhr.status && xhr.status < 300 ? pass : fail)(xhr);
-        };
-    };
+    var readyStateChangeHandler = function (xhr, pass, fail) { return function (v) {
+        if (xhr.readyState !== 4 /* DONE */)
+            return;
+        (200 <= xhr.status && xhr.status < 300 ? pass : fail)(xhr);
+    }; };
 })(Xhr || (Xhr = {}));

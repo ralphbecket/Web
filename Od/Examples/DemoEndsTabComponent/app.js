@@ -491,16 +491,11 @@ var Obs;
 // profitably cut out a step here by simply making vDOM structures patching
 // functions in their own right.  I'm going to try that experiment now.
 //
-// The experiment was a draw... except I did something truly stupid and
-// created a new closure for simple text elements.  This is, of course,
-// an absurd waste of resources.  Fixing that now...
+// The experiment was a success!
 //
 /// <reference path="./Obs.ts"/>
 var Od;
 (function (Od) {
-    // XXX This is to help diagnose Mihai's bug.
-    // Od events will be processed with this setTimeout delay.
-    Od.processPendingOdEventsDelay = 20;
     var debug = false;
     Od.flattenVdoms = function (xs) {
         if (xs == null)
@@ -1007,8 +1002,10 @@ var Od;
         var lifecycleFn = odEventHandler(props);
         if (lifecycleFn)
             lifecycleFn("removed", dom);
+        var anyDom = dom;
         for (var prop in props)
-            dom[prop] = null;
+            if (prop !== "src" || anyDom.tagName !== "IMG")
+                anyDom[prop] = null;
         // Recursively strip any child nodes.
         var children = dom.childNodes;
         var numChildren = children.length;
@@ -1091,7 +1088,6 @@ var Od;
             if (isComponentDom(dom))
                 setDomIsAttached(dom, isAttached);
             var lifecycleFn = odEventHandler(dom);
-            // XXX Should we defer this?
             if (isAttached && lifecycleFn != null)
                 lifecycleFn("attached", dom);
             dom = nextSibling;
@@ -1280,7 +1276,7 @@ var Od;
     Od.mergeProps = function () {
         var propsList = [];
         for (var _i = 0; _i < arguments.length; _i++) {
-            propsList[_i - 0] = arguments[_i];
+            propsList[_i] = arguments[_i];
         }
         var resultProps = {};
         for (var i = 0; i < propsList.length; i++) {

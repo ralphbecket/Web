@@ -158,6 +158,7 @@ const view = Od.component("ToDoMvcOd", () => Od.DIV({ id: "todoapp" }, [
                     const state = !allDone();
                     const todos = toDos();
                     for (var i = 0; i < todos.length; i++) todos[i].done(state);
+                    saveToDos();
                 }
             }),
             Od.UL({ id: "todo-list" }, toDos().map(toDoComponent))

@@ -1,6 +1,7 @@
 // Jigsaw - a simple location-hash router.
 var Jigsaw;
 (function (Jigsaw) {
+    // ---- Public interface. ----
     // A route is a possibly-empty set of "parts" separated by '/' slashes.
     // Each route part is matched against the corresponding part of the
     // window location hash, stripped of its leading '#' character.

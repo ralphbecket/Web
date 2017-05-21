@@ -19,8 +19,10 @@ var Oath;
     };
     Oath.race = function (ps) {
         return Oath.make(function (pass, fail) {
+            var done = false;
             ps.forEach(function (p, i) {
-                p.then(function (x) { pass(x); });
+                p.then(function (x) { if (!done)
+                    pass(x); done = true; });
             });
         });
     };

@@ -492,16 +492,11 @@ var Obs;
 // profitably cut out a step here by simply making vDOM structures patching
 // functions in their own right.  I'm going to try that experiment now.
 //
-// The experiment was a draw... except I did something truly stupid and
-// created a new closure for simple text elements.  This is, of course,
-// an absurd waste of resources.  Fixing that now...
+// The experiment was a success!
 //
 /// <reference path="./Obs.ts"/>
 var Od;
 (function (Od) {
-    // XXX This is to help diagnose Mihai's bug.
-    // Od events will be processed with this setTimeout delay.
-    Od.processPendingOdEventsDelay = 20;
     var debug = false;
     Od.flattenVdoms = function (xs) {
         if (xs == null)
@@ -1008,8 +1003,10 @@ var Od;
         var lifecycleFn = odEventHandler(props);
         if (lifecycleFn)
             lifecycleFn("removed", dom);
+        var anyDom = dom;
         for (var prop in props)
-            dom[prop] = null;
+            if (prop !== "src" || anyDom.tagName !== "IMG")
+                anyDom[prop] = null;
         // Recursively strip any child nodes.
         var children = dom.childNodes;
         var numChildren = children.length;
@@ -1092,7 +1089,6 @@ var Od;
             if (isComponentDom(dom))
                 setDomIsAttached(dom, isAttached);
             var lifecycleFn = odEventHandler(dom);
-            // XXX Should we defer this?
             if (isAttached && lifecycleFn != null)
                 lifecycleFn("attached", dom);
             dom = nextSibling;
@@ -1276,6 +1272,7 @@ var Od;
 // Jigsaw - a simple location-hash router.
 var Jigsaw;
 (function (Jigsaw) {
+    // ---- Public interface. ----
     // A route is a possibly-empty set of "parts" separated by '/' slashes.
     // Each route part is matched against the corresponding part of the
     // window location hash, stripped of its leading '#' character.
@@ -1449,8 +1446,10 @@ var Oath;
     };
     Oath.race = function (ps) {
         return Oath.make(function (pass, fail) {
+            var done = false;
             ps.forEach(function (p, i) {
-                p.then(function (x) { pass(x); });
+                p.then(function (x) { if (!done)
+                    pass(x); done = true; });
             });
         });
     };
@@ -1595,11 +1594,9 @@ var Xhr;
         xhr.send(opts.data);
         return promise;
     };
-    var readyStateChangeHandler = function (xhr, pass, fail) {
-        return function (v) {
-            if (xhr.readyState !== 4 /* DONE */)
-                return;
-            (200 <= xhr.status && xhr.status < 300 ? pass : fail)(xhr);
-        };
-    };
+    var readyStateChangeHandler = function (xhr, pass, fail) { return function (v) {
+        if (xhr.readyState !== 4 /* DONE */)
+            return;
+        (200 <= xhr.status && xhr.status < 300 ? pass : fail)(xhr);
+    }; };
 })(Xhr || (Xhr = {}));

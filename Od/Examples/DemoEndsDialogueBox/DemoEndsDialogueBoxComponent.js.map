@@ -1,0 +1,1 @@
+{"version":3,"file":"DemoEndsDialogueBoxComponent.js","sourceRoot":"","sources":["DemoEndsDialogueBoxComponent.ts"],"names":[],"mappings":"AAAA,0DAA0D;AAE1D,MAAM,CAAC,MAAM,GAAG;IACZ,IAAI,EAAE,GAAG,QAAQ,CAAC,cAAc,CAAC,SAAS,CAAC,CAAC;IAC5C,IAAI,OAAO,GAAG,IAAI,OAAO,CAAC,EAAE,CAAC,CAAC;IAC9B,OAAO,CAAC,KAAK,EAAE,CAAC;AACpB,CAAC,CAAC"}

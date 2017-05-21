@@ -10,7 +10,7 @@
     <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
     <DebugType>full</DebugType>
     <DebugSymbols>true</DebugSymbols>
-    <TypeScriptToolsVersion>1.8</TypeScriptToolsVersion>
+    <TypeScriptToolsVersion>2.1</TypeScriptToolsVersion>
     <UseIISExpress>true</UseIISExpress>
     <IISExpressSSLPort />
     <IISExpressAnonymousAuthentication />
@@ -22,14 +22,7 @@
     <Service Include="{4A0DDDB5-7A95-4FBF-97CC-616D07737A77}" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Elements.js" />
-    <Content Include="Jigsaw.js" />
-    <Content Include="Oath.js" />
-    <Content Include="SelectComponent.js" />
     <Content Include="TabComponent.css" />
-    <Content Include="TabComponent.js" />
-    <Content Include="WithClassName.js" />
-    <Content Include="Xhr.js" />
   </ItemGroup>
   <ItemGroup>
     <TypeScriptCompile Include="CheckboxComponent.ts" />
@@ -48,9 +41,6 @@
     <TypeScriptCompile Include="TextInputComponent.ts" />
     <TypeScriptCompile Include="WithClassName.ts" />
     <TypeScriptCompile Include="Xhr.ts" />
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="Oath.js.map" />
   </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">12.0</VisualStudioVersion>
