@@ -11,8 +11,16 @@ Od.component(name, () => Od.DIV(
     [name, (children || []) as any]
 ));
 
-const A = makeThing("A");
-const B = makeThing("B");
+const x = Obs.of("");
+
+const A = makeThing("A",
+    Od.component(null, () => Od.DIV(null, [
+        Od.INPUT({ oninput: (e: any) => { x(e.target.value); } }),
+        x()
+    ]))
+);
+
+const B = makeThing("B", Od.component(null, () => x()));
 const C = makeThing("C", [A, B]);
 
 Od.appendChild(C, document.body);

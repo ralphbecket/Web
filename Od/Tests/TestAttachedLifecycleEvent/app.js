@@ -533,7 +533,7 @@ var Od;
     // We don't have a special representation for text nodes, we simply
     // represent them as strings or numbers.
     var patchText = function (content, dom, parent) {
-        var txt = content.toString();
+        var txt = (content == null ? null : content.toString());
         if (dom == null || dom.nodeName !== "#text" || isComponentDom(dom)) {
             var newDom = document.createTextNode(txt);
             patchNode(newDom, dom, parent);
@@ -995,7 +995,7 @@ var Od;
     };
     var stripNode = function (dom) {
         // We don't want to strip anything owned by a component.
-        if (isComponentDom(dom))
+        if (dom == null || isComponentDom(dom))
             return;
         // Strip any properties...
         var props = getEltOdProps(dom);
@@ -1274,7 +1274,11 @@ var logOdEvent = function (name) { return function (what, dom) {
 var makeThing = function (name, children) {
     return Od.component(name, function () { return Od.DIV({ onodevent: logOdEvent(name) }, [name, (children || [])]); });
 };
-var A = makeThing("A");
-var B = makeThing("B");
+var x = Obs.of("");
+var A = makeThing("A", Od.component(null, function () { return Od.DIV(null, [
+    Od.INPUT({ oninput: function (e) { x(e.target.value); } }),
+    x()
+]); }));
+var B = makeThing("B", Od.component(null, function () { return x(); }));
 var C = makeThing("C", [A, B]);
 Od.appendChild(C, document.body);

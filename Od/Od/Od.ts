@@ -137,7 +137,7 @@ namespace Od {
     // represent them as strings or numbers.
     const patchText =
         (content: number | string, dom: Node, parent: Node): Node => {
-            var txt = content.toString();
+            var txt = (content == null ? null : content.toString());
             if (dom == null || dom.nodeName !== "#text" || isComponentDom(dom)) {
                 const newDom = document.createTextNode(txt);
                 patchNode(newDom, dom, parent);
@@ -653,7 +653,7 @@ namespace Od {
 
     const stripNode = (dom: Node): void => {
         // We don't want to strip anything owned by a component.
-        if (isComponentDom(dom)) return;
+        if (dom == null || isComponentDom(dom)) return;
         // Strip any properties...
         const props = getEltOdProps(dom);
         const lifecycleFn = odEventHandler(props);
