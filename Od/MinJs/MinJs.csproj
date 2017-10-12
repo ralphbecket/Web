@@ -24,39 +24,40 @@
     <Service Include="{4A0DDDB5-7A95-4FBF-97CC-616D07737A77}" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Jigsaw.js" />
+    <None Include="Jigsaw.js" />
     <Content Include="Jigsaw.min.js">
       <DependentUpon>Jigsaw.js</DependentUpon>
     </Content>
-    <Content Include="Oath.js" />
+    <None Include="Oath.js" />
     <Content Include="Oath.min.js">
       <DependentUpon>Oath.js</DependentUpon>
     </Content>
-    <Content Include="Obs.js" />
+    <None Include="Obs.js" />
     <Content Include="Obs.min.js">
       <DependentUpon>Obs.js</DependentUpon>
     </Content>
-    <Content Include="ObsAndOd.js" />
+    <None Include="ObsAndOd.js" />
     <Content Include="ObsAndOd.min.js">
       <DependentUpon>ObsAndOd.js</DependentUpon>
     </Content>
-    <Content Include="ObsAndOdAndElements.js" />
+    <None Include="ObsAndOdAndElements.js" />
     <Content Include="ObsAndOdAndElements.min.js">
       <DependentUpon>ObsAndOdAndElements.js</DependentUpon>
     </Content>
-    <Content Include="Od.js" />
+    <None Include="Od.js" />
     <Content Include="Od.min.js">
       <DependentUpon>Od.js</DependentUpon>
     </Content>
-    <Content Include="OdAndEnds.js" />
+    <None Include="OdAndEnds.js" />
     <Content Include="OdAndEnds.min.js">
       <DependentUpon>OdAndEnds.js</DependentUpon>
     </Content>
-    <Content Include="Xhr.js" />
+    <Content Include="README.md" />
+    <None Include="Xhr.js" />
     <Content Include="Xhr.min.js">
       <DependentUpon>Xhr.js</DependentUpon>
     </Content>
-    <Content Include="XhrAndOath.js" />
+    <None Include="XhrAndOath.js" />
     <Content Include="XhrAndOath.min.js">
       <DependentUpon>XhrAndOath.js</DependentUpon>
     </Content>
@@ -64,6 +65,7 @@
   <ItemGroup>
     <None Include="bundleconfig.json" />
     <Content Include="packages.config" />
+    <Content Include="package.json" />
   </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">12.0</VisualStudioVersion>
@@ -92,8 +94,19 @@
     </VisualStudio>
   </ProjectExtensions>
   <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
-    <TypeScriptRemoveComments>false</TypeScriptRemoveComments>
-    <TypeScriptSourceMap>true</TypeScriptSourceMap>
+    <TypeScriptRemoveComments>False</TypeScriptRemoveComments>
+    <TypeScriptSourceMap>False</TypeScriptSourceMap>
+    <TypeScriptTarget>ES5</TypeScriptTarget>
+    <TypeScriptJSXEmit>None</TypeScriptJSXEmit>
+    <TypeScriptCompileOnSaveEnabled>False</TypeScriptCompileOnSaveEnabled>
+    <TypeScriptNoImplicitAny>False</TypeScriptNoImplicitAny>
+    <TypeScriptModuleKind>None</TypeScriptModuleKind>
+    <TypeScriptOutFile />
+    <TypeScriptOutDir />
+    <TypeScriptGeneratesDeclarations>False</TypeScriptGeneratesDeclarations>
+    <TypeScriptNoEmitOnError>False</TypeScriptNoEmitOnError>
+    <TypeScriptMapRoot />
+    <TypeScriptSourceRoot />
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <TypeScriptRemoveComments>true</TypeScriptRemoveComments>

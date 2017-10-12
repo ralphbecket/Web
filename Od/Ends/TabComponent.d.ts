@@ -6,7 +6,7 @@ declare namespace Od {
         body: Obs.Observableish<Vdoms>;
     }
     const tabComponent: (args: {
-        name?: ComponentName;
+        name?: string | number;
         tabs: Obs.Observableish<Tab[]>;
         selection?: Obs.Observable<Tab>;
         props?: Obs.Observableish<Props>;

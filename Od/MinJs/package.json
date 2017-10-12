@@ -1,0 +1,16 @@
+{
+  "version": "1.0.0",
+  "name": "od",
+  "private": false,
+  "devDependencies": {
+  },
+  "eslintConfig": {
+    "env": {
+      "browser": true,
+      "node": true
+    },
+    "rules": {
+      "eqeqeq": "off"
+    }
+  }
+}
