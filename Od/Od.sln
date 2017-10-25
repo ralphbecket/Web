@@ -55,6 +55,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestAttachedLifecycleEvent"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestMihaiImgSrcStripping", "TestMihaiImgSrcStripping\TestMihaiImgSrcStripping.csproj", "{2574F603-4B6C-4A30-BFDD-E3BC09EEDFDF}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestMihaiNestedDisposal", "Tests\TestMihaiNestedDisposal\TestMihaiNestedDisposal.csproj", "{5823E781-6619-440F-B570-42E92D606DA4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -157,6 +159,10 @@ Global
 		{2574F603-4B6C-4A30-BFDD-E3BC09EEDFDF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2574F603-4B6C-4A30-BFDD-E3BC09EEDFDF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2574F603-4B6C-4A30-BFDD-E3BC09EEDFDF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5823E781-6619-440F-B570-42E92D606DA4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5823E781-6619-440F-B570-42E92D606DA4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5823E781-6619-440F-B570-42E92D606DA4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5823E781-6619-440F-B570-42E92D606DA4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -183,5 +189,6 @@ Global
 		{AE6686A8-0E5A-4415-B2EB-57A64426921E} = {98502A32-DE7E-42E3-859F-BB4B1077942B}
 		{AD3DD8AA-90E3-43CA-84D4-102A9818E9F2} = {6F033F29-A7C1-423F-9E61-FBAD500B1DBA}
 		{2574F603-4B6C-4A30-BFDD-E3BC09EEDFDF} = {6F033F29-A7C1-423F-9E61-FBAD500B1DBA}
+		{5823E781-6619-440F-B570-42E92D606DA4} = {6F033F29-A7C1-423F-9E61-FBAD500B1DBA}
 	EndGlobalSection
 EndGlobal

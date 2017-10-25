@@ -17,7 +17,7 @@ declare namespace Od {
     const element: (tag: string, props?: Props, children?: Vdoms) => Vdom;
     type ComponentName = string | number;
     var deferComponentUpdates: boolean;
-    const component: (name: string | number, fn: () => Vdom) => Vdom;
+    const component: (name: string | number, fn: () => Vdom, ondispose?: () => void) => Vdom;
     const dispose: (vdom: Vdom) => void;
     const fromHtml: (html: string) => Vdom;
     const fromDom: (srcDom: Node) => Vdom;

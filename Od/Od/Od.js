@@ -232,7 +232,7 @@ var Od;
     // Passing a null name creates an anonymous component, which will be
     // re-created every time the parent component updates.  Typically you
     // do not want this!
-    Od.component = function (name, fn) {
+    Od.component = function (name, fn, ondispose) {
         // If this component already exists in this scope, return that.
         var existingCmpt = existingNamedComponent(name);
         if (existingCmpt != null)
@@ -240,6 +240,7 @@ var Od;
         // Okay, we need to create a new component.
         var cmptID = nextComponentID++;
         var cmptInfo = {
+            name: name,
             componentID: cmptID,
             dom: null,
             obs: null,
@@ -247,7 +248,8 @@ var Od;
             anonymousSubcomponents: [],
             namedSubcomponents: {},
             hasOdEventHandlers: false,
-            updateIsPending: false
+            updateIsPending: false,
+            ondispose: ondispose
         };
         // A component, like any vDOM, is a patching function.
         var cmpt = function (dom, parent) {
@@ -323,7 +325,11 @@ var Od;
         Obs.dispose(cmptInfo.subs);
         Obs.dispose(cmptInfo.obs);
         var dom = cmptInfo.dom;
+        var domRemove = dom && dom.remove;
+        if (domRemove != null)
+            domRemove.call(dom);
         clearDomComponentID(dom);
+        enqueueNodeForStripping(dom);
     };
     var disposeAnonymousSubcomponents = function (cmptInfo) {
         var cmpts = cmptInfo.anonymousSubcomponents;
@@ -339,6 +345,9 @@ var Od;
             cmpts[name] = null;
         }
     };
+    // Note that disposing a component removes its DOM subtree from the
+    // main DOM tree and enqueues its nodes for stripping.  Any elements
+    // with onodevent handlers will receive "removed" events.
     Od.dispose = function (vdom) {
         var dispose = vdom && vdom.dispose;
         if (dispose != null)

@@ -1,0 +1,5 @@
+C:\Users\ralph\OneDrive\My Documents\GitHub\Web\Od\Tests\TestMihaiNestedDisposal\bin\TypeScriptHTMLApp1.dll.config
+C:\Users\ralph\OneDrive\My Documents\GitHub\Web\Od\Tests\TestMihaiNestedDisposal\bin\TypeScriptHTMLApp1.dll
+C:\Users\ralph\OneDrive\My Documents\GitHub\Web\Od\Tests\TestMihaiNestedDisposal\bin\TypeScriptHTMLApp1.pdb
+C:\Users\ralph\OneDrive\My Documents\GitHub\Web\Od\Tests\TestMihaiNestedDisposal\obj\Debug\TypeScriptHTMLApp1.dll
+C:\Users\ralph\OneDrive\My Documents\GitHub\Web\Od\Tests\TestMihaiNestedDisposal\obj\Debug\TypeScriptHTMLApp1.pdb

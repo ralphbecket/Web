@@ -88,11 +88,12 @@ namespace Od {
         dispose?: () => void; // For components.
     }
 
-    // Lifecycle events on elements are
-    // "created" when the element is created,
-    // "attached" when the element is attached to the document.body,
-    // "updated" when the element is patched, and
-    // "removed" when the element is about to be stripped.
+    // Lifecycle events on components are
+    // "created" when the component is created,
+    // "attached" when the component is attached to the document.body,
+    // "updated" when the component is patched, 
+    // "removed" when the component is about to be stripped, and
+    // "disposed" when the component is about to be disposed.
     //
     // "attached" events are run bottom-up in the sense that the Od-event
     // handlers of a parent node's children will receive the "attached"
@@ -255,6 +256,7 @@ namespace Od {
     export type ComponentName = string | number;
 
     interface ComponentInfo {
+        name: ComponentName;
         componentID: number;
         dom: Node;
         obs: Obs.Observable<Vdom>;
@@ -263,6 +265,7 @@ namespace Od {
         namedSubcomponents: { [name: string]: Vdom };
         hasOdEventHandlers: boolean;
         updateIsPending: boolean;
+        ondispose: () => void;
     }
 
     var nextComponentID = 1; // Name supply.
@@ -296,13 +299,14 @@ namespace Od {
     // do not want this!
 
     export const component =
-        (name: ComponentName, fn: () => Vdom): Vdom => {
+        (name: ComponentName, fn: () => Vdom, ondispose?: () => void): Vdom => {
             // If this component already exists in this scope, return that.
             const existingCmpt = existingNamedComponent(name);
             if (existingCmpt != null) return existingCmpt;
             // Okay, we need to create a new component.
             const cmptID = nextComponentID++;
             const cmptInfo = {
+                name: name,
                 componentID: cmptID,
                 dom: null as Node,
                 obs: null as Obs.Observable<Vdom>,
@@ -310,7 +314,8 @@ namespace Od {
                 anonymousSubcomponents: [] as Vdom[],
                 namedSubcomponents: {} as { [name: string]: Vdom },
                 hasOdEventHandlers: false,
-                updateIsPending: false
+                updateIsPending: false,
+                ondispose: ondispose
             };
             // A component, like any vDOM, is a patching function.
             const cmpt: VdomPatcher = (dom: Node, parent: Node) => {
@@ -388,7 +393,10 @@ namespace Od {
         Obs.dispose(cmptInfo.subs);
         Obs.dispose(cmptInfo.obs);
         const dom = cmptInfo.dom;
+        const domRemove = dom && (dom as HTMLElement).remove;
+        if (domRemove != null) domRemove.call(dom);
         clearDomComponentID(dom);
+        enqueueNodeForStripping(dom);
     };
 
     const disposeAnonymousSubcomponents = (cmptInfo: ComponentInfo): void => {
@@ -407,6 +415,9 @@ namespace Od {
         }
     };
 
+    // Note that disposing a component removes its DOM subtree from the
+    // main DOM tree and enqueues its nodes for stripping.  Any elements
+    // with onodevent handlers will receive "removed" events.
     export const dispose = (vdom: Vdom): void => {
         const dispose = vdom && (vdom as VdomPatcher).dispose;
         if (dispose != null) dispose();

@@ -1275,190 +1275,22 @@ var Od;
         Od[tag] = function (fst, snd) { return elt(tag, fst, snd); };
     });
 })(Od || (Od = {}));
-// <reference path="Elements.ts"/>
-var Od;
-(function (Od) {
-    var Drag;
-    (function (Drag) {
-        Drag.startX = 0;
-        Drag.startY = 0;
-        Drag.onDragCallback = null;
-        Drag.onDragEndCallback = null;
-        Drag.draggingSurface = document.createElement("DIV");
-        var stopDragging = function () {
-            var callback = Drag.onDragEndCallback;
-            Drag.onDragCallback = null;
-            Drag.onDragEndCallback = null;
-            if (Drag.draggingSurface.parentNode) {
-                Drag.draggingSurface.parentNode.removeChild(Drag.draggingSurface);
-            }
-            if (callback)
-                callback();
-        };
-        var drag = function (v) {
-            if (!Drag.onDragCallback)
-                return;
-            var pageX = v.pageX;
-            var pageY = v.pageY;
-            var deltaX = pageX - Drag.startX;
-            var deltaY = pageY - Drag.startY;
-            Drag.onDragCallback(pageX, pageY, deltaX, deltaY);
-        };
-        Drag.draggingSurface.style.position = "fixed";
-        Drag.draggingSurface.style.left = "0px";
-        Drag.draggingSurface.style.top = "0px";
-        Drag.draggingSurface.style.width = "100%";
-        Drag.draggingSurface.style.height = "100%";
-        Drag.draggingSurface.style.opacity = "0";
-        Drag.draggingSurface.onmousemove = drag;
-        Drag.draggingSurface.onmouseup = stopDragging;
-        Drag.draggingSurface.onmouseleave = stopDragging;
-        Drag.draggingSurface.ontouchend = stopDragging;
-    })(Drag || (Drag = {}));
-    ;
-    Od.startDragging = function (args, v) {
-        var elt = args.elt;
-        var onDrag = args.onDrag;
-        if (elt) {
-            var rect = elt.getBoundingClientRect();
-            var startLeft_1 = rect.left;
-            var startTop_1 = rect.top;
-            onDrag = function (x, y, dx, dy) {
-                var left = startLeft_1 + dx;
-                var top = startTop_1 + dy;
-                elt.style.left = left.toString() + "px";
-                elt.style.top = top.toString() + "px";
-                if (args.onDrag)
-                    args.onDrag(x, y, dx, dy);
-            };
-        }
-        Drag.onDragCallback = onDrag;
-        Drag.onDragEndCallback = args.onDragEnd;
-        Drag.startX = v.pageX;
-        Drag.startY = v.pageY;
-        document.body.appendChild(Drag.draggingSurface);
-    };
-})(Od || (Od = {}));
-/// <reference path="../Od/Od.ts"/>
-var Od;
-(function (Od) {
-    // Merge a list of property sets, giving priority to property sets
-    // later in the list.  "className" and "style" properties are merged
-    // in the way you'd expect, as a biased union.  Null property sets
-    // are ignored.
-    Od.mergeProps = function () {
-        var propsList = [];
-        for (var _i = 0; _i < arguments.length; _i++) {
-            propsList[_i] = arguments[_i];
-        }
-        var resultProps = {};
-        for (var i = 0; i < propsList.length; i++) {
-            var inputProps = propsList[i];
-            if (!inputProps)
-                continue;
-            for (var prop in inputProps) {
-                var value = inputProps[prop];
-                switch (prop) {
-                    case "class":
-                    case "className":
-                        mergeClassName(value, resultProps);
-                        break;
-                    case "style":
-                        mergeStyle(value, resultProps);
-                        break;
-                    default:
-                        resultProps[prop] = value;
-                }
-            }
-        }
-        return resultProps;
-    };
-    var mergeClassName = function (newClassNames, props) {
-        var currClassNames = props["className"];
-        if (!currClassNames) {
-            props["className"] = newClassNames;
-            return;
-        }
-        var currClasses = currClassNames.split(" ");
-        var newClasses = newClassNames.split(" ");
-        for (var i = newClasses.length - 1; 0 <= i; i--) {
-            var newClass = newClasses[i];
-            for (var j = currClasses.length - 1; 0 <= j; j--) {
-                if (newClass === currClasses[j])
-                    break;
-            }
-            if (j === -1)
-                currClasses.push(newClass);
-        }
-        props["className"] = currClasses.join(" ");
-    };
-    var mergeStyle = function (newStyle, props) {
-        var currStyle = props["style"];
-        if (!currStyle) {
-            props["style"] = newStyle;
-            return;
-        }
-        for (var style in newStyle)
-            currStyle[style] = newStyle[style];
-    };
-})(Od || (Od = {}));
-/// <reference path="Elements.ts"/>
-/// <reference path="Dragging.ts"/>
-/// <reference path="MergeProps.ts"/>
-var Od;
-(function (Od) {
-    var OdDialogueBoxCssClass = "OdDialogueBox";
-    var OdDialogueBoxHeaderCssClass = "OdDialogueBoxHeader";
-    var OdDialogueBoxBodyCssClass = "OdDialogueBoxBody";
-    var OdDialogueBoxFooterCssClass = "OdDialogueBoxFooter";
-    var startDraggingDialogueBox = function (v) {
-        var touches = v.touches;
-        if (touches) {
-            if (touches.length !== 1)
-                return;
-            v = touches[0];
-        }
-        var elt = v.target;
-        while (elt && !elt.classList.contains(OdDialogueBoxCssClass))
-            elt = elt.parentElement;
-        if (!elt)
-            return;
-        Od.startDragging({ elt: elt }, v);
-    };
-    Od.dialogueBox = function (header, body, footer, props) {
-        if (props === void 0) { props = null; }
-        var vdom = Od.DIV(Od.mergeProps(props, {
-            className: OdDialogueBoxCssClass,
-            style: { position: "absolute" }
-        }), [
-            Od.DIV({
-                className: OdDialogueBoxHeaderCssClass,
-                style: {
-                    position: "absolute",
-                    bottom: "100%",
-                    width: "100%",
-                    cursor: "move"
-                },
-                onmousedown: startDraggingDialogueBox,
-                ontouchstart: startDraggingDialogueBox
-            }, header || ""),
-            Od.DIV({
-                className: OdDialogueBoxBodyCssClass
-            }, body),
-            Od.DIV({
-                className: OdDialogueBoxFooterCssClass,
-                style: {
-                    position: "absolute",
-                    top: "100%",
-                    width: "100%"
-                }
-            }, footer || "")
-        ]);
-        return vdom;
-    };
-})(Od || (Od = {}));
-/// <reference path="../../Ends/DialogueBox.ts"/>
-var view = Od.dialogueBox(Od.DIV({ style: { paddingLeft: "0.5em" } }, "Header"), Od.DIV({ style: { width: "10em", height: "3em" } }, "Body"), Od.DIV({ style: { paddingLeft: "0.5em" } }, "Footer"));
+/// <reference path="../../Ends/Elements.ts"/>
+var Test;
+(function (Test) {
+    Test.view = Od.component(null, function () { return Od.DIV([
+        Od.BUTTON({
+            onclick: function () { console.log("A clicked"); Od.dispose(Test.view); },
+            onodevent: function (what, dom) { console.log("A", what); }
+        }, "Die!"),
+        Od.component(null, function () {
+            return Od.BUTTON({
+                onclick: function () { console.log("B clicked"); },
+                onodevent: function (what, dom) { console.log("B", what); }
+            }, "Do nothing.");
+        })
+    ]); });
+})(Test || (Test = {}));
 window.onload = function () {
-    Od.appendChild(view, document.body);
+    Od.appendChild(Test.view, document.getElementById("content"));
 };
