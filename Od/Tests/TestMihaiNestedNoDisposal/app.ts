@@ -5,6 +5,9 @@ namespace Test {
 
     const cmptName = (name: string): string => (true ? name : null); // Test named vs anonymous behaviour.
 
+    // Application state.
+    const currPageName = Obs.of("Page A");
+
     // A quick on-screen logging facility.
     const maxLogSize = 12;
     const logMsgs = Obs.of([]);
@@ -23,43 +26,43 @@ namespace Test {
         )
     );
 
-    // Application state.
-    const currPage = Obs.of(Od.component("Empty", () => "Empty page."));
-
-    const goToPageA = (): void => {
-        Od.dispose(currPage());
-        currPage(loggingDiv("Page A", [() => loggingDiv("Page A 1"), () => loggingDiv("Page A 2")]));
-    };
-
-    const goToPageB = (): void => {
-        Od.dispose(currPage());
-        currPage(loggingDiv("Page B", [() => loggingDiv("Page B 1")]));
-    };
-
     // Add some navigation.
-    const navView =
+    const navView = (names: string[]): Od.Vdom =>
         Od.DIV([
-            Od.P({ onclick: () => { log(); goToPageA(); }}, "Go to Page A"),
-            Od.P({ onclick: () => { log(); goToPageB(); }}, "Go to Page B"),
+            names.map(name =>
+                Od.P({
+                    onclick: () => { log(); currPageName(name); }
+                }, "Go to " + name)
+            ),
             Od.HR()
         ]);
 
     // A nested set of views.
-    const loggingDiv = (name: string, children?: (() => Od.Vdoms)[]) => Od.component(name, () =>
+    const loggingDiv = (name: string, children?: Od.Vdoms) => Od.component(name, () =>
         Od.DIV(
             { onodevent: (what: string, dom: Node) => { log(name + ": " + what); } },
-            [name, (children || []).map(f => f())]
+            [name, children || []]
         )
     );
-    //const mainView = Od.component("main", () => Od.DIV(currPage()));
-    const mainView = Od.component("main", currPage);
+    const mainView = Od.component("main", () => {
+        var currPage = currPageName();
+        var view = Od.DIV([
+            ( currPage === "Page A"
+            ? loggingDiv("Page A", [loggingDiv("Page A 1"), loggingDiv("Page A 2")])
+            : currPage === "Page B"
+            ? loggingDiv("Page B", [loggingDiv("Page B 1")])
+            : loggingDiv("Eh?")
+            )
+        ]);
+        return view;
+    });
 
     export const start = () => {
 
         const mainElt = document.getElementById("main");
         const logElt = document.getElementById("log");
         Od.appendChild(logView, logElt);
-        Od.appendChild(navView, mainElt);
+        Od.appendChild(navView(["Page A", "Page B"]), mainElt);
         Od.appendChild(mainView, mainElt);
 
     };

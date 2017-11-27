@@ -596,42 +596,39 @@ var Od;
         if (parent == null)
             return;
         if (newDom == null) {
-            if (oldDom != null)
-                parent.removeChild(oldDom);
+            if (oldDom == null)
+                return;
+            parent.removeChild(oldDom);
+            var cmptInfo = domComponentInfo(oldDom);
+            //if (cmptInfo && cmptInfo.isAttached) propagateAttachmentDown(oldDom, false);
+            updateIsAttached(cmptInfo, false);
         }
         else if (oldDom == null) {
             parent.appendChild(newDom);
         }
         else {
             parent.replaceChild(newDom, oldDom);
+            var cmptInfo = domComponentInfo(oldDom);
+            //if (cmptInfo && cmptInfo.isAttached) propagateAttachmentDown(oldDom, false);
+            updateIsAttached(cmptInfo, false);
         }
     };
     // A DOM node corresponding to the root of a component has an
-    // __Od__componentID property with a non-zero value.
+    // __Od__componentInfo property with a non-zero value.
     //
     var isComponentDom = function (dom) {
-        return !!domComponentID(dom);
+        return domComponentInfo(dom) != null;
     };
-    var domComponentID = function (dom) {
-        return dom.__Od__componentID;
+    var domComponentInfo = function (dom) {
+        return dom.__Od__componentInfo;
     };
-    var setDomComponentID = function (dom, componentID) {
-        dom.__Od__componentID = componentID;
+    var setDomComponentInfo = function (dom, cmptInfo) {
+        if (domComponentInfo(dom) == null)
+            dom.__Od__componentInfo = cmptInfo;
     };
-    var clearDomComponentID = function (dom) {
-        setDomComponentID(dom, 0);
-    };
-    // A DOM node corresponding to the root of a component has an
-    // optional __Od__isAttached property which is true iff the node
-    // is attached to the document.body.
-    var domIsAttached = function (dom) {
-        return dom.__Od__isAttached;
-    };
-    var setDomIsAttached = function (dom, isAttached) {
-        dom.__Od__isAttached = isAttached;
-    };
-    var clearDomIsAttached = function (dom) {
-        setDomIsAttached(dom, false);
+    var clearDomComponentInfo = function (dom, cmptInfo) {
+        if (domComponentInfo(dom) === cmptInfo)
+            dom.__Od__componentInfo = null;
     };
     var nextComponentID = 1; // Name supply.
     var parentComponentInfo = null; // Used for scoping.
@@ -658,32 +655,35 @@ var Od;
     // Passing a null name creates an anonymous component, which will be
     // re-created every time the parent component updates.  Typically you
     // do not want this!
-    Od.component = function (name, fn, ondispose) {
+    Od.component = function (name, fn) {
         // If this component already exists in this scope, return that.
         var existingCmpt = existingNamedComponent(name);
         if (existingCmpt != null)
             return existingCmpt;
         // Okay, we need to create a new component.
         var cmptID = nextComponentID++;
+        console.log("Creating component", name, cmptID);
         var cmptInfo = {
             name: name,
             componentID: cmptID,
             dom: null,
+            isAttached: false,
             obs: null,
             subs: null,
             anonymousSubcomponents: [],
             namedSubcomponents: {},
             hasOdEventHandlers: false,
-            updateIsPending: false,
-            ondispose: ondispose
+            updateIsPending: false
         };
         // A component, like any vDOM, is a patching function.
         var cmpt = function (dom, parent) {
             var cmptDom = cmptInfo.dom;
             patchNode(cmptDom, dom, parent);
             if (cmptDom !== dom && cmptInfo.hasOdEventHandlers) {
-                var isAttached = domIsAttachedToBody(cmptDom);
-                propagateAttachmentDown(cmptDom, isAttached);
+                var isAttached = (parentComponentInfo != null
+                    ? parentComponentInfo.isAttached
+                    : domIsAttachedToBody(cmptDom));
+                updateIsAttached(cmptInfo, isAttached);
             }
             return cmptDom;
         };
@@ -697,6 +697,8 @@ var Od;
         // Establish the observable in the context of this new component
         // so any sub-components will be registered with this component.
         var obs = Obs.fn(function () {
+            if (name !== "log")
+                console.log("Updating component", name, cmptID);
             var oldParentComponentInfo = parentComponentInfo;
             parentComponentInfo = cmptInfo;
             disposeAnonymousSubcomponents(cmptInfo);
@@ -708,7 +710,7 @@ var Od;
         // Peek here, because we don't want any parent component
         // acquiring a dependency on this component's private observable.
         var dom = patchFromVdom(Obs.peek(obs), null, null);
-        setDomComponentID(dom, cmptID);
+        setDomComponentInfo(dom, cmptInfo);
         runPendingOdEventCallbacks();
         // Set up the update subscription.
         var subs = Obs.subscribe([obs], function () {
@@ -738,23 +740,23 @@ var Od;
         var dom = cmptInfo.dom;
         var obs = cmptInfo.obs;
         var parent = dom && dom.parentNode;
-        clearDomComponentID(dom); // So patching will apply internally.
+        clearDomComponentInfo(dom, cmptInfo); // So patching will apply internally.
         var newDom = patchFromVdom(obs(), dom, parent);
-        setDomComponentID(newDom, cmptID); // Restore DOM ownership.
+        setDomComponentInfo(newDom, cmptInfo); // Restore DOM ownership.
         cmptInfo.dom = newDom;
         cmptInfo.updateIsPending = false;
         parentComponentInfo = oldParentComponentInfo;
     };
     var disposeComponent = function (cmptInfo) {
+        console.log("Disposing component", cmptInfo.name, cmptInfo.componentID);
         disposeAnonymousSubcomponents(cmptInfo);
         disposeNamedSubcomponents(cmptInfo);
         Obs.dispose(cmptInfo.subs);
         Obs.dispose(cmptInfo.obs);
         var dom = cmptInfo.dom;
         var domRemove = dom && dom.remove;
-        if (domRemove != null)
-            domRemove.call(dom);
-        clearDomComponentID(dom);
+        //if (domRemove != null) domRemove.call(dom);
+        clearDomComponentInfo(dom, cmptInfo);
         enqueueNodeForStripping(dom);
     };
     var disposeAnonymousSubcomponents = function (cmptInfo) {
@@ -791,12 +793,14 @@ var Od;
         deferredComponentUpdatesID = raf(updateDeferredComponents);
     };
     var updateDeferredComponents = function () {
+        console.log("Updating deferred components...");
         var cmptInfos = componentInfosPendingUpdate;
         for (var cmptInfo = cmptInfos.pop(); cmptInfo != null; cmptInfo = cmptInfos.pop()) {
             updateComponent(cmptInfo);
         }
         runPendingOdEventCallbacks();
         deferredComponentUpdatesID = 0;
+        console.log("Updating deferred components done.");
     };
     // Construct a static DOM subtree from an HTML string.
     Od.fromHtml = function (html) {
@@ -806,7 +810,7 @@ var Od;
         // If this is a bunch of nodes, return the whole DIV.
         var newDom = (tmp.childNodes.length === 1 ? tmp.firstChild : tmp);
         // Prevent this DOM subtree from being patched.
-        setDomComponentID(newDom, Infinity);
+        setDomComponentInfo(newDom, {});
         var vdom = function (dom, parent) {
             patchNode(newDom, dom, parent);
             return newDom;
@@ -816,7 +820,7 @@ var Od;
     // Take a DOM subtree directly.  The patching algorithm will not
     // touch the contents of this subtree.
     Od.fromDom = function (srcDom) {
-        setDomComponentID(srcDom, Infinity);
+        setDomComponentInfo(srcDom, {});
         var vdom = function (dom, parent) {
             patchNode(srcDom, dom, parent);
             return srcDom;
@@ -829,12 +833,16 @@ var Od;
     Od.bind = function (vdom, dom) {
         var domParent = dom && dom.parentNode;
         var newDom = patchFromVdom(vdom, dom, domParent);
+        var isAttached = domIsAttachedToBody(dom);
+        propagateAttachmentDown(newDom, isAttached);
         return newDom;
     };
     // Bind a vDOM node to a DOM node as new child.  For example,
     // Od.appendChild(myVdom, document.body);
     Od.appendChild = function (vdom, parent) {
         var newDom = patchFromVdom(vdom, null, parent);
+        var isAttached = domIsAttachedToBody(parent);
+        propagateAttachmentDown(newDom, isAttached);
         return newDom;
     };
     var isArray = function (x) { return x instanceof Array; };
@@ -987,8 +995,12 @@ var Od;
     var enqueueNodeForStripping = function (dom) {
         if (!dom)
             return;
-        if (isComponentDom(dom))
-            return; // Can't touch this!
+        var cmptInfo = domComponentInfo(dom);
+        if (cmptInfo != null) {
+            //if (cmptInfo.isAttached) propagateAttachmentDown(dom, false);
+            updateIsAttached(cmptInfo, false);
+            return; // Otherwise, we leave this alone: it belongs to the component.
+        }
         nodesPendingStripping.push(dom);
         if (stripNodesID !== 0)
             return;
@@ -1004,8 +1016,15 @@ var Od;
     };
     var stripNode = function (dom) {
         // We don't want to strip anything owned by a component.
-        if (dom == null || isComponentDom(dom))
+        if (dom == null)
             return;
+        var cmptInfo = domComponentInfo(dom);
+        if (cmptInfo != null) {
+            console.log("Not stripping component node:", dom, domComponentInfo(dom));
+            //if (cmptInfo.hasOdEventHandlers && cmptInfo.isAttached) propagateAttachmentDown(dom, false);
+            updateIsAttached(cmptInfo, false);
+            return;
+        }
         // Strip any properties...
         var props = getEltOdProps(dom);
         var lifecycleFn = odEventHandler(props);
@@ -1080,25 +1099,33 @@ var Od;
         for (; dom != null; dom = dom.parentNode) {
             if (dom === body)
                 return true;
-            if (!isComponentDom(dom))
+            var cmptInfo = domComponentInfo(dom);
+            if (cmptInfo == null)
                 continue;
-            var isAttached = domIsAttached(dom);
-            if (isAttached != null)
-                return isAttached;
+            return cmptInfo.isAttached;
         }
         return false;
     };
+    var updateIsAttached = function (cmptInfo, isAttached) {
+        if (cmptInfo == null)
+            return;
+        if (cmptInfo.isAttached == isAttached)
+            return; // No change.
+        propagateAttachmentDown(cmptInfo.dom, isAttached);
+    };
     var propagateAttachmentDown = function (dom, isAttached) {
+        var what = (isAttached ? "attached" : "detached");
         while (dom != null) {
             // Propagate bottom-up.
             propagateAttachmentDown(dom.firstChild, isAttached);
             // In case the lifecycle function plays silly buggers...
             var nextSibling = dom.nextSibling;
-            if (isComponentDom(dom))
-                setDomIsAttached(dom, isAttached);
+            var cmptInfo = domComponentInfo(dom);
+            if (cmptInfo != null)
+                cmptInfo.isAttached = isAttached;
             var lifecycleFn = odEventHandler(dom);
-            if (isAttached && lifecycleFn != null)
-                lifecycleFn("attached", dom);
+            if (lifecycleFn != null)
+                lifecycleFn(what, dom);
             dom = nextSibling;
         }
     };
@@ -1275,22 +1302,212 @@ var Od;
         Od[tag] = function (fst, snd) { return elt(tag, fst, snd); };
     });
 })(Od || (Od = {}));
+// Jigsaw - a simple location-hash router.
+var Jigsaw;
+(function (Jigsaw) {
+    // ---- Public interface. ----
+    // A route is a possibly-empty set of "parts" separated by '/' slashes.
+    // Each route part is matched against the corresponding part of the
+    // window location hash, stripped of its leading '#' character.
+    //
+    // Parts match as follows:
+    //  xyx     -   Must match the exact string "xyz" (case sensitive);
+    //  :foo    -   Required parameter, matches anything;
+    //  ?bar    -   Optional parameter, matches anything;
+    //  *baz    -   Parameter matching all remaining parts of the hash.
+    //
+    // A successful matching results in the corresponding route handler
+    // being called with a dictionary mapping parameters to argument values.
+    //
+    // Parameter names are exactly as written (i.e., they include the leading
+    // character indicating the parameter kind).  Argument values are all
+    // simple strings (preprocessed via decodeURIComponent), except for
+    // '*' parameters, whose values are arrays of such.
+    //
+    // Two special parameters are added to the dictionary: "#" is the
+    // original location hash and "?" is any query string (which you may
+    // choose to process via parseQuery).
+    //
+    // Routes are tested in the order in which they were added, the first
+    // match taking priority.
+    //
+    Jigsaw.addRoute = function (route, handler) {
+        var compiledRoute = {
+            route: route,
+            matcher: routeMatcher(route),
+            handler: handler
+        };
+        compiledRoutes.push(compiledRoute);
+    };
+    Jigsaw.removeRoute = function (route) {
+        compiledRoutes = compiledRoutes.filter(function (x) { return x.route === route; });
+    };
+    Jigsaw.clearRoutes = function () {
+        compiledRoutes = [];
+    };
+    // If no route matches, the default route handler will be called
+    // if one has been specified.
+    //
+    Jigsaw.defaultRouteHandler = null;
+    Jigsaw.takeRoute = function (hash) {
+        var queryIdx = hash.lastIndexOf("?");
+        var query = "";
+        if (queryIdx !== -1) {
+            query = hash.substr(queryIdx + 1);
+            hash = hash.substr(0, queryIdx);
+        }
+        var parts = (!hash ? [] : hash.split("/").map(decodeURIComponent));
+        for (var i = 0; i < compiledRoutes.length; i++) {
+            var compiledRoute = compiledRoutes[i];
+            var args = compiledRoute.matcher(parts, 0, {});
+            if (args) {
+                // Success!
+                args["#"] = hash;
+                args["?"] = query;
+                if (query != null)
+                    args["?"] = query;
+                compiledRoute.handler(args);
+                return;
+            }
+        }
+        // Nooooo...
+        if (Jigsaw.defaultRouteHandler)
+            Jigsaw.defaultRouteHandler(hash);
+    };
+    Jigsaw.startRouter = function () {
+        window.addEventListener("hashchange", processHash);
+    };
+    Jigsaw.stopRouter = function () {
+        window.removeEventListener("hashchange", processHash);
+    };
+    // A utility function to convert query strings into key/value
+    // dictionaries.
+    Jigsaw.parseQuery = function (query) {
+        var pairs = (query || "").replace(/\+/g, " ").split(/[&;]/);
+        var args = {};
+        pairs.forEach(function (pair) {
+            var i = pair.indexOf("=");
+            if (i === -1)
+                i = pair.length;
+            var key = pair.substr(0, i);
+            var value = decodeURIComponent(pair.substr(i + 1));
+            args[key] = value;
+        });
+        return args;
+    };
+    // ---- Implementation detail. ----
+    var previousHash = null;
+    // Rapid changes to the location hash can cause the application
+    // to receive multiple onhashchange events, but each receiving only
+    // the very latest hash.  We "debounce" that behaviour here.
+    var processHash = function () {
+        var hash = location.hash.substr(1);
+        if (hash === previousHash)
+            return;
+        Jigsaw.takeRoute(hash);
+        previousHash = hash;
+    };
+    var matchEnd = function (parts, i, args) { return (parts[i] == null) && args; };
+    // '.../foo/...'
+    var matchExact = function (word, cont) { return function (parts, i, args) {
+        return (parts[i] === word) && cont(parts, i + 1, args);
+    }; };
+    // '.../:bar/...'
+    var matchParam = function (param, cont) { return function (parts, i, args) {
+        var arg = parts[i];
+        if (arg == null)
+            return null;
+        args[param] = arg;
+        return cont(parts, i + 1, args);
+    }; };
+    // '.../?baz/...'
+    var matchOptParam = function (param, cont) { return function (parts, i, args) {
+        var arg = parts[i];
+        args[param] = arg;
+        return cont(parts, i + 1, args);
+    }; };
+    // '.../*quux'
+    var matchRest = function (param, cont) { return function (parts, i, args) {
+        args[param] = parts.slice(i);
+        return cont(parts, parts.length, args);
+    }; };
+    var routeMatcher = function (route) {
+        if (!route)
+            return matchEnd;
+        var params = route.split("/");
+        var matcher = matchEnd;
+        for (var i = params.length - 1; 0 <= i; i--) {
+            var param = params[i];
+            switch (param[0]) {
+                case ":":
+                    matcher = matchParam(param, matcher);
+                    continue;
+                case "?":
+                    matcher = matchOptParam(param, matcher);
+                    continue;
+                case "*":
+                    matcher = matchRest(param, matcher);
+                    continue;
+                default:
+                    matcher = matchExact(param, matcher);
+                    continue;
+            }
+        }
+        return matcher;
+    };
+    var compiledRoutes = [];
+})(Jigsaw || (Jigsaw = {}));
 /// <reference path="../../Ends/Elements.ts"/>
+/// <reference path="../../Ends/Jigsaw.ts"/>
 var Test;
 (function (Test) {
-    Test.view = Od.component(null, function () { return Od.DIV([
-        Od.BUTTON({
-            onclick: function () { console.log("A clicked"); Od.dispose(Test.view); },
-            onodevent: function (what, dom) { console.log("A", what); }
-        }, "Die!"),
-        Od.component(null, function () {
-            return Od.BUTTON({
-                onclick: function () { console.log("B clicked"); },
-                onodevent: function (what, dom) { console.log("B", what); }
-            }, "Do nothing.");
-        })
-    ]); });
+    var cmptName = function (name) { return (true ? name : null); }; // Test named vs anonymous behaviour.
+    // A quick on-screen logging facility.
+    var maxLogSize = 12;
+    var logMsgs = Obs.of([]);
+    var logNo = 1;
+    var log = function (msg) {
+        var msgs = logMsgs();
+        msg = msg && (logNo++) + " - " + msg;
+        msgs.push(msg);
+        if (maxLogSize < msgs.length)
+            msgs.shift();
+        logMsgs(msgs);
+        Obs.updateDependents(logMsgs); // Stupid imperative language...
+    };
+    var logView = Od.component("log", function () {
+        return Od.DIV(logMsgs().map(function (msg) { return msg ? Od.P(msg) : Od.HR(); }));
+    });
+    // Application state.
+    var currPage = Obs.of(Od.component("Empty", function () { return "Empty page."; }));
+    var goToPageA = function () {
+        Od.dispose(currPage());
+        currPage(loggingDiv("Page A", [function () { return loggingDiv("Page A 1"); }, function () { return loggingDiv("Page A 2"); }]));
+    };
+    var goToPageB = function () {
+        Od.dispose(currPage());
+        currPage(loggingDiv("Page B", [function () { return loggingDiv("Page B 1"); }]));
+    };
+    // Add some navigation.
+    var navView = Od.DIV([
+        Od.P({ onclick: function () { log(); goToPageA(); } }, "Go to Page A"),
+        Od.P({ onclick: function () { log(); goToPageB(); } }, "Go to Page B"),
+        Od.HR()
+    ]);
+    // A nested set of views.
+    var loggingDiv = function (name, children) { return Od.component(name, function () {
+        return Od.DIV({ onodevent: function (what, dom) { log(name + ": " + what); } }, [name, (children || []).map(function (f) { return f(); })]);
+    }); };
+    //const mainView = Od.component("main", () => Od.DIV(currPage()));
+    var mainView = Od.component("main", currPage);
+    Test.start = function () {
+        var mainElt = document.getElementById("main");
+        var logElt = document.getElementById("log");
+        Od.appendChild(logView, logElt);
+        Od.appendChild(navView, mainElt);
+        Od.appendChild(mainView, mainElt);
+    };
 })(Test || (Test = {}));
 window.onload = function () {
-    Od.appendChild(Test.view, document.getElementById("content"));
+    Test.start();
 };

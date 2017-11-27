@@ -1,7 +1,7 @@
 /// <reference path="Obs.d.ts" />
 declare namespace Od {
     type Vdom = number | string | VdomPatcher;
-    interface VdomArray extends Array<Vdom> {
+    interface VdomArray extends Array<Vdoms> {
     }
     type Vdoms = Vdom | VdomArray;
     interface VdomPatcher {
@@ -17,7 +17,7 @@ declare namespace Od {
     const element: (tag: string, props?: Props, children?: Vdoms) => Vdom;
     type ComponentName = string | number;
     var deferComponentUpdates: boolean;
-    const component: (name: string | number, fn: () => Vdom, ondispose?: () => void) => Vdom;
+    const component: (name: string | number, fn: () => Vdom) => Vdom;
     const dispose: (vdom: Vdom) => void;
     const fromHtml: (html: string) => Vdom;
     const fromDom: (srcDom: Node) => Vdom;

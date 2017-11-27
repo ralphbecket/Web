@@ -101,3 +101,8 @@ Temporary Items
 /Od/Backup.zip
 /Od/TestMihaiImgSrcStripping
 /Od/packages/BuildBundlerMinifier.1.8.148
+/Od/Tests/TestMihaiNestedNoDisposal/bin
+/Od/Tests/TestMihaiNestedNoDisposal/obj/Debug
+/Od/Tests/TestMihaiNestedNoDisposal/Web.Release.config
+/Od/Tests/TestMihaiNestedNoDisposal/Web.Debug.config
+/Od/Tests/TestMihaiNestedNoDisposal/Web.config

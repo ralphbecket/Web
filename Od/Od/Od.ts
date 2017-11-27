@@ -78,7 +78,7 @@ namespace Od {
     // A vDOM node is just a patching function with an optional ordering key.
     export type Vdom = number | string | VdomPatcher;
 
-    export interface VdomArray extends Array<Vdom> {}
+    export interface VdomArray extends Array<Vdoms> {}
 
     export type Vdoms = Vdom | VdomArray;
 
@@ -166,9 +166,9 @@ namespace Od {
         const vdom: Vdom = (dom, parent) => {
             const elt = dom as HTMLElement;
             const newDom =
-                ((dom == null || elt.tagName !== tag || isComponentDom(dom))
-                    ? document.createElement(tag)
-                    : elt
+                ( (dom == null || elt.tagName !== tag || isComponentDom(dom))
+                ? document.createElement(tag)
+                : elt
                 );
             patchNode(newDom, dom, parent);
             patchProps(newDom, props);
@@ -211,46 +211,38 @@ namespace Od {
         enqueueNodeForStripping(oldDom);
         if (parent == null) return;
         if (newDom == null) {
-            if (oldDom != null) parent.removeChild(oldDom);
+            if (oldDom == null) return;
+            parent.removeChild(oldDom);
+            const cmptInfo = domComponentInfo(oldDom);
+            //if (cmptInfo && cmptInfo.isAttached) propagateAttachmentDown(oldDom, false);
+            updateIsAttached(cmptInfo, false);
         }
         else if (oldDom == null) {
             parent.appendChild(newDom);
         }
         else {
             parent.replaceChild(newDom, oldDom);
+            const cmptInfo = domComponentInfo(oldDom);
+            //if (cmptInfo && cmptInfo.isAttached) propagateAttachmentDown(oldDom, false);
+            updateIsAttached(cmptInfo, false);
         }
     };
 
     // A DOM node corresponding to the root of a component has an
-    // __Od__componentID property with a non-zero value.
+    // __Od__componentInfo property with a non-zero value.
     //
     const isComponentDom = (dom: Node): boolean =>
-        !!domComponentID(dom);
+        domComponentInfo(dom) != null;
 
-    const domComponentID = (dom: Node): number =>
-        (dom as any).__Od__componentID;
+    const domComponentInfo = (dom: Node): ComponentInfo =>
+        (dom as any).__Od__componentInfo;
 
-    const setDomComponentID = (dom: Node, componentID: number): void => {
-        (dom as any).__Od__componentID = componentID;
+    const setDomComponentInfo = (dom: Node, cmptInfo: ComponentInfo): void => {
+        if (domComponentInfo(dom) == null) (dom as any).__Od__componentInfo = cmptInfo;
     };
 
-    const clearDomComponentID = (dom: Node): void => {
-        setDomComponentID(dom, 0);
-    };
-
-    // A DOM node corresponding to the root of a component has an
-    // optional __Od__isAttached property which is true iff the node
-    // is attached to the document.body.
-
-    const domIsAttached = (dom: Node): boolean =>
-        (dom as any).__Od__isAttached;
-
-    const setDomIsAttached = (dom: Node, isAttached: boolean): void => {
-        (dom as any).__Od__isAttached = isAttached;
-    };
-
-    const clearDomIsAttached = (dom: Node): void => {
-        setDomIsAttached(dom, false);
+    const clearDomComponentInfo = (dom: Node, cmptInfo: ComponentInfo): void => {
+        if (domComponentInfo(dom) === cmptInfo) (dom as any).__Od__componentInfo = null;
     };
 
     export type ComponentName = string | number;
@@ -259,13 +251,13 @@ namespace Od {
         name: ComponentName;
         componentID: number;
         dom: Node;
+        isAttached: boolean; // Trye iff the node is attached to document.body.
         obs: Obs.Observable<Vdom>;
         subs: Obs.Subscription;
         anonymousSubcomponents: Vdom[];
         namedSubcomponents: { [name: string]: Vdom };
         hasOdEventHandlers: boolean;
         updateIsPending: boolean;
-        ondispose: () => void;
     }
 
     var nextComponentID = 1; // Name supply.
@@ -299,31 +291,37 @@ namespace Od {
     // do not want this!
 
     export const component =
-        (name: ComponentName, fn: () => Vdom, ondispose?: () => void): Vdom => {
+        (name: ComponentName, fn: () => Vdom): Vdom => {
             // If this component already exists in this scope, return that.
             const existingCmpt = existingNamedComponent(name);
             if (existingCmpt != null) return existingCmpt;
             // Okay, we need to create a new component.
             const cmptID = nextComponentID++;
+            console.log("Creating component", name, cmptID);
             const cmptInfo = {
                 name: name,
                 componentID: cmptID,
                 dom: null as Node,
+                isAttached: false,
                 obs: null as Obs.Observable<Vdom>,
                 subs: null as Obs.Subscription,
                 anonymousSubcomponents: [] as Vdom[],
                 namedSubcomponents: {} as { [name: string]: Vdom },
                 hasOdEventHandlers: false,
-                updateIsPending: false,
-                ondispose: ondispose
+                updateIsPending: false
             };
             // A component, like any vDOM, is a patching function.
             const cmpt: VdomPatcher = (dom: Node, parent: Node) => {
                 const cmptDom = cmptInfo.dom;
                 patchNode(cmptDom, dom, parent);
                 if (cmptDom !== dom && cmptInfo.hasOdEventHandlers) {
-                    const isAttached = domIsAttachedToBody(cmptDom);
-                    propagateAttachmentDown(cmptDom, isAttached);
+                    const isAttached =
+                        ( parentComponentInfo != null
+                        ? parentComponentInfo.isAttached
+                        : domIsAttachedToBody(cmptDom)
+                        );
+                    updateIsAttached(cmptInfo, isAttached);
+                    //if (isAttached != cmptInfo.isAttached) propagateAttachmentDown(cmptDom, isAttached);
                 }
                 return cmptDom;
             };
@@ -337,6 +335,7 @@ namespace Od {
             // Establish the observable in the context of this new component
             // so any sub-components will be registered with this component.
             const obs = Obs.fn(() => {
+                if (name !== "log") console.log("Updating component", name, cmptID);
                 const oldParentComponentInfo = parentComponentInfo;
                 parentComponentInfo = cmptInfo;
                 disposeAnonymousSubcomponents(cmptInfo);
@@ -348,7 +347,7 @@ namespace Od {
             // Peek here, because we don't want any parent component
             // acquiring a dependency on this component's private observable.
             const dom = patchFromVdom(Obs.peek(obs), null, null);
-            setDomComponentID(dom, cmptID);
+            setDomComponentInfo(dom, cmptInfo);
             runPendingOdEventCallbacks();
             // Set up the update subscription.
             const subs = Obs.subscribe([obs], () => {
@@ -379,23 +378,24 @@ namespace Od {
         const dom = cmptInfo.dom;
         const obs = cmptInfo.obs;
         const parent = dom && dom.parentNode;
-        clearDomComponentID(dom); // So patching will apply internally.
+        clearDomComponentInfo(dom, cmptInfo); // So patching will apply internally.
         const newDom = patchFromVdom(obs(), dom, parent);
-        setDomComponentID(newDom, cmptID); // Restore DOM ownership.
+        setDomComponentInfo(newDom, cmptInfo); // Restore DOM ownership.
         cmptInfo.dom = newDom;
         cmptInfo.updateIsPending = false;
         parentComponentInfo = oldParentComponentInfo;
     };
 
     const disposeComponent = (cmptInfo: ComponentInfo): void => {
+        console.log("Disposing component", cmptInfo.name, cmptInfo.componentID);
         disposeAnonymousSubcomponents(cmptInfo);
         disposeNamedSubcomponents(cmptInfo);
         Obs.dispose(cmptInfo.subs);
         Obs.dispose(cmptInfo.obs);
         const dom = cmptInfo.dom;
         const domRemove = dom && (dom as HTMLElement).remove;
-        if (domRemove != null) domRemove.call(dom);
-        clearDomComponentID(dom);
+        //if (domRemove != null) domRemove.call(dom);
+        clearDomComponentInfo(dom, cmptInfo);
         enqueueNodeForStripping(dom);
     };
 
@@ -438,6 +438,7 @@ namespace Od {
     };
 
     const updateDeferredComponents = (): void => {
+        console.log("Updating deferred components...");
         var cmptInfos = componentInfosPendingUpdate;
         for (
             var cmptInfo = cmptInfos.pop();
@@ -448,6 +449,7 @@ namespace Od {
         }
         runPendingOdEventCallbacks();
         deferredComponentUpdatesID = 0;
+        console.log("Updating deferred components done.");
     };
 
     // Construct a static DOM subtree from an HTML string.
@@ -459,7 +461,7 @@ namespace Od {
             // If this is a bunch of nodes, return the whole DIV.
             const newDom = (tmp.childNodes.length === 1 ? tmp.firstChild : tmp);
             // Prevent this DOM subtree from being patched.
-            setDomComponentID(newDom, Infinity);
+            setDomComponentInfo(newDom, {} as ComponentInfo);
             const vdom = (dom: Node, parent: Node) => {
                 patchNode(newDom, dom, parent);
                 return newDom;
@@ -471,7 +473,7 @@ namespace Od {
     // touch the contents of this subtree.
     export const fromDom =
         (srcDom: Node): Vdom => {
-            setDomComponentID(srcDom, Infinity);
+            setDomComponentInfo(srcDom, {} as ComponentInfo);
             const vdom = (dom: Node, parent: Node) => {
                 patchNode(srcDom, dom, parent);
                 return srcDom;
@@ -485,6 +487,8 @@ namespace Od {
     export const bind = (vdom: Vdom, dom: Node): Node => {
         const domParent = dom && dom.parentNode;
         const newDom = patchFromVdom(vdom, dom, domParent);
+        const isAttached = domIsAttachedToBody(dom);
+        propagateAttachmentDown(newDom, isAttached);
         return newDom;
     };
 
@@ -492,6 +496,8 @@ namespace Od {
     // Od.appendChild(myVdom, document.body);
     export const appendChild = (vdom: Vdom, parent: Node): Node => {
         const newDom = patchFromVdom(vdom, null, parent);
+        const isAttached = domIsAttachedToBody(parent);
+        propagateAttachmentDown(newDom, isAttached);
         return newDom;
     };
 
@@ -646,7 +652,12 @@ namespace Od {
 
     const enqueueNodeForStripping = (dom: Node): void => {
         if (!dom) return;
-        if (isComponentDom(dom)) return; // Can't touch this!
+        const cmptInfo = domComponentInfo(dom);
+        if (cmptInfo != null) {
+            //if (cmptInfo.isAttached) propagateAttachmentDown(dom, false);
+            updateIsAttached(cmptInfo, false);
+            return; // Otherwise, we leave this alone: it belongs to the component.
+        }
         nodesPendingStripping.push(dom);
         if (stripNodesID !== 0) return;
         stripNodesID = setTimeout(stripNodes, 0);
@@ -664,7 +675,14 @@ namespace Od {
 
     const stripNode = (dom: Node): void => {
         // We don't want to strip anything owned by a component.
-        if (dom == null || isComponentDom(dom)) return;
+        if (dom == null) return;
+        const cmptInfo = domComponentInfo(dom);
+        if (cmptInfo != null) {
+            console.log("Not stripping component node:", dom, domComponentInfo(dom));
+            //if (cmptInfo.hasOdEventHandlers && cmptInfo.isAttached) propagateAttachmentDown(dom, false);
+            updateIsAttached(cmptInfo, false);
+            return;
+        }
         // Strip any properties...
         const props = getEltOdProps(dom);
         const lifecycleFn = odEventHandler(props);
@@ -738,22 +756,30 @@ namespace Od {
         var body = document.body;
         for (; dom != null; dom = dom.parentNode) {
             if (dom === body) return true;
-            if (!isComponentDom(dom)) continue;
-            const isAttached = domIsAttached(dom);
-            if (isAttached != null) return isAttached;
+            var cmptInfo = domComponentInfo(dom);
+            if (cmptInfo == null) continue;
+            return cmptInfo.isAttached;
         }
         return false;
     };
 
+    const updateIsAttached = (cmptInfo: ComponentInfo, isAttached: boolean): void => {
+        if (cmptInfo == null) return;
+        if (cmptInfo.isAttached == isAttached) return; // No change.
+        propagateAttachmentDown(cmptInfo.dom, isAttached);
+    };
+
     const propagateAttachmentDown = (dom: Node, isAttached: boolean): void => {
+        const what = (isAttached ? "attached" : "detached");
         while (dom != null) {
             // Propagate bottom-up.
             propagateAttachmentDown(dom.firstChild, isAttached);
             // In case the lifecycle function plays silly buggers...
             var nextSibling = dom.nextSibling;
-            if (isComponentDom(dom)) setDomIsAttached(dom, isAttached);
+            var cmptInfo = domComponentInfo(dom);
+            if (cmptInfo != null) cmptInfo.isAttached = isAttached;
             const lifecycleFn = odEventHandler(dom);
-            if (isAttached && lifecycleFn != null) lifecycleFn("attached", dom);
+            if (lifecycleFn != null) lifecycleFn(what, dom);
             dom = nextSibling;
         }
     };
