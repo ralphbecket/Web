@@ -755,9 +755,8 @@ var Od;
         if (domComponentInfo(dom) == null)
             dom.__Od__componentInfo = cmptInfo;
     };
-    var clearDomComponentInfo = function (dom, cmptInfo) {
-        if (domComponentInfo(dom) === cmptInfo)
-            dom.__Od__componentInfo = null;
+    var clearDomComponentInfo = function (dom) {
+        dom.__Od__componentInfo = null;
     };
     var nextComponentID = 1; // Name supply.
     var parentComponentInfo = null; // Used for scoping.
@@ -791,7 +790,7 @@ var Od;
             return existingCmpt;
         // Okay, we need to create a new component.
         var cmptID = nextComponentID++;
-        console.log("Creating component", name, cmptID);
+        // console.log("Creating component", name, cmptID);
         var cmptInfo = {
             name: name,
             componentID: cmptID,
@@ -826,8 +825,7 @@ var Od;
         // Establish the observable in the context of this new component
         // so any sub-components will be registered with this component.
         var obs = Obs.fn(function () {
-            if (name !== "log")
-                console.log("Updating component", name, cmptID);
+            // if (name !== "log") console.log("Updating component", name, cmptID);
             var oldParentComponentInfo = parentComponentInfo;
             parentComponentInfo = cmptInfo;
             disposeAnonymousSubcomponents(cmptInfo);
@@ -839,7 +837,12 @@ var Od;
         // Peek here, because we don't want any parent component
         // acquiring a dependency on this component's private observable.
         var dom = patchFromVdom(Obs.peek(obs), null, null);
+        // Check that we haven't been given another component's DOM subtree.
+        if (domComponentInfo(dom) != null)
+            throw new Error("Od components must have distinct root DOM nodes.");
+        // Mark this DOM subtree as belonging to this component.
         setDomComponentInfo(dom, cmptInfo);
+        // Fire off any creation events.
         runPendingOdEventCallbacks();
         // Set up the update subscription.
         var subs = Obs.subscribe([obs], function () {
@@ -869,7 +872,7 @@ var Od;
         var dom = cmptInfo.dom;
         var obs = cmptInfo.obs;
         var parent = dom && dom.parentNode;
-        clearDomComponentInfo(dom, cmptInfo); // So patching will apply internally.
+        clearDomComponentInfo(dom); // So patching will apply internally.
         var newDom = patchFromVdom(obs(), dom, parent);
         setDomComponentInfo(newDom, cmptInfo); // Restore DOM ownership.
         cmptInfo.dom = newDom;
@@ -877,7 +880,7 @@ var Od;
         parentComponentInfo = oldParentComponentInfo;
     };
     var disposeComponent = function (cmptInfo) {
-        console.log("Disposing component", cmptInfo.name, cmptInfo.componentID);
+        // console.log("Disposing component", cmptInfo.name, cmptInfo.componentID);
         disposeAnonymousSubcomponents(cmptInfo);
         disposeNamedSubcomponents(cmptInfo);
         Obs.dispose(cmptInfo.subs);
@@ -885,7 +888,7 @@ var Od;
         var dom = cmptInfo.dom;
         var domRemove = dom && dom.remove;
         //if (domRemove != null) domRemove.call(dom);
-        clearDomComponentInfo(dom, cmptInfo);
+        clearDomComponentInfo(dom);
         enqueueNodeForStripping(dom);
     };
     var disposeAnonymousSubcomponents = function (cmptInfo) {
@@ -922,14 +925,14 @@ var Od;
         deferredComponentUpdatesID = raf(updateDeferredComponents);
     };
     var updateDeferredComponents = function () {
-        console.log("Updating deferred components...");
+        // console.log("Updating deferred components...");
         var cmptInfos = componentInfosPendingUpdate;
         for (var cmptInfo = cmptInfos.pop(); cmptInfo != null; cmptInfo = cmptInfos.pop()) {
             updateComponent(cmptInfo);
         }
         runPendingOdEventCallbacks();
         deferredComponentUpdatesID = 0;
-        console.log("Updating deferred components done.");
+        // console.log("Updating deferred components done.");
     };
     // Construct a static DOM subtree from an HTML string.
     Od.fromHtml = function (html) {
@@ -1149,7 +1152,7 @@ var Od;
             return;
         var cmptInfo = domComponentInfo(dom);
         if (cmptInfo != null) {
-            console.log("Not stripping component node:", dom, domComponentInfo(dom));
+            // console.log("Not stripping component node:", dom, domComponentInfo(dom));
             //if (cmptInfo.hasOdEventHandlers && cmptInfo.isAttached) propagateAttachmentDown(dom, false);
             updateIsAttached(cmptInfo, false);
             return;

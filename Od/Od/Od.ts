@@ -241,8 +241,8 @@ namespace Od {
         if (domComponentInfo(dom) == null) (dom as any).__Od__componentInfo = cmptInfo;
     };
 
-    const clearDomComponentInfo = (dom: Node, cmptInfo: ComponentInfo): void => {
-        if (domComponentInfo(dom) === cmptInfo) (dom as any).__Od__componentInfo = null;
+    const clearDomComponentInfo = (dom: Node): void => {
+        (dom as any).__Od__componentInfo = null;
     };
 
     export type ComponentName = string | number;
@@ -297,7 +297,7 @@ namespace Od {
             if (existingCmpt != null) return existingCmpt;
             // Okay, we need to create a new component.
             const cmptID = nextComponentID++;
-            console.log("Creating component", name, cmptID);
+            // console.log("Creating component", name, cmptID);
             const cmptInfo = {
                 name: name,
                 componentID: cmptID,
@@ -335,7 +335,7 @@ namespace Od {
             // Establish the observable in the context of this new component
             // so any sub-components will be registered with this component.
             const obs = Obs.fn(() => {
-                if (name !== "log") console.log("Updating component", name, cmptID);
+                // if (name !== "log") console.log("Updating component", name, cmptID);
                 const oldParentComponentInfo = parentComponentInfo;
                 parentComponentInfo = cmptInfo;
                 disposeAnonymousSubcomponents(cmptInfo);
@@ -347,7 +347,11 @@ namespace Od {
             // Peek here, because we don't want any parent component
             // acquiring a dependency on this component's private observable.
             const dom = patchFromVdom(Obs.peek(obs), null, null);
+            // Check that we haven't been given another component's DOM subtree.
+            if (domComponentInfo(dom) != null) throw new Error("Od components must have distinct root DOM nodes.");
+            // Mark this DOM subtree as belonging to this component.
             setDomComponentInfo(dom, cmptInfo);
+            // Fire off any creation events.
             runPendingOdEventCallbacks();
             // Set up the update subscription.
             const subs = Obs.subscribe([obs], () => {
@@ -378,7 +382,7 @@ namespace Od {
         const dom = cmptInfo.dom;
         const obs = cmptInfo.obs;
         const parent = dom && dom.parentNode;
-        clearDomComponentInfo(dom, cmptInfo); // So patching will apply internally.
+        clearDomComponentInfo(dom); // So patching will apply internally.
         const newDom = patchFromVdom(obs(), dom, parent);
         setDomComponentInfo(newDom, cmptInfo); // Restore DOM ownership.
         cmptInfo.dom = newDom;
@@ -387,7 +391,7 @@ namespace Od {
     };
 
     const disposeComponent = (cmptInfo: ComponentInfo): void => {
-        console.log("Disposing component", cmptInfo.name, cmptInfo.componentID);
+        // console.log("Disposing component", cmptInfo.name, cmptInfo.componentID);
         disposeAnonymousSubcomponents(cmptInfo);
         disposeNamedSubcomponents(cmptInfo);
         Obs.dispose(cmptInfo.subs);
@@ -395,7 +399,7 @@ namespace Od {
         const dom = cmptInfo.dom;
         const domRemove = dom && (dom as HTMLElement).remove;
         //if (domRemove != null) domRemove.call(dom);
-        clearDomComponentInfo(dom, cmptInfo);
+        clearDomComponentInfo(dom);
         enqueueNodeForStripping(dom);
     };
 
@@ -438,7 +442,7 @@ namespace Od {
     };
 
     const updateDeferredComponents = (): void => {
-        console.log("Updating deferred components...");
+        // console.log("Updating deferred components...");
         var cmptInfos = componentInfosPendingUpdate;
         for (
             var cmptInfo = cmptInfos.pop();
@@ -449,7 +453,7 @@ namespace Od {
         }
         runPendingOdEventCallbacks();
         deferredComponentUpdatesID = 0;
-        console.log("Updating deferred components done.");
+        // console.log("Updating deferred components done.");
     };
 
     // Construct a static DOM subtree from an HTML string.
@@ -678,7 +682,7 @@ namespace Od {
         if (dom == null) return;
         const cmptInfo = domComponentInfo(dom);
         if (cmptInfo != null) {
-            console.log("Not stripping component node:", dom, domComponentInfo(dom));
+            // console.log("Not stripping component node:", dom, domComponentInfo(dom));
             //if (cmptInfo.hasOdEventHandlers && cmptInfo.isAttached) propagateAttachmentDown(dom, false);
             updateIsAttached(cmptInfo, false);
             return;
