@@ -42,8 +42,10 @@ Network Trash Folder
 Temporary Items
 .apdisk
 **/bin
+**/obj
+*.suo
 *.cs
 *.pdb
 *.config
 *.zip
-/packages/
+packages/
