@@ -24,15 +24,29 @@
     <Service Include="{4A0DDDB5-7A95-4FBF-97CC-616D07737A77}" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Xhr\Xhr.js" />
+    <Content Include="Xhr\Xhr.min.js">
+      <DependentUpon>Xhr.js</DependentUpon>
+    </Content>
     <None Include="Jigsaw.js" />
     <Content Include="Jigsaw.min.js">
       <DependentUpon>Jigsaw.js</DependentUpon>
     </Content>
+    <Content Include="Jigsaw\bundleconfig.json" />
     <None Include="Oath.js" />
+    <Content Include="Jigsaw\Jigsaw.js" />
+    <Content Include="Jigsaw\Jigsaw.min.js">
+      <DependentUpon>Jigsaw.js</DependentUpon>
+    </Content>
     <Content Include="Oath.min.js">
       <DependentUpon>Oath.js</DependentUpon>
     </Content>
+    <Content Include="Oath\bundleconfig.json" />
     <None Include="Obs.js" />
+    <Content Include="Oath\Oath.js" />
+    <Content Include="Oath\Oath.min.js">
+      <DependentUpon>Oath.js</DependentUpon>
+    </Content>
     <Content Include="Obs.min.js">
       <DependentUpon>Obs.js</DependentUpon>
     </Content>
@@ -44,7 +58,19 @@
     <Content Include="ObsAndOdAndElements.min.js">
       <DependentUpon>ObsAndOdAndElements.js</DependentUpon>
     </Content>
+    <Content Include="ObsAndOdAndElements\ObsAndOdAndElements.js" />
+    <Content Include="ObsAndOd\bundleconfig.json" />
+    <Content Include="ObsAndOdAndElements\bundleconfig.json" />
+    <Content Include="Obs\bundleconfig.json" />
     <None Include="Od.js" />
+    <Content Include="ObsAndOd\ObsAndOd.js" />
+    <Content Include="ObsAndOd\ObsAndOd.min.js">
+      <DependentUpon>ObsAndOd.js</DependentUpon>
+    </Content>
+    <Content Include="Obs\Obs.js" />
+    <Content Include="Obs\Obs.min.js">
+      <DependentUpon>Obs.js</DependentUpon>
+    </Content>
     <Content Include="Od.min.js">
       <DependentUpon>Od.js</DependentUpon>
     </Content>
@@ -52,7 +78,17 @@
     <Content Include="OdAndEnds.min.js">
       <DependentUpon>OdAndEnds.js</DependentUpon>
     </Content>
+    <Content Include="OdAndEnds\OdAndEnds.js" />
+    <Content Include="OdAndEnds\OdAndEnds.min.js">
+      <DependentUpon>OdAndEnds.js</DependentUpon>
+    </Content>
+    <Content Include="Od\Od.js" />
+    <Content Include="Od\Od.min.js">
+      <DependentUpon>Od.js</DependentUpon>
+    </Content>
     <Content Include="README.md" />
+    <Content Include="OdAndEnds\bundleconfig.json" />
+    <Content Include="Od\bundleconfig.json" />
     <None Include="Xhr.js" />
     <Content Include="Xhr.min.js">
       <DependentUpon>Xhr.js</DependentUpon>
@@ -61,6 +97,7 @@
     <Content Include="XhrAndOath.min.js">
       <DependentUpon>XhrAndOath.js</DependentUpon>
     </Content>
+    <Content Include="Xhr\bundleconfig.json" />
   </ItemGroup>
   <ItemGroup>
     <None Include="bundleconfig.json" />

@@ -1,0 +1,9 @@
+﻿[
+  {
+    "outputFileName": "Oath.js",
+    "inputFiles": [
+      "../../Ends/Oath.js"
+    ],
+    "includeInProject": true
+  }
+]

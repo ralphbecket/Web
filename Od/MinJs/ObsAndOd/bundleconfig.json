@@ -1,0 +1,10 @@
+﻿[
+  {
+    "outputFileName": "ObsAndOd.js",
+    "inputFiles": [
+      "../../Od/Obs.js",
+      "../../Od/Od.js"
+    ],
+    "includeInProject": true
+  }
+]

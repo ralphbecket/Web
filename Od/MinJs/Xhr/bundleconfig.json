@@ -1,0 +1,9 @@
+﻿[
+  {
+    "outputFileName": "Xhr.js",
+    "inputFiles": [
+      "../../Ends/Xhr.js"
+    ],
+    "includeInProject": true
+  }
+]

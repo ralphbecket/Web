@@ -1,0 +1,9 @@
+﻿[
+  {
+    "outputFileName": "Od.js",
+    "inputFiles": [
+      "../../Od/Od.js"
+    ],
+    "includeInProject": true
+  }
+]

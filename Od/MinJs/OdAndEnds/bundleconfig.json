@@ -1,0 +1,14 @@
+﻿[
+  {
+    "outputFileName": "OdAndEnds.js",
+    "inputFiles": [
+      "../../Od/Obs.js",
+      "../../Od/Od.js",
+      "../../Ends/Elements.js",
+      "../../Ends/Jigsaw.js",
+      "../../Ends/Oath.js",
+      "../../Ends/Xhr.js"
+    ],
+    "includeInProject": true
+  }
+]
