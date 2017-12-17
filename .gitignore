@@ -48,4 +48,5 @@ Temporary Items
 *.pdb
 *.config
 *.zip
+*.swp
 packages/
