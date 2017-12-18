@@ -50,3 +50,4 @@ Temporary Items
 *.zip
 *.swp
 packages/
+/Od/.vs/Od/v15/Server/sqlite3

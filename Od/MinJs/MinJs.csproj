@@ -19,11 +19,15 @@
     <UseGlobalApplicationHostFile />
     <NuGetPackageImportStamp>
     </NuGetPackageImportStamp>
+    <Use64BitIISExpress />
   </PropertyGroup>
   <ItemGroup>
     <Service Include="{4A0DDDB5-7A95-4FBF-97CC-616D07737A77}" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="ObsAndOdAndElements\ObsAndOdAndElements.min.js">
+      <DependentUpon>ObsAndOdAndElements.js</DependentUpon>
+    </Content>
     <Content Include="Xhr\Xhr.js" />
     <Content Include="Xhr\Xhr.min.js">
       <DependentUpon>Xhr.js</DependentUpon>
