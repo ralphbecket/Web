@@ -1,0 +1,19 @@
+{
+  "name": "Jigsaw",
+  "version": "1.0.0",
+  "description": "A tiny, simple, location-hash router.",
+  "keywords": [
+    "router",
+    "hash-router",
+    "location-hash"
+  ],
+  "license": "MS-PL",
+  "homepage": "https://github.com/ralphbecket/Web/tree/master/Od",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ralphbecket/Web/tree/master/Od"
+  },
+  "author": "Ralph Becket <ralphbecket@gmail.com> (http://ralphbecket.blogspot.com)",
+  "contributors": [ "Mihai Cazacu" ],
+  "files": [ "*.js" ]
+}

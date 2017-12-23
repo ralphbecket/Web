@@ -1,0 +1,22 @@
+{
+  "name": "Od",
+  "version": "1.0.0",
+  "description": "A fast, tiny, observables-based virtual-DOM library.",
+  "keywords": [
+    "vDOM",
+    "virtual-DOM",
+    "observables",
+    "components"
+  ],
+  "dependencies": {
+    "Oath": "git+https://github.com/ralphbecket/Web/tree/master/Od/MinJs/Obs"
+  },
+  "license": "MS-PL",
+  "homepage": "https://github.com/ralphbecket/Web/tree/master/Od",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ralphbecket/Web/tree/master/Od"
+  },
+  "author": "Ralph Becket <ralphbecket@gmail.com> (http://ralphbecket.blogspot.com)",
+  "files": [ "*.js" ]
+}

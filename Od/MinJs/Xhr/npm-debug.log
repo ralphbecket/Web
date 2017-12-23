@@ -1,0 +1,112 @@
+0 info it worked if it ends with ok
+1 verbose cli [ 'C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\Web\\External\\Node.exe',
+1 verbose cli   'C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\Web\\External\\node_modules\\npm\\bin\\npm-cli.js',
+1 verbose cli   'install' ]
+2 info using npm@3.3.4
+3 info using node@v5.4.1
+4 silly loadCurrentTree Starting
+5 silly install loadCurrentTree
+6 silly install readLocalPackageData
+7 silly install normalizeTree
+8 silly loadCurrentTree Finishing
+9 silly loadIdealTree Starting
+10 silly install loadIdealTree
+11 silly cloneCurrentTree Starting
+12 silly install cloneCurrentTreeToIdealTree
+13 silly cloneCurrentTree Finishing
+14 silly loadShrinkwrap Starting
+15 silly install loadShrinkwrap
+16 silly loadShrinkwrap Finishing
+17 silly loadAllDepsIntoIdealTree Starting
+18 silly install loadAllDepsIntoIdealTree
+19 silly fetchOtherPackageData Oath@git+https://github.com/ralphbecket/Web/tree/master/Od/MinJs/Oath
+20 silly cache add args [ 'Oath@git+https://github.com/ralphbecket/Web/tree/master/Od/MinJs/Oath',
+20 silly cache add   null ]
+21 verbose cache add spec Oath@git+https://github.com/ralphbecket/Web/tree/master/Od/MinJs/Oath
+22 silly cache add parsed spec Result {
+22 silly cache add   raw: 'Oath@git+https://github.com/ralphbecket/Web/tree/master/Od/MinJs/Oath',
+22 silly cache add   scope: null,
+22 silly cache add   name: 'Oath',
+22 silly cache add   rawSpec: 'git+https://github.com/ralphbecket/Web/tree/master/Od/MinJs/Oath',
+22 silly cache add   spec: 'https://github.com/ralphbecket/Web/tree/master/Od/MinJs/Oath',
+22 silly cache add   type: 'git' }
+23 verbose addRemoteGit caching git+https://github.com/ralphbecket/Web/tree/master/Od/MinJs/Oath
+24 silly tryClone cloning git+https://github.com/ralphbecket/Web/tree/master/Od/MinJs/Oath via git+https://github.com/ralphbecket/Web/tree/master/Od/MinJs/Oath
+25 verbose tryClone git-https-github-com-ralphbecket-Web-tree-master-Od-MinJs-Oath-0831f6e8fa3b4de7518d5ff7e167a722 not in flight; caching
+26 info git [ 'config', '--get', 'remote.origin.url' ]
+27 warn addRemoteGit Error: Command failed: git -c core.longpaths=true config --get remote.origin.url
+27 warn addRemoteGit
+27 warn addRemoteGit     at ChildProcess.exithandler (child_process.js:213:12)
+27 warn addRemoteGit     at emitTwo (events.js:87:13)
+27 warn addRemoteGit     at ChildProcess.emit (events.js:172:7)
+27 warn addRemoteGit     at maybeClose (internal/child_process.js:821:16)
+27 warn addRemoteGit     at Socket.<anonymous> (internal/child_process.js:319:11)
+27 warn addRemoteGit     at emitOne (events.js:77:13)
+27 warn addRemoteGit     at Socket.emit (events.js:169:7)
+27 warn addRemoteGit     at Pipe._onclose (net.js:469:12)
+27 warn addRemoteGit  git+https://github.com/ralphbecket/Web/tree/master/Od/MinJs/Oath resetting remote C:\Users\ralph\AppData\Roaming\npm-cache\_git-remotes\git-https-github-com-ralphbecket-Web-tree-master-Od-MinJs-Oath-0831f6e8fa3b4de7518d5ff7e167a722 because of error: { [Error: Command failed: git -c core.longpaths=true config --get remote.origin.url
+27 warn addRemoteGit ]
+27 warn addRemoteGit   killed: false,
+27 warn addRemoteGit   code: 1,
+27 warn addRemoteGit   signal: null,
+27 warn addRemoteGit   cmd: 'git -c core.longpaths=true config --get remote.origin.url' }
+28 info resetRemote resetting C:\Users\ralph\AppData\Roaming\npm-cache\_git-remotes\git-https-github-com-ralphbecket-Web-tree-master-Od-MinJs-Oath-0831f6e8fa3b4de7518d5ff7e167a722 for git+https://github.com/ralphbecket/Web/tree/master/Od/MinJs/Oath
+29 silly gentlyRm C:\Users\ralph\AppData\Roaming\npm-cache\_git-remotes\git-https-github-com-ralphbecket-Web-tree-master-Od-MinJs-Oath-0831f6e8fa3b4de7518d5ff7e167a722 is being purged
+30 verbose gentlyRm don't care about contents; nuking C:\Users\ralph\AppData\Roaming\npm-cache\_git-remotes\git-https-github-com-ralphbecket-Web-tree-master-Od-MinJs-Oath-0831f6e8fa3b4de7518d5ff7e167a722
+31 silly vacuum-fs purging C:\Users\ralph\AppData\Roaming\npm-cache\_git-remotes\git-https-github-com-ralphbecket-Web-tree-master-Od-MinJs-Oath-0831f6e8fa3b4de7518d5ff7e167a722
+32 silly vacuum-fs quitting because other entries in C:\Users\ralph\AppData\Roaming\npm-cache\_git-remotes
+33 info git [ 'clone',
+33 info git   '--template=C:\\Users\\ralph\\AppData\\Roaming\\npm-cache\\_git-remotes\\_templates',
+33 info git   '--mirror',
+33 info git   'https://github.com/ralphbecket/Web/tree/master/Od/MinJs/Oath',
+33 info git   'C:\\Users\\ralph\\AppData\\Roaming\\npm-cache\\_git-remotes\\git-https-github-com-ralphbecket-Web-tree-master-Od-MinJs-Oath-0831f6e8fa3b4de7518d5ff7e167a722' ]
+34 error git clone --template=C:\Users\ralph\AppData\Roaming\npm-cache\_git-remotes\_templates --mirror https://github.com/ralphbecket/Web/tree/master/Od/MinJs/Oath C:\Users\ralph\AppData\Roaming\npm-cache\_git-remotes\git-https-github-com-ralphbecket-Web-tree-master-Od-MinJs-Oath-0831f6e8fa3b4de7518d5ff7e167a722: Cloning into bare repository 'C:\Users\ralph\AppData\Roaming\npm-cache\_git-remotes\git-https-github-com-ralphbecket-Web-tree-master-Od-MinJs-Oath-0831f6e8fa3b4de7518d5ff7e167a722'...
+34 error git clone --template=C:\Users\ralph\AppData\Roaming\npm-cache\_git-remotes\_templates --mirror https://github.com/ralphbecket/Web/tree/master/Od/MinJs/Oath C:\Users\ralph\AppData\Roaming\npm-cache\_git-remotes\git-https-github-com-ralphbecket-Web-tree-master-Od-MinJs-Oath-0831f6e8fa3b4de7518d5ff7e167a722: remote: Not Found
+34 error git clone --template=C:\Users\ralph\AppData\Roaming\npm-cache\_git-remotes\_templates --mirror https://github.com/ralphbecket/Web/tree/master/Od/MinJs/Oath C:\Users\ralph\AppData\Roaming\npm-cache\_git-remotes\git-https-github-com-ralphbecket-Web-tree-master-Od-MinJs-Oath-0831f6e8fa3b4de7518d5ff7e167a722: fatal: repository 'https://github.com/ralphbecket/Web/tree/master/Od/MinJs/Oath/' not found
+35 silly fetchPackageMetaData Error: Command failed: git -c core.longpaths=true clone --template=C:\Users\ralph\AppData\Roaming\npm-cache\_git-remotes\_templates --mirror https://github.com/ralphbecket/Web/tree/master/Od/MinJs/Oath C:\Users\ralph\AppData\Roaming\npm-cache\_git-remotes\git-https-github-com-ralphbecket-Web-tree-master-Od-MinJs-Oath-0831f6e8fa3b4de7518d5ff7e167a722
+35 silly fetchPackageMetaData Cloning into bare repository 'C:\Users\ralph\AppData\Roaming\npm-cache\_git-remotes\git-https-github-com-ralphbecket-Web-tree-master-Od-MinJs-Oath-0831f6e8fa3b4de7518d5ff7e167a722'...
+35 silly fetchPackageMetaData remote: Not Found
+35 silly fetchPackageMetaData fatal: repository 'https://github.com/ralphbecket/Web/tree/master/Od/MinJs/Oath/' not found
+35 silly fetchPackageMetaData
+35 silly fetchPackageMetaData     at ChildProcess.exithandler (child_process.js:213:12)
+35 silly fetchPackageMetaData     at emitTwo (events.js:87:13)
+35 silly fetchPackageMetaData     at ChildProcess.emit (events.js:172:7)
+35 silly fetchPackageMetaData     at maybeClose (internal/child_process.js:821:16)
+35 silly fetchPackageMetaData     at Process.ChildProcess._handle.onexit (internal/child_process.js:211:5)
+35 silly fetchPackageMetaData  error for Oath@git+https://github.com/ralphbecket/Web/tree/master/Od/MinJs/Oath { [Error: Command failed: git -c core.longpaths=true clone --template=C:\Users\ralph\AppData\Roaming\npm-cache\_git-remotes\_templates --mirror https://github.com/ralphbecket/Web/tree/master/Od/MinJs/Oath C:\Users\ralph\AppData\Roaming\npm-cache\_git-remotes\git-https-github-com-ralphbecket-Web-tree-master-Od-MinJs-Oath-0831f6e8fa3b4de7518d5ff7e167a722
+35 silly fetchPackageMetaData Cloning into bare repository 'C:\Users\ralph\AppData\Roaming\npm-cache\_git-remotes\git-https-github-com-ralphbecket-Web-tree-master-Od-MinJs-Oath-0831f6e8fa3b4de7518d5ff7e167a722'...
+35 silly fetchPackageMetaData remote: Not Found
+35 silly fetchPackageMetaData fatal: repository 'https://github.com/ralphbecket/Web/tree/master/Od/MinJs/Oath/' not found
+35 silly fetchPackageMetaData ]
+35 silly fetchPackageMetaData   killed: false,
+35 silly fetchPackageMetaData   code: 128,
+35 silly fetchPackageMetaData   signal: null,
+35 silly fetchPackageMetaData   cmd: 'git -c core.longpaths=true clone --template=C:\\Users\\ralph\\AppData\\Roaming\\npm-cache\\_git-remotes\\_templates --mirror https://github.com/ralphbecket/Web/tree/master/Od/MinJs/Oath C:\\Users\\ralph\\AppData\\Roaming\\npm-cache\\_git-remotes\\git-https-github-com-ralphbecket-Web-tree-master-Od-MinJs-Oath-0831f6e8fa3b4de7518d5ff7e167a722' }
+36 silly rollbackFailedOptional Starting
+37 silly rollbackFailedOptional Finishing
+38 silly runTopLevelLifecycles Starting
+39 silly runTopLevelLifecycles Finishing
+40 silly install printInstalled
+41 verbose stack Error: Command failed: git -c core.longpaths=true clone --template=C:\Users\ralph\AppData\Roaming\npm-cache\_git-remotes\_templates --mirror https://github.com/ralphbecket/Web/tree/master/Od/MinJs/Oath C:\Users\ralph\AppData\Roaming\npm-cache\_git-remotes\git-https-github-com-ralphbecket-Web-tree-master-Od-MinJs-Oath-0831f6e8fa3b4de7518d5ff7e167a722
+41 verbose stack Cloning into bare repository 'C:\Users\ralph\AppData\Roaming\npm-cache\_git-remotes\git-https-github-com-ralphbecket-Web-tree-master-Od-MinJs-Oath-0831f6e8fa3b4de7518d5ff7e167a722'...
+41 verbose stack remote: Not Found
+41 verbose stack fatal: repository 'https://github.com/ralphbecket/Web/tree/master/Od/MinJs/Oath/' not found
+41 verbose stack
+41 verbose stack     at ChildProcess.exithandler (child_process.js:213:12)
+41 verbose stack     at emitTwo (events.js:87:13)
+41 verbose stack     at ChildProcess.emit (events.js:172:7)
+41 verbose stack     at maybeClose (internal/child_process.js:821:16)
+41 verbose stack     at Process.ChildProcess._handle.onexit (internal/child_process.js:211:5)
+42 verbose cwd C:\Users\ralph\OneDrive\My Documents\GitHub\Web\Od\MinJs\Xhr
+43 error Windows_NT 10.0.16299
+44 error argv "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\Web\\External\\Node.exe" "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\Web\\External\\node_modules\\npm\\bin\\npm-cli.js" "install"
+45 error node v5.4.1
+46 error npm  v3.3.4
+47 error code 128
+48 error Command failed: git -c core.longpaths=true clone --template=C:\Users\ralph\AppData\Roaming\npm-cache\_git-remotes\_templates --mirror https://github.com/ralphbecket/Web/tree/master/Od/MinJs/Oath C:\Users\ralph\AppData\Roaming\npm-cache\_git-remotes\git-https-github-com-ralphbecket-Web-tree-master-Od-MinJs-Oath-0831f6e8fa3b4de7518d5ff7e167a722
+48 error Cloning into bare repository 'C:\Users\ralph\AppData\Roaming\npm-cache\_git-remotes\git-https-github-com-ralphbecket-Web-tree-master-Od-MinJs-Oath-0831f6e8fa3b4de7518d5ff7e167a722'...
+48 error remote: Not Found
+48 error fatal: repository 'https://github.com/ralphbecket/Web/tree/master/Od/MinJs/Oath/' not found
+49 error If you need help, you may report this error at:
+49 error     <https://github.com/npm/npm/issues>
+50 verbose exit [ 1, true ]

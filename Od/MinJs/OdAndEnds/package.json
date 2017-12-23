@@ -1,0 +1,24 @@
+{
+  "name": "ObsAndEnds",
+  "version": "1.0.0",
+  "description": "A small, efficient observables-based virtual-DOM library with all the support libraries: Od, Elements, Obs, Oath, Xhr, and Jigsaw.",
+  "keywords": [
+    "observables",
+    "vDOM",
+    "virtual-DOM",
+    "components",
+    "HTML",
+    "hash-router",
+    "router",
+    "XMLHttpRequest",
+    "AJAX"
+  ],
+  "license": "MS-PL",
+  "homepage": "https://github.com/ralphbecket/Web/tree/master/Od",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ralphbecket/Web/tree/master/Od"
+  },
+  "author": "Ralph Becket <ralphbecket@gmail.com> (http://ralphbecket.blogspot.com)",
+  "files": [ "*.js" ]
+}

@@ -1,0 +1,17 @@
+{
+  "name": "Oath",
+  "version": "1.0.0",
+  "description": "A small Promises/A+ implementation.",
+  "keywords": [
+    "promise",
+    "promise/a+"
+  ],
+  "license": "MS-PL",
+  "homepage": "https://github.com/ralphbecket/Web/tree/master/Od",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ralphbecket/Web/tree/master/Od"
+  },
+  "author": "Ralph Becket <ralphbecket@gmail.com> (http://ralphbecket.blogspot.com)",
+  "files": [ "*.js" ]
+}

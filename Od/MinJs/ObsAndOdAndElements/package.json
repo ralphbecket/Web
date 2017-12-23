@@ -1,0 +1,20 @@
+{
+  "name": "ObsAndOdAndElements",
+  "version": "1.0.0",
+  "description": "A small, efficient observables-based virtual-DOM library with convenient extensions for all the HTML elements.",
+  "keywords": [
+    "observables",
+    "vDOM",
+    "virtual-DOM",
+    "components",
+    "HTML"
+  ],
+  "license": "MS-PL",
+  "homepage": "https://github.com/ralphbecket/Web/tree/master/Od",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ralphbecket/Web/tree/master/Od"
+  },
+  "author": "Ralph Becket <ralphbecket@gmail.com> (http://ralphbecket.blogspot.com)",
+  "files": [ "*.js" ]
+}
