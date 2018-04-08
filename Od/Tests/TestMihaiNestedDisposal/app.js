@@ -661,7 +661,7 @@ var Od;
             return existingCmpt;
         // Okay, we need to create a new component.
         var cmptID = nextComponentID++;
-        // console.log("Creating component", name, cmptID);
+        // console.log("Od: creating component", name, cmptID);
         var cmptInfo = {
             name: name,
             componentID: cmptID,
@@ -696,7 +696,7 @@ var Od;
         // Establish the observable in the context of this new component
         // so any sub-components will be registered with this component.
         var obs = Obs.fn(function () {
-            // if (name !== "log") console.log("Updating component", name, cmptID);
+            // if (name !== "log") console.log("Od: updating component", name, cmptID);
             var oldParentComponentInfo = parentComponentInfo;
             parentComponentInfo = cmptInfo;
             disposeAnonymousSubcomponents(cmptInfo);
@@ -751,7 +751,6 @@ var Od;
         parentComponentInfo = oldParentComponentInfo;
     };
     var disposeComponent = function (cmptInfo) {
-        // console.log("Disposing component", cmptInfo.name, cmptInfo.componentID);
         disposeAnonymousSubcomponents(cmptInfo);
         disposeNamedSubcomponents(cmptInfo);
         Obs.dispose(cmptInfo.subs);
@@ -760,6 +759,7 @@ var Od;
         var domRemove = dom && dom.remove;
         //if (domRemove != null) domRemove.call(dom);
         clearDomComponentInfo(dom);
+        // console.log("Od: disposing component and enqueuing node for stripping.", cmptInfo.name || "");
         enqueueNodeForStripping(dom);
     };
     var disposeAnonymousSubcomponents = function (cmptInfo) {
@@ -1030,6 +1030,9 @@ var Od;
         }
         // Strip any properties...
         var props = getEltOdProps(dom);
+        if (props == null)
+            return; // This has already been deleted or is not an Od node.
+        setEltOdProps(dom, null);
         var lifecycleFn = odEventHandler(props);
         if (lifecycleFn)
             lifecycleFn("removed", dom);
@@ -1466,7 +1469,7 @@ var Test;
 (function (Test) {
     var cmptName = function (name) { return (true ? name : null); }; // Test named vs anonymous behaviour.
     // A quick on-screen logging facility.
-    var maxLogSize = 12;
+    var maxLogSize = 20;
     var logMsgs = Obs.of([]);
     var logNo = 1;
     var log = function (msg) {
@@ -1479,7 +1482,7 @@ var Test;
         Obs.updateDependents(logMsgs); // Stupid imperative language...
     };
     var logView = Od.component("log", function () {
-        return Od.DIV(logMsgs().map(function (msg) { return msg ? Od.P(msg) : Od.HR(); }));
+        return Od.DIV(logMsgs().map(function (msg) { return msg ? Od.DIV(msg) : Od.HR(); }));
     });
     // Application state.
     var currPage = Obs.of(Od.component("Empty", function () { return "Empty page."; }));
@@ -1501,8 +1504,8 @@ var Test;
     var loggingDiv = function (name, children) { return Od.component(name, function () {
         return Od.DIV({ onodevent: function (what, dom) { log(name + ": " + what); } }, [name, (children || []).map(function (f) { return f(); })]);
     }); };
-    //const mainView = Od.component("main", () => Od.DIV(currPage()));
-    var mainView = Od.component("main", currPage);
+    var mainView = Od.component("main", function () { return Od.DIV(currPage()); });
+    //const mainView = Od.component("Main", currPage);
     Test.start = function () {
         var mainElt = document.getElementById("main");
         var logElt = document.getElementById("log");

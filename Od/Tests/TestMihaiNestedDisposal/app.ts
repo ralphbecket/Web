@@ -6,7 +6,7 @@ namespace Test {
     const cmptName = (name: string): string => (true ? name : null); // Test named vs anonymous behaviour.
 
     // A quick on-screen logging facility.
-    const maxLogSize = 12;
+    const maxLogSize = 20;
     const logMsgs = Obs.of([]);
     var logNo = 1;
     const log = (msg?: string): void => {
@@ -19,7 +19,7 @@ namespace Test {
     };
     const logView = Od.component("log", () =>
         Od.DIV(
-            logMsgs().map(msg => msg ? Od.P(msg) : Od.HR())
+            logMsgs().map(msg => msg ? Od.DIV(msg) : Od.HR())
         )
     );
 
@@ -51,8 +51,8 @@ namespace Test {
             [name, (children || []).map(f => f())]
         )
     );
-    //const mainView = Od.component("main", () => Od.DIV(currPage()));
-    const mainView = Od.component("main", currPage);
+    const mainView = Od.component("main", () => Od.DIV(currPage()));
+    //const mainView = Od.component("Main", currPage);
 
     export const start = () => {
 

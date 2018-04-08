@@ -790,7 +790,7 @@ var Od;
             return existingCmpt;
         // Okay, we need to create a new component.
         var cmptID = nextComponentID++;
-        // console.log("Creating component", name, cmptID);
+        // console.log("Od: creating component", name, cmptID);
         var cmptInfo = {
             name: name,
             componentID: cmptID,
@@ -825,7 +825,7 @@ var Od;
         // Establish the observable in the context of this new component
         // so any sub-components will be registered with this component.
         var obs = Obs.fn(function () {
-            // if (name !== "log") console.log("Updating component", name, cmptID);
+            // if (name !== "log") console.log("Od: updating component", name, cmptID);
             var oldParentComponentInfo = parentComponentInfo;
             parentComponentInfo = cmptInfo;
             disposeAnonymousSubcomponents(cmptInfo);
@@ -880,7 +880,6 @@ var Od;
         parentComponentInfo = oldParentComponentInfo;
     };
     var disposeComponent = function (cmptInfo) {
-        // console.log("Disposing component", cmptInfo.name, cmptInfo.componentID);
         disposeAnonymousSubcomponents(cmptInfo);
         disposeNamedSubcomponents(cmptInfo);
         Obs.dispose(cmptInfo.subs);
@@ -889,6 +888,7 @@ var Od;
         var domRemove = dom && dom.remove;
         //if (domRemove != null) domRemove.call(dom);
         clearDomComponentInfo(dom);
+        // console.log("Od: disposing component and enqueuing node for stripping.", cmptInfo.name || "");
         enqueueNodeForStripping(dom);
     };
     var disposeAnonymousSubcomponents = function (cmptInfo) {
@@ -1159,6 +1159,9 @@ var Od;
         }
         // Strip any properties...
         var props = getEltOdProps(dom);
+        if (props == null)
+            return; // This has already been deleted or is not an Od node.
+        setEltOdProps(dom, null);
         var lifecycleFn = odEventHandler(props);
         if (lifecycleFn)
             lifecycleFn("removed", dom);

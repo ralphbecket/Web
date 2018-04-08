@@ -149,12 +149,11 @@ namespace Od {
         };
 
     // Patch from an arbitrary Vdom node.
-    const patchFromVdom = (vdom: Vdom, dom: Node, parent: Node): Node => {
-        return (vdom instanceof Function
-            ? (vdom as VdomPatcher)(dom, parent)
-            : patchText(vdom as string, dom, parent)
+    const patchFromVdom = (vdom: Vdom, dom: Node, parent: Node): Node =>
+        ( vdom instanceof Function
+        ? (vdom as VdomPatcher)(dom, parent)
+        : patchText(vdom as string, dom, parent)
         );
-    };
 
     // Create an element node.
     export const element =
@@ -297,7 +296,7 @@ namespace Od {
             if (existingCmpt != null) return existingCmpt;
             // Okay, we need to create a new component.
             const cmptID = nextComponentID++;
-            // console.log("Creating component", name, cmptID);
+            // console.log("Od: creating component", name, cmptID);
             const cmptInfo = {
                 name: name,
                 componentID: cmptID,
@@ -335,7 +334,7 @@ namespace Od {
             // Establish the observable in the context of this new component
             // so any sub-components will be registered with this component.
             const obs = Obs.fn(() => {
-                // if (name !== "log") console.log("Updating component", name, cmptID);
+                // if (name !== "log") console.log("Od: updating component", name, cmptID);
                 const oldParentComponentInfo = parentComponentInfo;
                 parentComponentInfo = cmptInfo;
                 disposeAnonymousSubcomponents(cmptInfo);
@@ -391,7 +390,6 @@ namespace Od {
     };
 
     const disposeComponent = (cmptInfo: ComponentInfo): void => {
-        // console.log("Disposing component", cmptInfo.name, cmptInfo.componentID);
         disposeAnonymousSubcomponents(cmptInfo);
         disposeNamedSubcomponents(cmptInfo);
         Obs.dispose(cmptInfo.subs);
@@ -400,6 +398,7 @@ namespace Od {
         const domRemove = dom && (dom as HTMLElement).remove;
         //if (domRemove != null) domRemove.call(dom);
         clearDomComponentInfo(dom);
+        // console.log("Od: disposing component and enqueuing node for stripping.", cmptInfo.name || "");
         enqueueNodeForStripping(dom);
     };
 
@@ -689,6 +688,8 @@ namespace Od {
         }
         // Strip any properties...
         const props = getEltOdProps(dom);
+        if (props == null) return; // This has already been deleted or is not an Od node.
+        setEltOdProps(dom, null);
         const lifecycleFn = odEventHandler(props);
         if (lifecycleFn) lifecycleFn("removed", dom);
         const anyDom = dom as any;

@@ -100,6 +100,7 @@
     <Content Include="Od\bundleconfig.json" />
     <Content Include="Od\package.json" />
     <Content Include="OdAndEnds\package.json" />
+    <Content Include="tsconfig.json" />
     <None Include="Xhr.js" />
     <Content Include="Xhr.min.js">
       <DependentUpon>Xhr.js</DependentUpon>
@@ -115,6 +116,9 @@
     <None Include="bundleconfig.json" />
     <Content Include="packages.config" />
     <Content Include="package.json" />
+  </ItemGroup>
+  <ItemGroup>
+    <TypeScriptCompile Include="Dummy.ts" />
   </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">12.0</VisualStudioVersion>
