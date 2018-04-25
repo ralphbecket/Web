@@ -1167,13 +1167,22 @@ var Od;
             lifecycleFn("removed", dom);
         var anyDom = dom;
         for (var prop in props)
-            if (prop !== "src" || anyDom.tagName !== "IMG")
-                anyDom[prop] = null;
+            stripProperty(anyDom, prop);
         // Recursively strip any child nodes.
         var children = dom.childNodes;
         var numChildren = children.length;
         for (var i = 0; i < numChildren; i++)
             stripNode(children[i]);
+    };
+    // We strip node properties to avoid space leaks.
+    // This can only happen when the property value is a closure or
+    // other object.  Note: we particularly want to avoid clearing
+    // certain string properties (see, e.g., https://gtmetrix.com/avoid-empty-src-or-href.html)
+    // because setting them, even to null, can trigger browsers to
+    // doing something in response, which we clearly don't intend here!
+    var stripProperty = function (dom, prop) {
+        if (dom[prop] instanceof Object)
+            dom[prop] = null;
     };
     var runningPendingOdEvents = false;
     var pendingCreatedEventCallbacks = [];

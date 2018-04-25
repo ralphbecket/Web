@@ -693,11 +693,21 @@ namespace Od {
         const lifecycleFn = odEventHandler(props);
         if (lifecycleFn) lifecycleFn("removed", dom);
         const anyDom = dom as any;
-        for (var prop in props) if (prop !== "src" || anyDom.tagName !== "IMG") anyDom[prop] = null;
+        for (var prop in props) stripProperty(anyDom, prop);
         // Recursively strip any child nodes.
         const children = dom.childNodes;
         const numChildren = children.length;
         for (var i = 0; i < numChildren; i++) stripNode(children[i]);
+    };
+
+    // We strip node properties to avoid space leaks.
+    // This can only happen when the property value is a closure or
+    // other object.  Note: we particularly want to avoid clearing
+    // certain string properties (see, e.g., https://gtmetrix.com/avoid-empty-src-or-href.html)
+    // because setting them, even to null, can trigger browsers to
+    // doing something in response, which we clearly don't intend here!
+    const stripProperty = (dom: any, prop: string): void => {
+        if (dom[prop] instanceof Object) dom[prop] = null;
     };
 
     var runningPendingOdEvents = false;
